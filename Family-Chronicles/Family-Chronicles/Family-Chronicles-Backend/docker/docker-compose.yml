@@ -1,0 +1,51 @@
+# This file is supposed to be used with "docker stack deploy" !
+version: "3.7"
+
+services:
+  mariadb:
+    image: mariadb:10.5
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_ROOT_PASSWORD=family-chronicles-maria-root
+      - MYSQL_DATABASE=family-chronicles
+      - MYSQL_USER=family-chronicles
+      - MYSQL_PASSWORD=family-chronicles-maria
+    volumes:
+      - mariadb_data:/var/lib/mysql
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5
+    ports:
+      - "8008:80"
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_USER=family-chronicles
+      - PMA_PASSWORD=family-chronicles-maria
+    depends_on:
+      - mariadb
+  mongodb:
+    image: mongo
+    restart: always
+    ports:
+      - "61001:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: family-chronicles
+      MONGO_INITDB_ROOT_PASSWORD: family-chronicles-mongo
+    volumes:
+      - mongo_data:/data/db
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - "61002:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: family-chronicles
+      ME_CONFIG_MONGODB_ADMINPASSWORD: family-chronicles-mongo
+    depends_on:
+      - mongodb
+
+volumes:
+  mariadb_data:
+  mongo_data:
