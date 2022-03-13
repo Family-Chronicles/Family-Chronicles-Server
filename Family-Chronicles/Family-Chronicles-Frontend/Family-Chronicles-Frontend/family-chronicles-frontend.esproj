@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/0.4.0-alpha">
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/0.5.7-alpha">
   <PropertyGroup Label="Globals">
-    <ProjectGuid>af8d9d33-2771-4a8f-8e7f-e84411fda527</ProjectGuid>
+    <ProjectGuid>6d0f1333-21f2-44e5-8015-d61ff03866f4</ProjectGuid>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+  <PropertyGroup>
     <StartupCommand>npm run serve</StartupCommand>
     <JavaScriptTestRoot>.\</JavaScriptTestRoot>
     <JavaScriptTestFramework>Jest</JavaScriptTestFramework>
