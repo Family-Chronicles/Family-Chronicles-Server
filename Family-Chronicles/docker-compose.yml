@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Family-Chronicles-Backend/Dockerfile
   familychroniclesfrontend:
-    image: familychroniclesfrontend
+    image: ${DOCKER_REGISTRY-}familychroniclesfrontend
     build:
       context: .
       dockerfile: Family-Chronicles-Frontend/Dockerfile
