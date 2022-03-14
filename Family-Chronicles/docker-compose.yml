@@ -6,15 +6,15 @@ services:
     build:
       context: .
       dockerfile: Family-Chronicles-Backend/Dockerfile
-  familychroniclesfrontend:
-    image: ${DOCKER_REGISTRY-}familychroniclesfrontend
-    build:
-      context: .
-      dockerfile: Family-Chronicles-Frontend/Dockerfile
-    environment:
-      NODE_ENV: development
-    ports:
-      - 3000:3000
+  #familychroniclesfrontend:
+    #image: ${DOCKER_REGISTRY-}familychroniclesfrontend
+    #build:
+      #context: .
+      #dockerfile: Family-Chronicles-Frontend/Dockerfile
+    #environment:
+      #NODE_ENV: development
+    #ports:
+      #- 3000:3000
   mariadb:
     image: mariadb:10.5
     ports:
