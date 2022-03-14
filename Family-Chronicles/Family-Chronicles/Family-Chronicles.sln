@@ -5,7 +5,9 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Family-Chronicles-Backend", "Family-Chronicles-Backend\Family-Chronicles-Backend.csproj", "{1694CDD9-8790-4894-A72E-EC3098780F26}"
 EndProject
-Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "family-chronicles-frontend", "..\Family-Chronicles-Frontend\Family-Chronicles-Frontend\family-chronicles-frontend.esproj", "{6D0F1333-21F2-44E5-8015-D61FF03866F4}"
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "family-chronicles-frontend", "Family-Chronicles-Frontend\family-chronicles-frontend.esproj", "{6D0F1333-21F2-44E5-8015-D61FF03866F4}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{34B33DC0-8C1C-4171-808F-DA345C795982}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,6 +25,10 @@ Global
 		{6D0F1333-21F2-44E5-8015-D61FF03866F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D0F1333-21F2-44E5-8015-D61FF03866F4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6D0F1333-21F2-44E5-8015-D61FF03866F4}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{34B33DC0-8C1C-4171-808F-DA345C795982}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34B33DC0-8C1C-4171-808F-DA345C795982}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34B33DC0-8C1C-4171-808F-DA345C795982}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34B33DC0-8C1C-4171-808F-DA345C795982}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
