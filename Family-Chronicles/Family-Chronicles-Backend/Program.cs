@@ -7,8 +7,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var connectionString = builder.Configuration.GetConnectionString("MariaDbConnectionString");
-
+var config = builder.Configuration;
+var connectionString = config.GetConnectionString("MariaDbConnectionString");
 var serverVersion = ServerVersion.AutoDetect(connectionString);
 
 builder.Services.AddDbContext<MariaDbContext>(
@@ -21,7 +21,18 @@ builder.Services.AddDbContext<MariaDbContext>(
 				.EnableDetailedErrors()
 		);
 
+builder.Services.AddMvc();
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+using (var context = scope.ServiceProvider.GetService<MariaDbContext>())
+{
+	if (context != null)
+	{
+		context.Database.EnsureCreated();
+	}
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
