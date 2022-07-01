@@ -45,19 +45,10 @@ services:
     depends_on:
       - mongodb
   family-chronicles-backend:
-    image: ${DOCKER_REGISTRY-}familychroniclesbackend
+    image: ${DOCKER_REGISTRY-}familychronicles-server
     build:
       context: .
-      dockerfile: Family-Chronicles-Backend/Dockerfile
-  #familychroniclesfrontend:
-    #image: ${DOCKER_REGISTRY-}familychroniclesfrontend
-    #build:
-      #context: .
-      #dockerfile: Family-Chronicles-Frontend/Dockerfile
-    #environment:
-      #NODE_ENV: development
-    #ports:
-      #- 3000:3000
+      dockerfile: src/Dockerfile
 
 volumes:
   mariadb_data:
