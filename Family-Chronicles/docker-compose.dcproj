@@ -6,7 +6,7 @@
     <ProjectGuid>34b33dc0-8c1c-4171-808f-da345c795982</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
-    <DockerServiceName>family-chronicles-backend</DockerServiceName>
+    <DockerServiceName>family-chronicles-server</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
     <None Include="docker-compose.override.yml">

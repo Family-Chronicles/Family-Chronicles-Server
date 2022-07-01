@@ -6,9 +6,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/Family-Chronicles/Family-Chronicles/Family-Chronicles-Backend/bin/Debug/net6.0/Family-Chronicles-Backend.dll",
+            "program": "${workspaceFolder}/Family-Chronicles/src/bin/Debug/net6.0/Family-Chronicles-Server.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/Family-Chronicles/Family-Chronicles/Family-Chronicles-Backend",
+            "cwd": "${workspaceFolder}/Family-Chronicles/src",
             "stopAtEntry": false,
             "serverReadyAction": {
                 "action": "openExternally",
@@ -25,17 +25,6 @@
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
-        },
-        {
-            "name": "Docker Node.js Launch",
-            "type": "docker",
-            "request": "launch",
-            "preLaunchTask": "docker-run: debug",
-            "platform": "node",
-            "node": {
-                "package": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend/package.json",
-                "localRoot": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend"
-            }
         }
     ]
 }

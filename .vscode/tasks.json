@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Family-Chronicles/Family-Chronicles/Family-Chronicles-Backend/Family-Chronicles-Backend.csproj",
+                "${workspaceFolder}/Family-Chronicles/src/Family-Chronicles-Server.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/Family-Chronicles/Family-Chronicles/Family-Chronicles-Backend/Family-Chronicles-Backend.csproj",
+                "${workspaceFolder}/Family-Chronicles/src/Family-Chronicles-Server.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -33,50 +33,9 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/Family-Chronicles/Family-Chronicles/Family-Chronicles-Backend/Family-Chronicles-Backend.csproj"
+                "${workspaceFolder}/Family-Chronicles/src/Family-Chronicles-Server.csproj"
             ],
             "problemMatcher": "$msCompile"
-        },
-        {
-            "type": "docker-build",
-            "label": "docker-build",
-            "platform": "node",
-            "dockerBuild": {
-                "dockerfile": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend/Dockerfile",
-                "context": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend",
-                "pull": true
-            },
-            "node": {
-                "package": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend/package.json"
-            }
-        },
-        {
-            "type": "docker-run",
-            "label": "docker-run: release",
-            "dependsOn": [
-                "docker-build"
-            ],
-            "platform": "node",
-            "node": {
-                "package": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend/package.json"
-            }
-        },
-        {
-            "type": "docker-run",
-            "label": "docker-run: debug",
-            "dependsOn": [
-                "docker-build"
-            ],
-            "dockerRun": {
-                "env": {
-                    "DEBUG": "*",
-                    "NODE_ENV": "development"
-                }
-            },
-            "node": {
-                "package": "${workspaceFolder}/Family-Chronicles/Family-Chronicles-Frontend/Family-Chronicles-Frontend/package.json",
-                "enableDebugging": true
-            }
         }
     ]
 }
