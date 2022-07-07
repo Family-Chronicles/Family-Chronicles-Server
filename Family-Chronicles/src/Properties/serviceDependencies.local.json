@@ -5,6 +5,7 @@
     },
     "mssql1": {
       "secretStore": "LocalSecretsFile",
+      "resourceId": null,
       "type": "mssql.onprem",
       "connectionId": "ConnectionStrings:MariaDbConnectionString"
     }

@@ -2,7 +2,8 @@ version: "3.7"
 
 services:
   mariadb:
-    image: mariadb:10.5
+    image: mariadb:10.7
+    restart: always
     ports:
       - "3307:3306"
     environment:
@@ -45,10 +46,12 @@ services:
     depends_on:
       - mongodb
   family-chronicles-backend:
-    image: ${DOCKER_REGISTRY-}familychronicles-server
     build:
       context: .
       dockerfile: src/Dockerfile
+    depends_on:
+      - mariadb
+      - mongodb
 
 volumes:
   mariadb_data:

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Family-Chronicles-Server", "src\Family-Chronicles-erver.csproj", "{1694CDD9-8790-4894-A72E-EC3098780F26}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Family-Chronicles-Server", "src\Family-Chronicles-Server.csproj", "{1694CDD9-8790-4894-A72E-EC3098780F26}"
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{34B33DC0-8C1C-4171-808F-DA345C795982}"
 EndProject
