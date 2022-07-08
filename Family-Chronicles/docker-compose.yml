@@ -5,7 +5,7 @@ services:
     image: mariadb:10.7
     restart: always
     ports:
-      - "3307:3306"
+      - "3306:3306"
     environment:
       - MYSQL_ROOT_HOST=%
       - MYSQL_ROOT_PASSWORD=family-chronicles-maria-root

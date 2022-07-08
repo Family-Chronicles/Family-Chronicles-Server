@@ -17,8 +17,6 @@ FROM build AS publish
 RUN dotnet publish "Family-Chronicles-Server.csproj" -c Release -o /app/publish
 
 FROM base AS final
-RUN echo "Running final build"
-RUN apt update && apt install -y mariadb-client
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Family-Chronicles-Server.dll"]

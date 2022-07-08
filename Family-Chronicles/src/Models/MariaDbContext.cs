@@ -9,8 +9,13 @@ public class MariaDbContext : DbContext
 		_config = config;
 	}
 
+	protected override void OnModelCreating(ModelBuilder builder)
+	{
+		base.OnModelCreating(builder);
+	}
+
 	protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 	{
-		optionsBuilder.UseMySQL(@_config["MariaDbConnectionString"]);
+		optionsBuilder.UseMySQL(@_config["ConnectionStrings:MariaDbConnectionString"]);
 	}
 }
