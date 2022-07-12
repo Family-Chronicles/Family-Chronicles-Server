@@ -46,6 +46,9 @@ services:
     depends_on:
       - mongodb
   family-chronicles-backend:
+    ports:
+      - "80800:80"
+      - "44300:443"
     build:
       context: .
       dockerfile: src/Dockerfile

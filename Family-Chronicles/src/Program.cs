@@ -1,5 +1,3 @@
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -15,9 +13,15 @@ var serverVersion = ServerVersion.Create(new Version(10, 4, 6), ServerType.Maria
 
 builder.Services.AddDbContext<MariaDbContext>(
 			dbContextOptions => dbContextOptions
-				.UseMySql(connectionString, serverVersion)
-				// The following three options help with debugging, but should
-				// be changed or removed for production.
+				.UseMySql(
+					connectionString,
+					serverVersion,
+					options => options.EnableRetryOnFailure(
+						maxRetryCount: 5,
+						maxRetryDelay: System.TimeSpan.FromSeconds(5),
+						errorNumbersToAdd: null
+						)
+					 )
 				.LogTo(Console.WriteLine, LogLevel.Information)
 				.EnableSensitiveDataLogging()
 				.EnableDetailedErrors()
@@ -30,10 +34,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 using (var context = scope.ServiceProvider.GetService<MariaDbContext>())
 {
-	if (context != null)
-	{
-		context.Database.EnsureCreated();
-	}
+	//if (context != null)
+	//{
+	//	context.Database.EnsureCreated();
+	//}
 }
 
 // Configure the HTTP request pipeline.
