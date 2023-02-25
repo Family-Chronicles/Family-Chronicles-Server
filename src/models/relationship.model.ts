@@ -2,23 +2,23 @@ import { RelationshipType } from "../types/relationship.type";
 
 export class Relationship {
 	// Properties
-	public id: string;
-	public personId: string;
-	public relatedPersonId: string;
-	public relationshipType: RelationshipType;
-	public notes: string;
+	id: string;
+	relationPartnerOne: string;
+	relationPartnerTwo: string;
+	relationshipType: RelationshipType;
+	notes: string;
 
 	// Constructor
 	constructor(
 		id: string,
-		personId: string,
-		relatedPersonId: string,
+		relationPartnerOne: string,
+		relationPartnerTwo: string,
 		relationshipType: RelationshipType,
 		notes: string
 	) {
 		this.id = id;
-		this.personId = personId;
-		this.relatedPersonId = relatedPersonId;
+		this.relationPartnerOne = relationPartnerOne;
+		this.relationPartnerTwo = relationPartnerTwo;
 		this.relationshipType = relationshipType;
 		this.notes = notes;
 	}

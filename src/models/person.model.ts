@@ -1,3 +1,4 @@
+import { RelatedData } from "./data.model";
 import { Family } from "./family.model";
 import { Relationship } from "./relationship.model";
 
@@ -14,6 +15,7 @@ export class Person {
 	public relationships: Relationship[];
 	public notes: string;
 	public familys: Family[];
+	public relatedData: RelatedData[];
 
 	// Constructor
 	constructor(
@@ -26,7 +28,8 @@ export class Person {
 		placeOfDeath: string | null,
 		relationships: Relationship[],
 		notes: string,
-		familys: Family[]
+		familys: Family[],
+		relatedData: RelatedData[]
 	) {
 		this.id = id;
 		this.firstName = firstName;
@@ -38,5 +41,6 @@ export class Person {
 		this.relationships = relationships;
 		this.notes = notes;
 		this.familys = familys;
+		this.relatedData = relatedData;
 	}
 }
