@@ -1,41 +1,112 @@
-class DatabaseService {
+import { Config } from "../types/config.type.js";
+import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
+import { ConfigService } from "./config.srvs.js";
 
-	private static _instance: DatabaseService;
+export class DatabaseService {
+	private static instance: DatabaseService;
+	private config: Config = ConfigService.getInstance()._config;
+	private client: MongoClient | undefined;
+	private db: Db | undefined;
 
-	private constructor() {
-		this.initDataBase();
-	}
+	private constructor() {}
 
 	public static getInstance(): DatabaseService {
-		if (!DatabaseService._instance) {
-			DatabaseService._instance = new DatabaseService();
+		if (!DatabaseService.instance) {
+			DatabaseService.instance = new DatabaseService();
 		}
-		return DatabaseService._instance;
+
+		return DatabaseService.instance;
 	}
 
-	public initDataBase(): void {
-		// Initialize the database
+	public async connect(uri: string, dbName: string): Promise<void> {
+		this.client = await MongoClient.connect(uri, <MongoClientOptions>{
+			useUnifiedTopology: true,
+		});
+		this.db = this.client.db(dbName);
 	}
 
-	public resetDataBase(): void {
-		// Reset the database
+	public async disconnect(): Promise<void> {
+		if (this.client) {
+			await this.client.close();
+		}
 	}
 
-	public getDataRecord<T>(key: string): T {
-		// Get a data record from the database
-		return <T>null;
+	public async createCollection(collectionName: string): Promise<Collection> {
+		if (!this.client || !this.db) {
+			await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			)
+		}
+		const collection = await this.db!.createCollection(collectionName);
+		return collection;
 	}
 
-	public setDataRecord(key: string, value: any): void {
-		// Set a data record in the database
+	public async dropCollection(collectionName: string): Promise<boolean> {
+		if (!this.client || !this.db) {
+			await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			)
+		}
+		const result = await this.db!.dropCollection(collectionName);
+		return result;
 	}
 
-	public deleteDataRecord(key: string): void {
-		// Delete a data record from the database
+	public async insertDocument(
+		collectionName: string,
+		document: any
+	): Promise<boolean> {
+		if (!this.client || !this.db) {
+			await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			)
+		}
+		const collection = this.db!.collection(collectionName);
+		const result = await collection.insertOne(document);
+		return result.acknowledged;
 	}
 
-	public getAllKeys(): string[] {
-		// Get all keys from the database
-		return [];
+	public async updateDocument(
+		collectionName: string,
+		filter: any,
+		update: any
+	): Promise<boolean> {
+		if (!this.client || !this.db) {
+			await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			)
+		}
+		const collection = this.db!.collection(collectionName);
+		const result = await collection.updateOne(filter, { $set: update });
+		return result.acknowledged;
+	}
+
+	public async deleteDocument(
+		collectionName: string,
+		filter: any
+	): Promise<boolean> {
+		if (!this.client || !this.db) {
+			await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			)
+		}
+		const collection = this.db!.collection(collectionName);
+		const result = await collection.deleteOne(filter);
+		return result.acknowledged;
+	}
+
+	public async listAllCollections(): Promise<string[]> {
+		if (!this.client || !this.db) {
+			await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			)
+		}
+		const collections = await this.db!.listCollections().toArray();
+		return collections.map((collection) => collection.name);
 	}
 }
