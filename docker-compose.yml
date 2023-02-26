@@ -1,0 +1,18 @@
+version: "3"
+services:
+  family-chronicles-server:
+    container_name: family-chronicles-server
+    image: family-chronicles/family-chronicles-server
+    restart: always
+    build: .
+    ports:
+      - "49160:8080"
+    links:
+      - mongo
+  mongo:
+    container_name: mongo
+    image: mongo
+    volumes:
+      - ./data:/data/db
+    ports:
+      - "27018:27017"

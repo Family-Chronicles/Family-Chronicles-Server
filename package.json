@@ -5,9 +5,14 @@
   "main": "./dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "npx tsc",
-    "start": "node dist/index.js",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/index.js\""
+    "build": "tsc --p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
+		"start-docker": "npm run docker-build && docker-compose up",
+		"restart-docker": "npm run docker-stop && npm run start-docker",
+		"docker-stop": "docker-compose down",
+		"docker-build": "docker build . -t family-chronicles/family-chronicles-server",
+		"docker-run": "docker run -p 49160:8080 -d family-chronicles/family-chronicles-server"
   },
   "repository": {
     "type": "git",
