@@ -1,11 +1,11 @@
-import { RelatedData } from "./data.model";
-import { Family } from "./family.model";
-import { Relationship } from "./relationship.model";
+import { RelatedData } from "./data.model.js";
+import { Family } from "./family.model.js";
+import { Relationship } from "./relationship.model.js";
 
 export class Person {
 
 	// Properties
-	public id: string;
+	public readonly id: string;
 	public firstName: string[];
 	public lastName: string[];
 	public dateOfBirth: Date;
@@ -19,7 +19,7 @@ export class Person {
 
 	// Constructor
 	constructor(
-		id: string,
+		id: string | null | undefined,
 		firstName: string[],
 		lastName: string[],
 		dateOfBirth: Date,
@@ -31,7 +31,11 @@ export class Person {
 		familys: Family[],
 		relatedData: RelatedData[]
 	) {
-		this.id = id;
+		if (id === "" || id === null || id === undefined) {
+			this.id = crypto.randomUUID();
+		} else {
+			this.id = id;
+		}
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.dateOfBirth = dateOfBirth;

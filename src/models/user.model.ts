@@ -1,7 +1,7 @@
-import { UserType } from "./../types/user.type";
+import { UserType } from "./../types/user.type.js";
 export class User {
 	// Properties
-	public id: string;
+	public readonly id: string;
 	public name: string;
 	public email: string;
 	public password: string;
@@ -11,7 +11,7 @@ export class User {
 
 	// Constructor
 	constructor(
-		id: string,
+		id: string | null | undefined,
 		name: string,
 		email: string,
 		password: string,
@@ -19,7 +19,11 @@ export class User {
 		updatedAt: Date,
 		UserType: UserType
 	) {
-		this.id = id;
+		if (id === "" || id === null || id === undefined) {
+			this.id = crypto.randomUUID();
+		} else {
+			this.id = id;
+		}
 		this.name = name;
 		this.email = email;
 		this.password = password;

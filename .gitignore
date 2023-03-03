@@ -886,3 +886,6 @@ FodyWeavers.xsd
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,visualstudiocode,node,deno,webstorm,phpstorm,intellij,intellij+all
 
 package-lock.json
+
+data
+/tools/*.js

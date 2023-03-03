@@ -1,22 +1,26 @@
-import { RelationshipType } from "../types/relationship.type";
+import { RelationshipType } from "../types/relationship.type.js";
 
 export class Relationship {
 	// Properties
-	id: string;
-	relationPartnerOne: string;
-	relationPartnerTwo: string;
-	relationshipType: RelationshipType;
-	notes: string;
+	public readonly id: string;
+	public relationPartnerOne: string;
+	public relationPartnerTwo: string;
+	public relationshipType: RelationshipType;
+	public notes: string;
 
 	// Constructor
 	constructor(
-		id: string,
+		id: string | null | undefined,
 		relationPartnerOne: string,
 		relationPartnerTwo: string,
 		relationshipType: RelationshipType,
 		notes: string
 	) {
-		this.id = id;
+		if (id === "" || id === null || id === undefined) {
+			this.id = crypto.randomUUID();
+		} else {
+			this.id = id;
+		}
 		this.relationPartnerOne = relationPartnerOne;
 		this.relationPartnerTwo = relationPartnerTwo;
 		this.relationshipType = relationshipType;

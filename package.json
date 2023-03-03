@@ -2,12 +2,19 @@
   "name": "family-chronicles-server",
   "version": "0.0.1",
   "description": "The Family Chronicles project is an attempt to develop a family tree management tool. The focus here is on an open API that should support existing standards, but also provide its own more complex interfaces. The vision is to make instances of the API linkable by administrators to form multiple family pedigrees into one big whole.",
-  "main": "./dist/index.js",
+  "main": "./dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "npx tsc",
-    "start": "node dist/index.js",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/index.js\""
+    "build": "npm run tooling && tsc --p tsconfig.json",
+    "start-node": "node dist/server.js",
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
+    "tooling": "npm run tooling-build && npm run tooling-run",
+    "tooling-run": "node ./tools/syncConfig.js",
+    "tooling-build": "tsc --project ./tooling.tsconfig.json",
+    "start": "npm run docker-build && docker-compose up",
+    "docker-stop": "docker-compose down",
+    "docker-build": "docker build . -t family-chronicles/family-chronicles-server",
+    "docker-run": "docker run -p 49160:8080 -d family-chronicles/family-chronicles-server"
   },
   "repository": {
     "type": "git",
@@ -22,6 +29,12 @@
     "name": "Jonas Pfalzgraf",
     "email": "info@josunlp.de"
   },
+  "contributors": [
+    {
+      "name": "Jonas Pfalzgraf",
+      "email": "info@josunlp.de"
+    }
+  ],
   "license": "MPL-2.0",
   "bugs": {
     "url": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
@@ -29,13 +42,16 @@
   "homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
   "dependencies": {
     "dotenv": "^16.0.3",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "mongodb": "^5.1.0",
+    "mongoose": "^6.10.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
     "@types/node": "^18.14.1",
     "concurrently": "^7.6.0",
     "nodemon": "^2.0.20",
+    "ts-node": "^10.9.1",
     "typescript": "^4.9.5"
   }
 }
