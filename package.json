@@ -6,13 +6,12 @@
   "type": "module",
   "scripts": {
     "build": "npm run tooling && tsc --p tsconfig.json",
-    "start": "node dist/server.js",
+    "start-node": "node dist/server.js",
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
     "tooling": "npm run tooling-build && npm run tooling-run",
     "tooling-run": "node ./tools/syncConfig.js",
     "tooling-build": "tsc --project ./tooling.tsconfig.json",
-    "start-docker": "npm run docker-build && docker-compose up",
-    "restart-docker": "npm run docker-stop && npm run start-docker",
+    "start": "npm run docker-build && docker-compose up",
     "docker-stop": "docker-compose down",
     "docker-build": "docker build . -t family-chronicles/family-chronicles-server",
     "docker-run": "docker run -p 49160:8080 -d family-chronicles/family-chronicles-server"

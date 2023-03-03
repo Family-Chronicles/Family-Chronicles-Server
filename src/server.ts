@@ -1,3 +1,27 @@
-import { App } from "./app.js";
+import express, { Express } from "express";
+import dotenv from "dotenv";
+import { ConfigService } from "./services/config.srvs";
+import { DatabaseService } from "./services/database.srvs";
+import { RouterService } from "./services/router.srvs";
 
-new App();
+class Server {
+	private app: Express = express();
+	private port = 8080;
+
+	constructor() {
+		dotenv.config();
+		ConfigService.getInstance();
+		DatabaseService.getInstance();
+		const routerService = RouterService.getInstance();
+
+		routerService.buildUpRoutes(this.app);
+
+		this.app.listen(this.port, () => {
+			console.log(
+				`⚡️[server]: Server is running at http://localhost:${this.port}`
+			);
+		});
+	}
+}
+
+new Server();

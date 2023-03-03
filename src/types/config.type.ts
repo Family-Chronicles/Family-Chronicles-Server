@@ -20,6 +20,8 @@ export type Config = {
 	"database": {
 		"host": string;
 		"databasename": string;
+		"username": string;
+		"password": string;
 		"collections": string[];
 	};
 };

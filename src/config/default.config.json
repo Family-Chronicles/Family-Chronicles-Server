@@ -20,8 +20,10 @@
     "bugs": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
   },
   "database": {
-    "host": "mongodb://localhost:27018",
+    "host": "mongodb://mongo:27017",
     "databasename": "family-chronicles",
+    "username": "admin",
+    "password": "admin",
     "collections": [
       "users",
       "data",
