@@ -1,6 +1,6 @@
-import { Config } from "../types/config.type";
+import { Config } from "../types/config.type.js";
 import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
-import { ConfigService } from "./config.srvs";
+import { ConfigService } from "./config.srvs.js";
 
 export class DatabaseService {
 	private static instance: DatabaseService;
@@ -47,12 +47,6 @@ export class DatabaseService {
 		this.db = this.client.db(dbName);
 	}
 
-	private async disconnect(): Promise<void> {
-		if (this.client) {
-			await this.client.close();
-		}
-	}
-
 	private async setListener(): Promise<void> {
 		this.client!.on("close", async () => {
 			console.log("MongoDB connection closed.");
@@ -82,13 +76,11 @@ export class DatabaseService {
 
 	public async createCollection(collectionName: string): Promise<Collection> {
 		const collection = await this.db!.createCollection(collectionName);
-		this.disconnect();
 		return collection;
 	}
 
 	public async dropCollection(collectionName: string): Promise<boolean> {
 		const result = await this.db!.dropCollection(collectionName);
-		this.disconnect();
 		return result;
 	}
 
@@ -98,7 +90,6 @@ export class DatabaseService {
 	): Promise<boolean> {
 		const collection = this.db!.collection(collectionName);
 		const result = await collection.insertOne(document);
-		this.disconnect();
 		return result.acknowledged;
 	}
 
@@ -109,7 +100,6 @@ export class DatabaseService {
 	): Promise<boolean> {
 		const collection = this.db!.collection(collectionName);
 		const result = await collection.updateOne(filter, { $set: update });
-		this.disconnect();
 		return result.acknowledged;
 	}
 
@@ -119,19 +109,16 @@ export class DatabaseService {
 	): Promise<boolean> {
 		const collection = this.db!.collection(collectionName);
 		const result = await collection.deleteOne(filter);
-		this.disconnect();
 		return result.acknowledged;
 	}
 
 	public async listAllCollections(): Promise<string[]> {
 		const collections = await this.db!.listCollections().toArray();
-		this.disconnect();
 		return collections.map((collection) => collection.name);
 	}
 
 	public async listAllDatabases(): Promise<string[]> {
 		const databases = await this.db!.admin().listDatabases();
-		this.disconnect();
 		return databases.databases.map((database) => database.name);
 	}
 }

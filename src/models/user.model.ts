@@ -1,4 +1,4 @@
-import { UserType } from "./../types/user.type";
+import { UserType } from "./../types/user.type.js";
 export class User {
 	// Properties
 	public readonly id: string;

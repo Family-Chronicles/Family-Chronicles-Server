@@ -1,6 +1,6 @@
 import { Express, Request, Response } from "express";
-import { DatabaseService } from "./database.srvs";
-import { ConfigService } from "./config.srvs";
+import { DatabaseService } from "./database.srvs.js";
+import { ConfigService } from "./config.srvs.js";
 
 export class RouterService {
 	private static instance: RouterService;

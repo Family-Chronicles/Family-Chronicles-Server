@@ -1,4 +1,4 @@
-import { Config } from "../types/config.type";
+import { Config } from "../types/config.type.js";
 import fs from "fs";
 
 export class ConfigService {

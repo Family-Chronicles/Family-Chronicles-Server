@@ -1,8 +1,8 @@
 import express, { Express } from "express";
 import dotenv from "dotenv";
-import { ConfigService } from "./services/config.srvs";
-import { DatabaseService } from "./services/database.srvs";
-import { RouterService } from "./services/router.srvs";
+import { ConfigService } from "./services/config.srvs.js";
+import { DatabaseService } from "./services/database.srvs.js";
+import { RouterService } from "./services/router.srvs.js";
 
 class Server {
 	private app: Express = express();

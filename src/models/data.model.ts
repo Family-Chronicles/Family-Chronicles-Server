@@ -1,4 +1,4 @@
-import { TaggedPerson } from "./taggedPerson.model";
+import { TaggedPerson } from "./taggedPerson.model.js";
 
 export class RelatedData {
 	// Properties

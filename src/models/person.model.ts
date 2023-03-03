@@ -1,6 +1,6 @@
-import { RelatedData } from "./data.model";
-import { Family } from "./family.model";
-import { Relationship } from "./relationship.model";
+import { RelatedData } from "./data.model.js";
+import { Family } from "./family.model.js";
+import { Relationship } from "./relationship.model.js";
 
 export class Person {
 

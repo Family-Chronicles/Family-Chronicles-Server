@@ -1,4 +1,4 @@
-import { RelationshipType } from "../types/relationship.type";
+import { RelationshipType } from "../types/relationship.type.js";
 
 export class Relationship {
 	// Properties
