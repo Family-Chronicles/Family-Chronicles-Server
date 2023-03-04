@@ -1,0 +1,29 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"outDir": "./tools/",
+		"rootDir": "./tools/",
+		"removeComments": true,
+		"moduleResolution": "node",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": [
+			"node"
+		]
+	},
+	"include": [
+		"./tools/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"./src/*.ts",
+		"./src/**/*.ts",
+		"./dist/*.ts",
+		"./dist/*.js",
+		"./dist/**/*.js",
+		"./dist/**/*.ts"
+	]
+}
