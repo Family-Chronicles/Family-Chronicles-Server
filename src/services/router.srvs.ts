@@ -1,11 +1,9 @@
-import { Express, Request, Response } from "express";
-import { DatabaseService } from "./database.srvs.js";
-import { ConfigService } from "./config.srvs.js";
+import { TestController } from "../controllers/testController.js";
+import { Express } from "express";
+import { IndexController } from "../controllers/indexController.js";
 
 export class RouterService {
 	private static instance: RouterService;
-
-	private constructor() {}
 
 	public static getInstance(): RouterService {
 		if (!RouterService.instance) {
@@ -16,25 +14,7 @@ export class RouterService {
 	}
 
 	public buildUpRoutes(app: Express): void {
-
-		const _config = ConfigService.getInstance()._config;
-		const _database = DatabaseService.getInstance();
-
-		app.get("/", (req: Request, res: Response) => {
-			_database.listAllDatabases().then((dbs) => {
-				res.send(
-					"Express + TypeScript Server. Version: " +
-						_config.meta.version +
-						" | " +
-						_config.meta.name +
-						" | " +
-						dbs.join(", ")
-				);
-			});
-		});
-
-		app.get("/test", (req: Request, res: Response) => {
-			res.send("Test");
-		});
+		new IndexController().routes(app);
+		new TestController().routes(app);
 	}
 }
