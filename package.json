@@ -5,16 +5,14 @@
   "main": "./dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "npm run tooling && tsc --p tsconfig.json",
+    "build": "tsc && npm run tooling",
     "start-node": "node dist/server.js",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./dist/server.js\"",
     "tooling": "npm run tooling-build && npm run tooling-run",
     "tooling-run": "node ./tools/syncConfig.js",
     "tooling-build": "tsc --project ./tooling.tsconfig.json",
     "start": "npm run docker-build && docker-compose up",
     "docker-stop": "docker-compose down",
-    "docker-build": "docker build . -t family-chronicles/family-chronicles-server",
-    "docker-run": "docker run -p 49160:8080 -d family-chronicles/family-chronicles-server"
+    "docker-build": "docker build . -t family-chronicles/family-chronicles-server"
   },
   "repository": {
     "type": "git",
@@ -43,6 +41,7 @@
   "dependencies": {
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
+    "express-jsdoc-swagger": "^1.8.0",
     "mongodb": "^5.1.0",
     "mongoose": "^6.10.0",
     "swagger-jsdoc": "^6.2.8",

@@ -21,10 +21,6 @@ fs.writeFileSync(
 	JSON.stringify(config, null, 2)
 );
 
-if (!fs.existsSync("./dist")) {
-	fs.mkdirSync("./dist");
-}
-
 // ensure that the dist folder exists
 if (!fs.existsSync("./dist/config")) {
 	fs.mkdirSync("./dist/config");

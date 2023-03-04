@@ -1,6 +1,6 @@
+import { TestController } from "../controllers/testController.js";
 import { Express } from "express";
-import { IndexRoute } from "../routes/index.route.js";
-import { TestRoute } from "../routes/test.route.js";
+import { IndexController } from "../controllers/indexController.js";
 
 export class RouterService {
 	private static instance: RouterService;
@@ -14,7 +14,7 @@ export class RouterService {
 	}
 
 	public buildUpRoutes(app: Express): void {
-		IndexRoute.route(app);
-		TestRoute.route(app);
+		new IndexController().routes(app);
+		new TestController().routes(app);
 	}
 }
