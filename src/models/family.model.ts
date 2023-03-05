@@ -1,4 +1,6 @@
-export class Family {
+import { IModel } from "../interfaces/model.interface";
+
+export class Family implements IModel {
 	// Properties
 	public readonly id: string;
 	public Name: string;

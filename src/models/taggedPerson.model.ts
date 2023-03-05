@@ -1,4 +1,6 @@
-export class TaggedPerson {
+import { IModel } from "../interfaces/model.interface";
+
+export class TaggedPerson implements IModel {
 	// Properties
 	public readonly id: string;
 	public personId: string;

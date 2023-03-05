@@ -1,6 +1,7 @@
 import { Config } from "../types/config.type.js";
 import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
 import { ConfigService } from "./config.srvs.js";
+import { IModel } from "../interfaces/model.interface.js";
 
 export class DatabaseService {
 	private static instance: DatabaseService;
@@ -84,13 +85,22 @@ export class DatabaseService {
 		return result;
 	}
 
-	public async insertDocument(
+	public async createDocument<T>(
 		collectionName: string,
-		document: any
+		document: T
 	): Promise<boolean> {
 		const collection = this.db!.collection(collectionName);
-		const result = await collection.insertOne(document);
+		const result = await collection.insertOne(document!);
 		return result.acknowledged;
+	}
+
+	public async findDocument<T extends IModel>(_collectionName: string, id: string): Promise<T | undefined> {
+		const document = await this.listAllDocuments<T>(_collectionName).then(
+			(documents) => {
+				return documents.find((document) => document.id === id);
+			}
+		);
+		return document;
 	}
 
 	public async updateDocument(
@@ -120,5 +130,11 @@ export class DatabaseService {
 	public async listAllDatabases(): Promise<string[]> {
 		const databases = await this.db!.admin().listDatabases();
 		return databases.databases.map((database) => database.name);
+	}
+
+	public async listAllDocuments<T>(collectionName: string): Promise<T[]> {
+		const collection = this.db!.collection(collectionName);
+		const documents = await collection.find().toArray();
+		return documents as T[];
 	}
 }

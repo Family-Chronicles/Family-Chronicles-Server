@@ -1,9 +1,6 @@
-import { RelatedData } from "./data.model.js";
-import { Family } from "./family.model.js";
-import { Relationship } from "./relationship.model.js";
+import { IModel } from "../interfaces/model.interface";
 
-export class Person {
-
+export class Person implements IModel {
 	// Properties
 	public readonly id: string;
 	public firstName: string[];
@@ -12,10 +9,10 @@ export class Person {
 	public dateOfDeath: Date | null;
 	public placeOfBirth: string;
 	public placeOfDeath: string | null;
-	public relationships: Relationship[];
+	public relationshipIds: string[];
 	public notes: string;
-	public familys: Family[];
-	public relatedData: RelatedData[];
+	public familyIds: string[];
+	public relatedDataIds: string[];
 
 	// Constructor
 	constructor(
@@ -26,10 +23,10 @@ export class Person {
 		dateOfDeath: Date | null,
 		placeOfBirth: string,
 		placeOfDeath: string | null,
-		relationships: Relationship[],
+		relationshipIds: string[],
 		notes: string,
-		familys: Family[],
-		relatedData: RelatedData[]
+		familyIds: string[],
+		relatedDataIds: string[]
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.id = crypto.randomUUID();
@@ -42,9 +39,9 @@ export class Person {
 		this.dateOfDeath = dateOfDeath;
 		this.placeOfBirth = placeOfBirth;
 		this.placeOfDeath = placeOfDeath;
-		this.relationships = relationships;
+		this.relationshipIds = relationshipIds;
 		this.notes = notes;
-		this.familys = familys;
-		this.relatedData = relatedData;
+		this.familyIds = familyIds;
+		this.relatedDataIds = relatedDataIds;
 	}
 }

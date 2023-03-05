@@ -1,21 +1,21 @@
-import { TaggedPerson } from "./taggedPerson.model.js";
+import { IModel } from "../interfaces/model.interface.js";
 
-export class RelatedData {
+export class RelatedData implements IModel {
 	// Properties
 	public readonly id: string;
 	public relatedData: string | Blob | File;
 	public notes: string;
-	public taggedPersons: TaggedPerson[];
+	public taggedPersonsIds: string[];
 
 	// Constructor
 	constructor(
 		relatedData: string | Blob | File,
 		notes: string,
-		taggedPersons: TaggedPerson[]
+		taggedPersonsIds: string[]
 	) {
 		this.id = crypto.randomUUID();
 		this.relatedData = relatedData;
 		this.notes = notes;
-		this.taggedPersons = taggedPersons;
+		this.taggedPersonsIds = taggedPersonsIds;
 	}
 }

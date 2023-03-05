@@ -1,5 +1,6 @@
+import { IModel } from './../interfaces/model.interface';
 import { UserType } from "./../types/user.type.js";
-export class User {
+export class User implements IModel {
 	// Properties
 	public readonly id: string;
 	public name: string;
@@ -7,7 +8,7 @@ export class User {
 	public password: string;
 	public createdAt: Date;
 	public updatedAt: Date;
-	public UserType: UserType;
+	public userType: UserType;
 
 	// Constructor
 	constructor(
@@ -17,7 +18,7 @@ export class User {
 		password: string,
 		createdAt: Date,
 		updatedAt: Date,
-		UserType: UserType
+		userType: UserType
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.id = crypto.randomUUID();
@@ -29,6 +30,6 @@ export class User {
 		this.password = password;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
-		this.UserType = UserType;
+		this.userType = userType;
 	}
 }

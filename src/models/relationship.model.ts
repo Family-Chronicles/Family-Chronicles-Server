@@ -1,6 +1,7 @@
+import { IModel } from "../interfaces/model.interface.js";
 import { RelationshipType } from "../types/relationship.type.js";
 
-export class Relationship {
+export class Relationship implements IModel {
 	// Properties
 	public readonly id: string;
 	public relationPartnerOne: string;
