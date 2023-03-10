@@ -2,9 +2,11 @@ import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
 import { DatabaseService } from "../services/database.srvs.js";
 import { User } from "../models/user.model.js";
+import { AuthorizationService } from "../services/auth.srvs.js";
 
 export class UserController implements IController {
 	private _database = DatabaseService.getInstance();
+	private _authorization = AuthorizationService.getInstance();
 	private _collectionName = "users";
 	/**
 	 * Routes user controller
@@ -61,7 +63,9 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.get("/users", (req: Request, res: Response) => {
-			this.index(req, res);
+			this._authorization.authorize(req, res, () => {
+				this.index(req, res);
+			});
 		});
 
 		/**
@@ -104,7 +108,9 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.post("/user", (req: Request, res: Response) => {
-			this.create(req, res);
+			this._authorization.authorize(req, res, () => {
+				this.create(req, res);
+			});
 		});
 
 		/**
@@ -147,7 +153,9 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.get("/user/:id", (req: Request, res: Response) => {
-			this.show(req, res);
+			this._authorization.authorize(req, res, () => {
+				this.show(req, res);
+			});
 		});
 
 		/**
@@ -190,7 +198,9 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.put("/user/:id", (req: Request, res: Response) => {
-			this.update(req, res);
+			this._authorization.authorize(req, res, () => {
+				this.update(req, res);
+			});
 		});
 
 		/**
@@ -228,7 +238,9 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.delete("/user/:id", (req: Request, res: Response) => {
-			this.delete(req, res);
+			this._authorization.authorize(req, res, () => {
+				this.delete(req, res);
+			});
 		});
 	}
 
