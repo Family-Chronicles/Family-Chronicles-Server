@@ -1,4 +1,5 @@
 import { IModel } from "../interfaces/model.interface";
+import crypto from "crypto";
 
 export class TaggedPerson implements IModel {
 	// Properties

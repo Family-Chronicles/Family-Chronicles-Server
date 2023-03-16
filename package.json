@@ -1,60 +1,66 @@
 {
-  "name": "family-chronicles-server",
-  "version": "0.0.1",
-  "description": "The Family Chronicles project is an attempt to develop a family tree management tool. The focus here is on an open API that should support existing standards, but also provide its own more complex interfaces. The vision is to make instances of the API linkable by administrators to form multiple family pedigrees into one big whole.",
-  "main": "./dist/server.js",
-  "type": "module",
-  "scripts": {
-    "build": "tsc && npm run tooling",
-    "start-node": "node dist/server.js",
-    "tooling": "npm run tooling-build && npm run tooling-run",
-    "tooling-run": "node ./tools/syncConfig.js",
-    "tooling-build": "tsc --project ./tooling.tsconfig.json",
-    "start": "npm run docker-build && docker-compose up",
-    "docker-stop": "docker-compose down",
-    "docker-build": "docker build . -t family-chronicles/family-chronicles-server"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Family-Chronicles/Family-Chronicles-Server.git"
-  },
-  "keywords": [
-    "nodejs",
-    "typescript",
-    "Family-Chronicles"
-  ],
-  "author": {
-    "name": "Jonas Pfalzgraf",
-    "email": "info@josunlp.de"
-  },
-  "contributors": [
-    {
-      "name": "Jonas Pfalzgraf",
-      "email": "info@josunlp.de"
-    }
-  ],
-  "license": "MPL-2.0",
-  "bugs": {
-    "url": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
-  },
-  "homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
-  "dependencies": {
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "express-jsdoc-swagger": "^1.8.0",
-    "mongodb": "^5.1.0",
-    "mongoose": "^6.10.0",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^4.6.2"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.17",
-    "@types/node": "^18.14.1",
-    "@types/swagger-jsdoc": "^6.0.1",
-    "@types/swagger-ui-express": "^4.1.3",
-    "concurrently": "^7.6.0",
-    "nodemon": "^2.0.20",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.9.5"
-  }
+	"name": "family-chronicles-server",
+	"version": "0.0.1",
+	"description": "The Family Chronicles project is an attempt to develop a family tree management tool. The focus here is on an open API that should support existing standards, but also provide its own more complex interfaces. The vision is to make instances of the API linkable by administrators to form multiple family pedigrees into one big whole.",
+	"main": "./dist/server.js",
+	"type": "module",
+	"scripts": {
+		"build": "npm run lint && tsc && npm run tooling",
+		"lint": "eslint --ext .ts . --fix --cache && prettier --write .",
+		"start-node": "node dist/server.js",
+		"tooling": "npm run tooling-build && npm run tooling-run",
+		"tooling-run": "node ./tools/syncConfig.js",
+		"tooling-build": "tsc --project ./tooling.tsconfig.json",
+		"start": "npm run docker-build && docker-compose up",
+		"docker-stop": "docker-compose down",
+		"docker-build": "docker build . -t family-chronicles/family-chronicles-server"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Family-Chronicles/Family-Chronicles-Server.git"
+	},
+	"keywords": [
+		"nodejs",
+		"typescript",
+		"Family-Chronicles"
+	],
+	"author": {
+		"name": "Jonas Pfalzgraf",
+		"email": "info@josunlp.de"
+	},
+	"contributors": [
+		{
+			"name": "Jonas Pfalzgraf",
+			"email": "info@josunlp.de"
+		}
+	],
+	"license": "MPL-2.0",
+	"bugs": {
+		"url": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
+	},
+	"homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+	"dependencies": {
+		"dotenv": "^16.0.3",
+		"express": "^4.18.2",
+		"express-jsdoc-swagger": "^1.8.0",
+		"mongodb": "^5.1.0",
+		"mongoose": "^6.10.0",
+		"swagger-jsdoc": "^6.2.8",
+		"swagger-ui-express": "^4.6.2"
+	},
+	"devDependencies": {
+		"@types/express": "^4.17.17",
+		"@types/node": "^18.14.1",
+		"@types/swagger-jsdoc": "^6.0.1",
+		"@types/swagger-ui-express": "^4.1.3",
+		"@typescript-eslint/eslint-plugin": "^5.55.0",
+		"concurrently": "^7.6.0",
+		"eslint": "^8.36.0",
+		"eslint-config-prettier": "^8.7.0",
+		"eslint-plugin-prettier": "^4.2.1",
+		"nodemon": "^2.0.20",
+		"prettier": "^2.8.4",
+		"ts-node": "^10.9.1",
+		"typescript": "^4.9.5"
+	}
 }

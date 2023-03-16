@@ -1,5 +1,6 @@
 import { IModel } from "../interfaces/model.interface.js";
 import { RelationshipType } from "../types/relationship.type.js";
+import crypto from "crypto";
 
 export class Relationship implements IModel {
 	// Properties

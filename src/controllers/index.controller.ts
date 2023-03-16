@@ -32,6 +32,7 @@ export class IndexController implements IController {
 			version: this._config.meta.version,
 			name: this._config.meta.name,
 		};
+		// eslint-disable-next-line no-unused-vars
 		this._database.listAllDatabases().then((dbs) => {
 			res.send(result);
 		});

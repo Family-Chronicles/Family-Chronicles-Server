@@ -249,12 +249,16 @@ export class UserController implements IController {
 			this._collectionName
 		);
 
-		userDocuments.then((users) => {
-			if (users === null) {
-				users = [];
-			}
-			res.send(users);
-		});
+		userDocuments
+			.then((users) => {
+				if (users === null) {
+					users = [];
+				}
+				res.send(users);
+			})
+			.catch((error) => {
+				console.error(error);
+			});
 	}
 
 	private create(req: Request, res: Response): void {

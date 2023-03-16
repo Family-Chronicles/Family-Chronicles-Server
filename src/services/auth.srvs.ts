@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 
 export class AuthorizationService {
-
 	private static _instance: AuthorizationService;
 
 	private readonly _token: string = "token";
@@ -18,13 +17,17 @@ export class AuthorizationService {
 	public async authorize(req: Request, res: Response, next: () => void) {
 		const token = req.headers["x-access-token"];
 		if (!token) {
-			return res.status(401).send({ auth: false, message: "No token provided." });
+			return res
+				.status(401)
+				.send({ auth: false, message: "No token provided." });
 		}
 
 		const decoded = this.verifyToken(token as string);
 
 		if (!decoded) {
-			return res.status(500).send({ auth: false, message: "Failed to authenticate token." });
+			return res
+				.status(500)
+				.send({ auth: false, message: "Failed to authenticate token." });
 		}
 
 		next();

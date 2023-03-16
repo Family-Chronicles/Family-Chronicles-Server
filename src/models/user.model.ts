@@ -1,5 +1,7 @@
-import { IModel } from './../interfaces/model.interface';
+import { IModel } from "./../interfaces/model.interface";
 import { UserType } from "./../types/user.type.js";
+import crypto from "crypto";
+
 export class User implements IModel {
 	// Properties
 	public readonly id: string;

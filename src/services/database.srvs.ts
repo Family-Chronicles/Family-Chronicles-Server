@@ -94,7 +94,10 @@ export class DatabaseService {
 		return result.acknowledged;
 	}
 
-	public async findDocument<T extends IModel>(_collectionName: string, id: string): Promise<T | undefined> {
+	public async findDocument<T extends IModel>(
+		_collectionName: string,
+		id: string
+	): Promise<T | undefined> {
 		const document = await this.listAllDocuments<T>(_collectionName).then(
 			(documents) => {
 				return documents.find((document) => document.id === id);

@@ -1,1 +1,8 @@
-export type RelationshipType = "Spouse" | "Child" | "Parent" | "Sibling" | "Related" | "Other" | "Unknown";
+export type RelationshipType =
+	| "Spouse"
+	| "Child"
+	| "Parent"
+	| "Sibling"
+	| "Related"
+	| "Other"
+	| "Unknown";
