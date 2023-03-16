@@ -1,6 +1,17 @@
 import { Config } from "../types/config.type.js";
 import fs from "fs";
 
+/**
+ * Config service
+ * @class
+ * @implements {IService}
+ * @property {Config} _config - Config
+ * @constructor
+ * @returns {ConfigService} - Config service instance
+ * @example
+ * const configService = ConfigService.getInstance();
+ * const config = configService._config;
+ */
 export class ConfigService {
 	private static _instance: ConfigService;
 

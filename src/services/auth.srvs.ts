@@ -1,5 +1,15 @@
 import { Request, Response } from "express";
 
+/**
+ * Authorization service
+ * @class
+ * @property {Function} authorize - Authorize request
+ * @example
+ * const authService = AuthorizationService.getInstance();
+ * authService.authorize(req, res, () => {
+ * 	// Do something
+ * });
+ */
 export class AuthorizationService {
 	private static _instance: AuthorizationService;
 

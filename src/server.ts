@@ -7,6 +7,18 @@ import { RouterService } from "./services/router.srvs.js";
 import expressJSDocSwagger from "express-jsdoc-swagger";
 import * as url from "url";
 
+/**
+ * Server
+ * @class
+ * @property {Express} app - Express app
+ * @property {number} port - Port
+ * @property {string} __filename - Filename
+ * @property {string} __dirname - Directory name
+ * @constructor
+ * @returns {Server} - Server instance
+ * @example
+ * const server = new Server();
+ */
 class Server {
 	private app: Express = express();
 	private port = 8080;

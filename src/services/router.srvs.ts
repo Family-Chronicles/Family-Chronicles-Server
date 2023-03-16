@@ -3,6 +3,14 @@ import { Express } from "express";
 import { IndexController } from "../controllers/index.controller.js";
 import { UserController } from "../controllers/user.controller.js";
 
+/**
+ * Router service
+ * @class
+ * @property {Function} buildUpRoutes - Build up routes
+ * @example
+ * RouterService.getInstance().buildUpRoutes(app);
+ * @returns {RouterService} - Router service instance
+ */
 export class RouterService {
 	private static instance: RouterService;
 

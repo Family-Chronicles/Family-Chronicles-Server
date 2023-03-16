@@ -3,6 +3,19 @@ import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
 import { ConfigService } from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
 
+/**
+ * Database service
+ * @class
+ * @implements {IService}
+ * @property {Config} config - Config
+ * @property {MongoClient} client - MongoDB client
+ * @property {Db} db - MongoDB database
+ * @constructor
+ * @returns {DatabaseService} - Database service instance
+ * @example
+ * const databaseService = DatabaseService.getInstance();
+ * const document = await databaseService.findDocument<DocumentModel>("collection", "id");
+ */
 export class DatabaseService {
 	private static instance: DatabaseService;
 	private config: Config = ConfigService.getInstance()._config;

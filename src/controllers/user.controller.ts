@@ -17,6 +17,7 @@ export class UserController implements IController {
 		 * GET /users
 		 * @tags users
 		 * @summary This returns an array of all users
+		 * @security x-auth-token
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [
@@ -72,6 +73,8 @@ export class UserController implements IController {
 		 * POST /user
 		 * @tags users
 		 * @summary This a new user and saves it to the database
+		 * @security x-auth-token
+		 * @param {User} - the new user - application/json
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
@@ -258,6 +261,7 @@ export class UserController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
+				res.status(500).send({ status: 500 });
 			});
 	}
 
@@ -272,7 +276,12 @@ export class UserController implements IController {
 			req.body.userType
 		);
 
-		this._database.createDocument<User>(this._collectionName, user);
+		this._database
+			.createDocument<User>(this._collectionName, user)
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
 
 		res.send(user);
 	}
@@ -283,16 +292,75 @@ export class UserController implements IController {
 			req.params.id
 		);
 
-		userDocument.then((user) => {
-			res.send(user);
-		});
+		userDocument
+			.then((user) => {
+				if (user === null) {
+					res.status(404).send({ status: 404 });
+					return;
+				}
+				res.send(user);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
 	}
 
 	private update(req: Request, res: Response): void {
-		res.send("update");
+		const userDocument = this._database.findDocument<User>(
+			this._collectionName,
+			req.params.id
+		);
+
+		userDocument
+			.then((user) => {
+				if (user === null || user === undefined) {
+					res.status(404).send({ status: 404 });
+					return;
+				}
+				const updatedUser = new User(
+					user.id,
+					req.body.name,
+					req.body.email,
+					req.body.password,
+					user.createdAt,
+					new Date(),
+					req.body.userType
+				);
+
+				this._database
+					.updateDocument(this._collectionName, req.params.id, updatedUser)
+					.then((updatedUser) => {
+						res.status(200).send(updatedUser);
+					});
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
 	}
 
 	private delete(req: Request, res: Response): void {
-		res.send("delete");
+		const userDocument = this._database.findDocument<User>(
+			this._collectionName,
+			req.params.id
+		);
+
+		userDocument
+			.then((user) => {
+				if (user === null || user === undefined) {
+					res.status(404).send({ status: 404 });
+					return;
+				}
+				this._database
+					.deleteDocument(this._collectionName, req.params.id)
+					.then(() => {
+						res.status(200).send({ success: true });
+					});
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
 	}
 }
