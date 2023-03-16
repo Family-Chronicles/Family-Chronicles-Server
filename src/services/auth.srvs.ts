@@ -13,7 +13,7 @@ import { Request, Response } from "express";
 export class AuthorizationService {
 	private static _instance: AuthorizationService;
 
-	private readonly _token: string = "token";
+	private readonly _token: string = "Bearer token";
 
 	private constructor() {}
 
@@ -25,7 +25,7 @@ export class AuthorizationService {
 	}
 
 	public async authorize(req: Request, res: Response, next: () => void) {
-		const token = req.headers["x-access-token"];
+		const token = req.headers["Authorization"];
 		if (!token) {
 			return res
 				.status(401)

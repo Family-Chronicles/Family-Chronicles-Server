@@ -17,8 +17,8 @@ export class UserController implements IController {
 		 * GET /users
 		 * @tags users
 		 * @summary This returns an array of all users
-		 * @security x-auth-token
-		 * @return {object} 200 - success response - application/json
+		 * @security BearerAuth
+		 * @return {object[]} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [
 		 * 	{
@@ -70,56 +70,11 @@ export class UserController implements IController {
 		});
 
 		/**
-		 * POST /user
-		 * @tags users
-		 * @summary This a new user and saves it to the database
-		 * @security x-auth-token
-		 * @param {User} - the new user - application/json
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.post("/user", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.create(req, res);
-			});
-		});
-
-		/**
-		 * POST /user/:id
+		 * GET /user/:id
 		 * @tags users
 		 * @summary This returns a user by id
+		 * @security BearerAuth
+		 * @param {string} id.path.required - the id of the user
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
@@ -158,6 +113,53 @@ export class UserController implements IController {
 		app.get("/user/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
+			});
+		});
+
+		/**
+		 * POST /user
+		 * @tags users
+		 * @summary This a new user and saves it to the database
+		 * @security BearerAuth
+		 * @param {object} - the new user - application/json
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * 	{
+		 * 		"id": "string",
+		 * 		"name": "string",
+		 * 		"password": "string",
+		 * 		"createdAt": "Date",
+		 * 		"updatedAt": "Date",
+		 * 		"userType": "UserType"
+		 * 	}
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.post("/user", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.create(req, res);
 			});
 		});
 

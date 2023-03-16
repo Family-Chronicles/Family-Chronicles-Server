@@ -89,9 +89,9 @@ class Server {
 				},
 			],
 			security: {
-				BasicAuth: {
+				BearerAuth: {
 					type: "http",
-					scheme: "basic",
+					scheme: "bearer",
 				},
 			},
 			baseDir: this.__dirname,
