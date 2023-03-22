@@ -27,6 +27,16 @@ insert_final_newline = true
 indent_style = space
 indent_size = 1
 
-#EditorConfig
+# EditorConfig
 [.editorconfig]
 indent_style = space
+
+# YMAL
+[*.{yml, yaml}]
+indent_style = space
+indent_size = 2
+
+# Docker
+[Dockerfile]
+indent_style = space
+indent_size = 2
