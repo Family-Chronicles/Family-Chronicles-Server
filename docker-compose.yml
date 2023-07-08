@@ -76,7 +76,7 @@ services:
       - mongo-express
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:lastest
+    image: phpmyadmin/phpmyadmin:latest
     container_name: phpmyadmin
     restart: always
     ports:
