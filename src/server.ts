@@ -17,6 +17,7 @@ import { TaggedPerson } from "./models/taggedPerson.model.js";
 import { User } from "./models/user.model.js";
 import { H } from "friendly-helper";
 import bodyParser from "body-parser";
+import rateLimiter from "express-rate-limit";
 
 /**
  * Server
@@ -42,9 +43,19 @@ class Server {
 		DatabaseService.getInstance();
 		RouterService.getInstance().buildUpRoutes(this.app);
 
+		const limiter = rateLimiter({
+			max: 20,
+			windowMs: 60 * 1000,
+			message:
+				"You can't make any more requests at the moment. Try again later",
+			standardHeaders: true,
+			legacyHeaders: false,
+		});
+
 		this.swagger(this.app);
 		this.app.use(bodyParser.json());
 		this.app.use(bodyParser.urlencoded({ extended: false }));
+		this.app.use(limiter);
 		this.app.use((req, res, next) => {
 			res.header("Access-Control-Allow-Origin", "*");
 			res.header(
