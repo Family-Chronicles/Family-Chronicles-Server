@@ -1,3 +1,4 @@
+import { RateLimitRequestHandler } from "express-rate-limit";
 import { IController } from "../interfaces/controller.interface.js";
 import { Express, Request, Response } from "express";
 
@@ -5,7 +6,7 @@ import { Express, Request, Response } from "express";
  * Test controller
  */
 export class TestController implements IController {
-	public routes(app: Express): void {
+	public routes(app: Express, rateLimiting: RateLimitRequestHandler): void {
 		/**
 		 * GET /test
 		 * @summary This returns a test object
@@ -15,7 +16,7 @@ export class TestController implements IController {
 		 * "test": "test"
 		 * }
 		 */
-		app.get("/test", (req: Request, res: Response) => {
+		app.get("/test", rateLimiting, (req: Request, res: Response) => {
 			this.getTest(req, res);
 		});
 	}

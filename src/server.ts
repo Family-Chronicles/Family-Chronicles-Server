@@ -41,7 +41,6 @@ class Server {
 		dotenv.config();
 		ConfigService.getInstance();
 		DatabaseService.getInstance();
-		RouterService.getInstance().buildUpRoutes(this.app);
 
 		const limiter = rateLimiter({
 			max: 20,
@@ -51,6 +50,8 @@ class Server {
 			standardHeaders: true,
 			legacyHeaders: false,
 		});
+
+		RouterService.getInstance().buildUpRoutes(this.app, limiter);
 
 		this.swagger(this.app);
 		this.app.use(bodyParser.json());
