@@ -28,7 +28,7 @@ import crypto from "crypto";
  */
 export class Family implements IModel {
 	// Properties
-	public readonly id: string;
+	public readonly Id: string;
 	public Name: string;
 	public Description: string;
 	public Notes: string;
@@ -43,9 +43,9 @@ export class Family implements IModel {
 		HistoricalNames: string[]
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
 		this.Name = Name;
 		this.Description = Description;

@@ -12,6 +12,7 @@ insert_final_newline = true
 # Eslint rules
 [*.{js,ts}]
 indent_style = tab
+indent_size = 4
 trim_trailing_whitespace = true
 insert_final_newline = true
 brace_style = Allman

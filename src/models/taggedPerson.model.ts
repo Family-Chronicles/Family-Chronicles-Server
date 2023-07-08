@@ -31,12 +31,12 @@ import crypto from "crypto";
  */
 export class TaggedPerson implements IModel {
 	// Properties
-	public readonly id: string;
-	public personId: string;
-	public lat: number | null;
-	public lng: number | null;
-	public timeStamp: Date | null;
-	public notes: string;
+	public readonly Id: string;
+	public PersonId: string;
+	public Latitude: number | null;
+	public Longitude: number | null;
+	public TimeStamp: Date | null;
+	public Notes: string;
 
 	// Constructor
 	constructor(
@@ -48,14 +48,14 @@ export class TaggedPerson implements IModel {
 		notes: string
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
-		this.personId = personId;
-		this.lat = lat;
-		this.lng = lng;
-		this.timeStamp = timeStamp;
-		this.notes = notes;
+		this.PersonId = personId;
+		this.Latitude = lat;
+		this.Longitude = lng;
+		this.TimeStamp = timeStamp;
+		this.Notes = notes;
 	}
 }

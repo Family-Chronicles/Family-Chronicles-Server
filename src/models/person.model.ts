@@ -46,17 +46,17 @@ import crypto from "crypto";
  */
 export class Person implements IModel {
 	// Properties
-	public readonly id: string;
-	public firstName: string[];
-	public lastName: string[];
-	public dateOfBirth: Date;
-	public dateOfDeath: Date | null;
-	public placeOfBirth: string;
-	public placeOfDeath: string | null;
-	public relationshipIds: string[];
-	public notes: string;
-	public familyIds: string[];
-	public relatedDataIds: string[];
+	public readonly Id: string;
+	public FirstName: string[];
+	public LastName: string[];
+	public DateOfBirth: Date;
+	public DateOfDeath: Date | null;
+	public PlaceOfBirth: string;
+	public PlaceOfDeath: string | null;
+	public RelationshipIds: string[];
+	public Notes: string;
+	public FamilyIds: string[];
+	public RelatedDataIds: string[];
 
 	// Constructor
 	constructor(
@@ -73,19 +73,19 @@ export class Person implements IModel {
 		relatedDataIds: string[]
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
-		this.firstName = firstName;
-		this.lastName = lastName;
-		this.dateOfBirth = dateOfBirth;
-		this.dateOfDeath = dateOfDeath;
-		this.placeOfBirth = placeOfBirth;
-		this.placeOfDeath = placeOfDeath;
-		this.relationshipIds = relationshipIds;
-		this.notes = notes;
-		this.familyIds = familyIds;
-		this.relatedDataIds = relatedDataIds;
+		this.FirstName = firstName;
+		this.LastName = lastName;
+		this.DateOfBirth = dateOfBirth;
+		this.DateOfDeath = dateOfDeath;
+		this.PlaceOfBirth = placeOfBirth;
+		this.PlaceOfDeath = placeOfDeath;
+		this.RelationshipIds = relationshipIds;
+		this.Notes = notes;
+		this.FamilyIds = familyIds;
+		this.RelatedDataIds = relatedDataIds;
 	}
 }

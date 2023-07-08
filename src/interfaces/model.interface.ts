@@ -10,5 +10,5 @@
  * };
  */
 export interface IModel {
-	readonly id: string;
+	readonly Id: string;
 }

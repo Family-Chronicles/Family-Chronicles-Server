@@ -24,10 +24,10 @@ import { Blob, File } from "buffer";
  */
 export class RelatedData implements IModel {
 	// Properties
-	public readonly id: string;
-	public relatedData: string | Blob | File;
-	public notes: string;
-	public taggedPersonsIds: string[];
+	public readonly Id: string;
+	public RelatedData: string | Blob | File;
+	public Notes: string;
+	public TaggedPersonsIds: string[];
 
 	// Constructor
 	constructor(
@@ -35,9 +35,9 @@ export class RelatedData implements IModel {
 		notes: string,
 		taggedPersonsIds: string[]
 	) {
-		this.id = crypto.randomUUID();
-		this.relatedData = relatedData;
-		this.notes = notes;
-		this.taggedPersonsIds = taggedPersonsIds;
+		this.Id = crypto.randomUUID();
+		this.RelatedData = relatedData;
+		this.Notes = notes;
+		this.TaggedPersonsIds = taggedPersonsIds;
 	}
 }

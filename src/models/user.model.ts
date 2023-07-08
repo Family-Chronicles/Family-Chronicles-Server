@@ -1,5 +1,5 @@
 import { IModel } from "./../interfaces/model.interface";
-import { UserType } from "./../types/user.type.js";
+import { Role } from "../types/role.type.js";
 import crypto from "crypto";
 
 /**
@@ -20,7 +20,7 @@ import crypto from "crypto";
  * @param {string} password - User password
  * @param {Date} createdAt - User creation date
  * @param {Date} updatedAt - User update date
- * @param {UserType} userType - User type
+ * @param {Role} userType - User type
  * @returns {User} - User instance
  * @example
  * const user = new User(
@@ -35,13 +35,13 @@ import crypto from "crypto";
  */
 export class User implements IModel {
 	// Properties
-	public readonly id: string;
-	public name: string;
-	public email: string;
-	public password: string;
-	public createdAt: Date;
-	public updatedAt: Date;
-	public userType: UserType;
+	public readonly Id: string;
+	public Name: string;
+	public Email: string;
+	public Password: string;
+	public CreatedAt: Date;
+	public UpdatedAt: Date;
+	public Role: Role;
 
 	// Constructor
 	constructor(
@@ -51,18 +51,18 @@ export class User implements IModel {
 		password: string,
 		createdAt: Date,
 		updatedAt: Date,
-		userType: UserType
+		role: Role
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
-		this.name = name;
-		this.email = email;
-		this.password = password;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
-		this.userType = userType;
+		this.Name = name;
+		this.Email = email;
+		this.Password = password;
+		this.CreatedAt = createdAt;
+		this.UpdatedAt = updatedAt;
+		this.Role = role;
 	}
 }

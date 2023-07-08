@@ -29,28 +29,28 @@ import crypto from "crypto";
  */
 export class Relationship implements IModel {
 	// Properties
-	public readonly id: string;
-	public relationPartnerOne: string;
-	public relationPartnerTwo: string;
-	public relationshipType: RelationshipType;
-	public notes: string;
+	public readonly Id: string;
+	public RelationPartnerOneId: string;
+	public RelationPartnerTwoId: string;
+	public RelationshipType: RelationshipType;
+	public Notes: string;
 
 	// Constructor
 	constructor(
 		id: string | null | undefined,
-		relationPartnerOne: string,
-		relationPartnerTwo: string,
+		relationPartnerOneId: string,
+		relationPartnerTwoId: string,
 		relationshipType: RelationshipType,
 		notes: string
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
-		this.relationPartnerOne = relationPartnerOne;
-		this.relationPartnerTwo = relationPartnerTwo;
-		this.relationshipType = relationshipType;
-		this.notes = notes;
+		this.RelationPartnerOneId = relationPartnerOneId;
+		this.RelationPartnerTwoId = relationPartnerTwoId;
+		this.RelationshipType = relationshipType;
+		this.Notes = notes;
 	}
 }

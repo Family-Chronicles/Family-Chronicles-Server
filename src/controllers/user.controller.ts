@@ -321,11 +321,11 @@ export class UserController implements IController {
 					return;
 				}
 				const updatedUser = new User(
-					user.id,
+					user.Id,
 					req.body.name,
 					req.body.email,
 					req.body.password,
-					user.createdAt,
+					user.CreatedAt,
 					new Date(),
 					req.body.userType
 				);
@@ -357,7 +357,9 @@ export class UserController implements IController {
 				this._database
 					.deleteDocument(this._collectionName, req.params.id)
 					.then(() => {
-						res.status(200).send({ success: true });
+						res.status(200).send({
+							success: true,
+						});
 					});
 			})
 			.catch((error) => {

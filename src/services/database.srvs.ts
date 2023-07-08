@@ -20,7 +20,6 @@ export class DatabaseService {
 	private static instance: DatabaseService;
 	private config: Config = ConfigService.getInstance()._config;
 	private client: MongoClient | undefined;
-	private db: Db | undefined;
 
 	private constructor() {}
 
@@ -34,22 +33,22 @@ export class DatabaseService {
 	}
 
 	private async intializeDatabase(): Promise<void> {
-		await this.connect(
+		const db = await this.connect(
 			this.config.database.host,
 			this.config.database.databasename
 		);
-		const collections = await this.db!.listCollections().toArray();
+		const collections = await db.listCollections().toArray();
 		const collectionNames = collections.map((collection) => collection.name);
 		const configCollections = this.config.database.collections;
 		configCollections.forEach(async (collection) => {
 			if (!collectionNames.includes(collection)) {
-				await this.db!.createCollection(collection);
+				await db.createCollection(collection);
 			}
 		});
 		this.setListener();
 	}
 
-	private async connect(uri: string, dbName: string): Promise<void> {
+	private async connect(uri: string, dbName: string): Promise<Db> {
 		this.client = await MongoClient.connect(uri, <MongoClientOptions>{
 			useUnifiedTopology: true,
 			auth: {
@@ -58,7 +57,7 @@ export class DatabaseService {
 			},
 			appName: this.config.meta.name,
 		});
-		this.db = this.client.db(dbName);
+		return this.client.db(dbName);
 	}
 
 	private async setListener(): Promise<void> {
@@ -89,12 +88,20 @@ export class DatabaseService {
 	}
 
 	public async createCollection(collectionName: string): Promise<Collection> {
-		const collection = await this.db!.createCollection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = await db.createCollection(collectionName);
 		return collection;
 	}
 
 	public async dropCollection(collectionName: string): Promise<boolean> {
-		const result = await this.db!.dropCollection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const result = await db.dropCollection(collectionName);
 		return result;
 	}
 
@@ -102,7 +109,11 @@ export class DatabaseService {
 		collectionName: string,
 		document: T
 	): Promise<boolean> {
-		const collection = this.db!.collection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
 		const result = await collection.insertOne(document!);
 		return result.acknowledged;
 	}
@@ -113,7 +124,7 @@ export class DatabaseService {
 	): Promise<T | undefined> {
 		const document = await this.listAllDocuments<T>(_collectionName).then(
 			(documents) => {
-				return documents.find((document) => document.id === id);
+				return documents.find((document) => document.Id === id);
 			}
 		);
 		return document;
@@ -124,8 +135,14 @@ export class DatabaseService {
 		filter: any,
 		update: any
 	): Promise<boolean> {
-		const collection = this.db!.collection(collectionName);
-		const result = await collection.updateOne(filter, { $set: update });
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
+		const result = await collection.updateOne(filter, {
+			$set: update,
+		});
 		return result.acknowledged;
 	}
 
@@ -133,23 +150,39 @@ export class DatabaseService {
 		collectionName: string,
 		filter: any
 	): Promise<boolean> {
-		const collection = this.db!.collection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
 		const result = await collection.deleteOne(filter);
 		return result.acknowledged;
 	}
 
 	public async listAllCollections(): Promise<string[]> {
-		const collections = await this.db!.listCollections().toArray();
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collections = await db.listCollections().toArray();
 		return collections.map((collection) => collection.name);
 	}
 
 	public async listAllDatabases(): Promise<string[]> {
-		const databases = await this.db!.admin().listDatabases();
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const databases = await db.admin().listDatabases();
 		return databases.databases.map((database) => database.name);
 	}
 
 	public async listAllDocuments<T>(collectionName: string): Promise<T[]> {
-		const collection = this.db!.collection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
 		const documents = await collection.find().toArray();
 		return documents as T[];
 	}
