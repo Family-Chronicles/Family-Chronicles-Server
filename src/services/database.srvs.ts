@@ -45,7 +45,9 @@ export class DatabaseService {
 			this.config.database.databasename
 		);
 		const collections = await db.listCollections().toArray();
-		const collectionNames = collections.map((collection) => collection.name);
+		const collectionNames = collections.map(
+			(collection) => collection.name
+		);
 		const configCollections = this.config.database.collections;
 		configCollections.forEach(async (collection) => {
 			if (!collectionNames.includes(collection)) {

@@ -352,7 +352,11 @@ export class UserController implements IController {
 				const result = JSON.stringify(updatedUser);
 
 				this._database
-					.updateDocument(this._collectionName, userDocument, updatedUser)
+					.updateDocument(
+						this._collectionName,
+						userDocument,
+						updatedUser
+					)
 					.then(() => {
 						res.status(200).send(result);
 					})

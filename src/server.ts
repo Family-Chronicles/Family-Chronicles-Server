@@ -215,8 +215,14 @@ class Server {
 		databaseService.createDocument("data", testData.data[1]);
 		databaseService.createDocument("persons", testData.persons[0]);
 		databaseService.createDocument("persons", testData.persons[1]);
-		databaseService.createDocument("relationships", testData.relationships[0]);
-		databaseService.createDocument("relationships", testData.relationships[1]);
+		databaseService.createDocument(
+			"relationships",
+			testData.relationships[0]
+		);
+		databaseService.createDocument(
+			"relationships",
+			testData.relationships[1]
+		);
 		databaseService.createDocument("tags", testData.taggedPersons[0]);
 		databaseService.createDocument("tags", testData.taggedPersons[1]);
 		databaseService.createDocument("users", testData.users[0]);
@@ -230,7 +236,8 @@ class Server {
 			info: {
 				title: "Express API for " + config.meta.name,
 				version: "1.0.0",
-				description: "This is a REST API application made with Express.",
+				description:
+					"This is a REST API application made with Express.",
 				license: {
 					name: "Licensed Under " + config.meta.license,
 					url: "https://github.com/Family-Chronicles/Family-Chronicles-Server/blob/main/LICENSE",
