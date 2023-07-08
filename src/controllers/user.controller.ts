@@ -3,6 +3,7 @@ import { IController } from "../interfaces/controller.interface.js";
 import { DatabaseService } from "../services/database.srvs.js";
 import { User } from "../models/user.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
+import bodyParser from "body-parser";
 
 export class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -125,12 +126,10 @@ export class UserController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"id": "string",
 		 * 		"name": "string",
+		 * 		"email": "string",
 		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"role": "Date",
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -157,7 +156,7 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.post("/user", (req: Request, res: Response) => {
+		app.post("/user", bodyParser.json(), (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.create(req, res);
 			});
@@ -202,7 +201,7 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.put("/user/:id", (req: Request, res: Response) => {
+		app.put("/user/:id", bodyParser.json(), (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.update(req, res);
 			});
@@ -259,6 +258,12 @@ export class UserController implements IController {
 				if (users === null) {
 					users = [];
 				}
+
+				users.forEach((user) => {
+					//@ts-ignore
+					delete user._id;
+				});
+
 				res.send(users);
 			})
 			.catch((error) => {
@@ -268,6 +273,7 @@ export class UserController implements IController {
 	}
 
 	private create(req: Request, res: Response): void {
+		console.log(req.body);
 		const user = new User(
 			null,
 			req.body.name,
@@ -275,14 +281,14 @@ export class UserController implements IController {
 			req.body.password,
 			new Date(),
 			new Date(),
-			req.body.userType
+			req.body.role
 		);
 
 		this._database
 			.createDocument<User>(this._collectionName, user)
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send({ status: 500, message: error.message });
 			});
 
 		res.send(user);
@@ -300,6 +306,8 @@ export class UserController implements IController {
 					res.status(404).send({ status: 404 });
 					return;
 				}
+				//@ts-ignore
+				delete user!._id;
 				res.send(user);
 			})
 			.catch((error) => {
@@ -322,18 +330,24 @@ export class UserController implements IController {
 				}
 				const updatedUser = new User(
 					user.Id,
-					req.body.name,
-					req.body.email,
-					req.body.password,
+					req.body.name ?? user.Name,
+					req.body.email ?? user.Email,
+					req.body.password ?? user.Password,
 					user.CreatedAt,
 					new Date(),
-					req.body.userType
+					req.body.role ?? user.Role
 				);
 
+				const result = JSON.stringify(updatedUser);
+
 				this._database
-					.updateDocument(this._collectionName, req.params.id, updatedUser)
-					.then((updatedUser) => {
-						res.status(200).send(updatedUser);
+					.updateDocument(this._collectionName, userDocument, updatedUser)
+					.then(() => {
+						res.status(200).send(result);
+					})
+					.catch((error) => {
+						console.error(error);
+						res.status(500).send({ status: 500 });
 					});
 			})
 			.catch((error) => {
@@ -355,7 +369,7 @@ export class UserController implements IController {
 					return;
 				}
 				this._database
-					.deleteDocument(this._collectionName, req.params.id)
+					.deleteDocument(this._collectionName, userDocument)
 					.then(() => {
 						res.status(200).send({
 							success: true,

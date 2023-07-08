@@ -1,5 +1,12 @@
 import { Config } from "../types/config.type.js";
-import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
+import {
+	MongoClient,
+	Collection,
+	Db,
+	MongoClientOptions,
+	Filter,
+	Document,
+} from "mongodb";
 import { ConfigService } from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
 
@@ -132,8 +139,8 @@ export class DatabaseService {
 
 	public async updateDocument(
 		collectionName: string,
-		filter: any,
-		update: any
+		filter: Filter<Document>,
+		update: IModel
 	): Promise<boolean> {
 		const db = await this.connect(
 			this.config.database.host,
@@ -148,7 +155,7 @@ export class DatabaseService {
 
 	public async deleteDocument(
 		collectionName: string,
-		filter: any
+		filter: Filter<Document>
 	): Promise<boolean> {
 		const db = await this.connect(
 			this.config.database.host,
