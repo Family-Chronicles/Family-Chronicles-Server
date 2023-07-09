@@ -1,12 +1,32 @@
 import { Config } from "../types/config.type.js";
-import { MongoClient, Collection, Db, MongoClientOptions } from "mongodb";
+import {
+	MongoClient,
+	Collection,
+	Db,
+	MongoClientOptions,
+	Filter,
+	Document,
+} from "mongodb";
 import { ConfigService } from "./config.srvs.js";
+import { IModel } from "../interfaces/model.interface.js";
 
+/**
+ * Database service
+ * @class
+ * @implements {IService}
+ * @property {Config} config - Config
+ * @property {MongoClient} client - MongoDB client
+ * @property {Db} db - MongoDB database
+ * @constructor
+ * @returns {DatabaseService} - Database service instance
+ * @example
+ * const databaseService = DatabaseService.getInstance();
+ * const document = await databaseService.findDocument<DocumentModel>("collection", "id");
+ */
 export class DatabaseService {
 	private static instance: DatabaseService;
 	private config: Config = ConfigService.getInstance()._config;
 	private client: MongoClient | undefined;
-	private db: Db | undefined;
 
 	private constructor() {}
 
@@ -20,22 +40,24 @@ export class DatabaseService {
 	}
 
 	private async intializeDatabase(): Promise<void> {
-		await this.connect(
+		const db = await this.connect(
 			this.config.database.host,
 			this.config.database.databasename
 		);
-		const collections = await this.db!.listCollections().toArray();
-		const collectionNames = collections.map((collection) => collection.name);
+		const collections = await db.listCollections().toArray();
+		const collectionNames = collections.map(
+			(collection) => collection.name
+		);
 		const configCollections = this.config.database.collections;
 		configCollections.forEach(async (collection) => {
 			if (!collectionNames.includes(collection)) {
-				await this.db!.createCollection(collection);
+				await db.createCollection(collection);
 			}
 		});
 		this.setListener();
 	}
 
-	private async connect(uri: string, dbName: string): Promise<void> {
+	private async connect(uri: string, dbName: string): Promise<Db> {
 		this.client = await MongoClient.connect(uri, <MongoClientOptions>{
 			useUnifiedTopology: true,
 			auth: {
@@ -44,7 +66,7 @@ export class DatabaseService {
 			},
 			appName: this.config.meta.name,
 		});
-		this.db = this.client.db(dbName);
+		return this.client.db(dbName);
 	}
 
 	private async setListener(): Promise<void> {
@@ -75,50 +97,102 @@ export class DatabaseService {
 	}
 
 	public async createCollection(collectionName: string): Promise<Collection> {
-		const collection = await this.db!.createCollection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = await db.createCollection(collectionName);
 		return collection;
 	}
 
 	public async dropCollection(collectionName: string): Promise<boolean> {
-		const result = await this.db!.dropCollection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const result = await db.dropCollection(collectionName);
 		return result;
 	}
 
-	public async insertDocument(
+	public async createDocument<T>(
 		collectionName: string,
-		document: any
+		document: T
 	): Promise<boolean> {
-		const collection = this.db!.collection(collectionName);
-		const result = await collection.insertOne(document);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
+		const result = await collection.insertOne(document!);
 		return result.acknowledged;
+	}
+
+	public async findDocument<T extends IModel>(
+		_collectionName: string,
+		id: string
+	): Promise<T | undefined> {
+		const document = await this.listAllDocuments<T>(_collectionName).then(
+			(documents) => {
+				return documents.find((document) => document.Id === id);
+			}
+		);
+		return document;
 	}
 
 	public async updateDocument(
 		collectionName: string,
-		filter: any,
-		update: any
+		filter: Filter<Document>,
+		update: IModel
 	): Promise<boolean> {
-		const collection = this.db!.collection(collectionName);
-		const result = await collection.updateOne(filter, { $set: update });
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
+		const result = await collection.updateOne(filter, {
+			$set: update,
+		});
 		return result.acknowledged;
 	}
 
 	public async deleteDocument(
 		collectionName: string,
-		filter: any
+		filter: Filter<Document>
 	): Promise<boolean> {
-		const collection = this.db!.collection(collectionName);
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
 		const result = await collection.deleteOne(filter);
 		return result.acknowledged;
 	}
 
 	public async listAllCollections(): Promise<string[]> {
-		const collections = await this.db!.listCollections().toArray();
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collections = await db.listCollections().toArray();
 		return collections.map((collection) => collection.name);
 	}
 
 	public async listAllDatabases(): Promise<string[]> {
-		const databases = await this.db!.admin().listDatabases();
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const databases = await db.admin().listDatabases();
 		return databases.databases.map((database) => database.name);
+	}
+
+	public async listAllDocuments<T>(collectionName: string): Promise<T[]> {
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(collectionName);
+		const documents = await collection.find().toArray();
+		return documents as T[];
 	}
 }

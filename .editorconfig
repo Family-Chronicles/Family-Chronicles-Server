@@ -1,19 +1,43 @@
 root = true
 
+# General
 [*]
 charset = utf-8
-indent_style = tab
-indent_size = 2
 end_of_line = lf
-insert_final_newline = true
+indent_size = 2
+indent_style = tab
 trim_trailing_whitespace = true
+insert_final_newline = true
 
-[*.md]
-trim_trailing_whitespace = false
+# Eslint rules
+[*.{js,ts}]
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+brace_style = Allman
+
+# Stylelint rules
+[*.{html,css,scss,less,sass}]
+indent_style = tab
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# CSV
+[*.csv]
+indent_style = space
+indent_size = 1
+
+# EditorConfig
+[.editorconfig]
 indent_style = space
 
-[*.yml]
+# YMAL
+[*.{yml, yaml}]
 indent_style = space
+indent_size = 2
 
-[*.json]
-indent_style =
+# Docker
+[Dockerfile]
+indent_style = space
+indent_size = 2

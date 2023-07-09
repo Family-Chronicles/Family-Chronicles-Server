@@ -10,13 +10,9 @@
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
-		"types": [
-			"node"
-		]
+		"types": ["node"]
 	},
-	"include": [
-		"./tools/*.ts"
-	],
+	"include": ["./tools/*.ts"],
 	"exclude": [
 		"node_modules",
 		"./src/*.ts",

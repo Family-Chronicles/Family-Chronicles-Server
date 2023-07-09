@@ -1,6 +1,34 @@
-export class Family {
+import { IModel } from "../interfaces/model.interface";
+import crypto from "crypto";
+
+/**
+ * Family model
+ * @class
+ * @implements {IModel}
+ * @property {string} id - Family id
+ * @property {string} Name - Family name
+ * @property {string} Description - Family description
+ * @property {string} Notes - Family notes
+ * @property {string[]} HistoricalNames - Family historical names
+ * @constructor
+ * @param {string | null | undefined} id - Family id
+ * @param {string} Name - Family name
+ * @param {string} Description - Family description
+ * @param {string} Notes - Family notes
+ * @param {string[]} HistoricalNames - Family historical names
+ * @returns {Family} - Family instance
+ * @example
+ * const family = new Family(
+ * 	null,
+ * 	"Smith",
+ * 	"Smith family",
+ * 	"Notes",
+ * 	["Smiths", "Smythe"]
+ * );
+ */
+export class Family implements IModel {
 	// Properties
-	public readonly id: string;
+	public readonly Id: string;
 	public Name: string;
 	public Description: string;
 	public Notes: string;
@@ -15,9 +43,9 @@ export class Family {
 		HistoricalNames: string[]
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
 		this.Name = Name;
 		this.Description = Description;

@@ -1,21 +1,43 @@
-import { TaggedPerson } from "./taggedPerson.model.js";
+import { IModel } from "../interfaces/model.interface.js";
+import crypto from "crypto";
+import { Blob, File } from "buffer";
 
-export class RelatedData {
+/**
+ * Related data model
+ * @class
+ * @implements {IModel}
+ * @property {string} id - Related data id
+ * @property {string | Blob | File} relatedData - Related data
+ * @property {string} notes - Notes
+ * @property {string[]} taggedPersonsIds - Tagged persons ids
+ * @constructor
+ * @param {string | Blob | File} relatedData - Related data
+ * @param {string} notes - Notes
+ * @param {string[]} taggedPersonsIds - Tagged persons ids
+ * @returns {RelatedData} - Related data instance
+ * @example
+ * const relatedData = new RelatedData(
+ * 	"Related data",
+ * 	"Notes",
+ * 	["1", "2"]
+ * );
+ */
+export class RelatedData implements IModel {
 	// Properties
-	public readonly id: string;
-	public relatedData: string | Blob | File;
-	public notes: string;
-	public taggedPersons: TaggedPerson[];
+	public readonly Id: string;
+	public RelatedData: string | Blob | File;
+	public Notes: string;
+	public TaggedPersonsIds: string[];
 
 	// Constructor
 	constructor(
 		relatedData: string | Blob | File,
 		notes: string,
-		taggedPersons: TaggedPerson[]
+		taggedPersonsIds: string[]
 	) {
-		this.id = crypto.randomUUID();
-		this.relatedData = relatedData;
-		this.notes = notes;
-		this.taggedPersons = taggedPersons;
+		this.Id = crypto.randomUUID();
+		this.RelatedData = relatedData;
+		this.Notes = notes;
+		this.TaggedPersonsIds = taggedPersonsIds;
 	}
 }

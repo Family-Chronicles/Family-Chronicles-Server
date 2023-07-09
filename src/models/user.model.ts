@@ -1,13 +1,47 @@
-import { UserType } from "./../types/user.type.js";
-export class User {
+import { IModel } from "./../interfaces/model.interface";
+import { Role } from "../types/role.type.js";
+import crypto from "crypto";
+
+/**
+ * User model
+ * @class
+ * @implements {IModel}
+ * @property {string} id - User id
+ * @property {string} name - User name
+ * @property {string} email - User email
+ * @property {string} password - User password
+ * @property {Date} createdAt - User creation date
+ * @property {Date} updatedAt - User update date
+ * @property {UserType} userType - User type
+ * @constructor
+ * @param {string | null | undefined} id - User id
+ * @param {string} name - User name
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @param {Date} createdAt - User creation date
+ * @param {Date} updatedAt - User update date
+ * @param {Role} userType - User type
+ * @returns {User} - User instance
+ * @example
+ * const user = new User(
+ * 	null,
+ * 	"John Doe",
+ * 	"
+ * 	"123456",
+ * 	new Date(),
+ * 	new Date(),
+ * 	UserType.ADMIN
+ * );
+ */
+export class User implements IModel {
 	// Properties
-	public readonly id: string;
-	public name: string;
-	public email: string;
-	public password: string;
-	public createdAt: Date;
-	public updatedAt: Date;
-	public UserType: UserType;
+	public readonly Id: string;
+	public Name: string;
+	public Email: string;
+	public Password: string;
+	public CreatedAt: Date;
+	public UpdatedAt: Date;
+	public Role: Role;
 
 	// Constructor
 	constructor(
@@ -17,18 +51,18 @@ export class User {
 		password: string,
 		createdAt: Date,
 		updatedAt: Date,
-		UserType: UserType
+		role: Role
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.id = crypto.randomUUID();
+			this.Id = crypto.randomUUID();
 		} else {
-			this.id = id;
+			this.Id = id;
 		}
-		this.name = name;
-		this.email = email;
-		this.password = password;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
-		this.UserType = UserType;
+		this.Name = name;
+		this.Email = email;
+		this.Password = password;
+		this.CreatedAt = createdAt;
+		this.UpdatedAt = updatedAt;
+		this.Role = role;
 	}
 }
