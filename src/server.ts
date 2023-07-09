@@ -45,8 +45,11 @@ class Server {
 		const limiter = rateLimiter({
 			max: 20,
 			windowMs: 60 * 1000,
-			message:
-				"You can't make any more requests at the moment. Try again later",
+			message: {
+				success: false,
+				message: "Too many requests, please try again later.",
+			},
+			statusCode: 429,
 			standardHeaders: true,
 			legacyHeaders: false,
 		});
