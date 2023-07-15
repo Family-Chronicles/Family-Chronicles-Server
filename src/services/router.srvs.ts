@@ -3,6 +3,7 @@ import { Express } from "express";
 import { IndexController } from "../controllers/index.controller.js";
 import { UserController } from "../controllers/user.controller.js";
 import { RateLimitRequestHandler } from "express-rate-limit";
+import { PersonController } from "../controllers/person.controller.js";
 
 /**
  * Router service
@@ -30,5 +31,6 @@ export class RouterService {
 		new IndexController().routes(app, rateLimiting);
 		new TestController().routes(app, rateLimiting);
 		new UserController().routes(app, rateLimiting);
+		new PersonController().routes(app, rateLimiting);
 	}
 }

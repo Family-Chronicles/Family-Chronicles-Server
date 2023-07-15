@@ -1,45 +1,41 @@
 import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
 import { DatabaseService } from "../services/database.srvs.js";
-import { User } from "../models/user.model.js";
+import { Person } from "../models/person.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
 import { RateLimitRequestHandler } from "express-rate-limit";
 
-export class UserController implements IController {
+export class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "users";
+	private _collectionName = "persons";
 	/**
-	 * Routes user controller
+	 * Routes person controller
 	 * @param app
 	 */
 	public routes(app: Express, rateLimiting: RateLimitRequestHandler): void {
 		/**
-		 * GET /users
-		 * @tags users
-		 * @summary This returns an array of all users
+		 * GET /persons
+		 * @tags persons
+		 * @summary This returns an array of all persons
 		 * @security BearerAuth
 		 * @return {object[]} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	},
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"FirstName": ["John"],
+		 * 		"LastName": ["Doe"],
+		 * 		"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 		"DateOfDeath": null,
+		 * 		"PlaceOfBirth": "New York",
+		 * 		"PlaceOfDeath": null,
+		 * 		"RelationshipIds": [],
+		 * 		"Notes": "",
+		 * 		"FamilyIds": [],
+		 * 		"RelatedDataIds": [],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
-		 * ]
 		 * @example response - 400 - bad request response example
 		 * {
 		 * 	"status": 400
@@ -65,28 +61,33 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/users", rateLimiting, (req: Request, res: Response) => {
+		app.get("/persons", rateLimiting, (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
 			});
 		});
 
 		/**
-		 * GET /user/:id
-		 * @tags users
-		 * @summary This returns a user by id
+		 * GET /person/:id
+		 * @tags persons
+		 * @summary This returns a person by id
 		 * @security BearerAuth
-		 * @param {string} id.path.required - the id of the user
+		 * @param {string} id.path.required - the id of the person
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
+		 * {
+		 * 	"FirstName": ["John"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * }
 		 * @example response - 400 - bad request response example
 		 * {
 		 * 	"status": 400
@@ -112,26 +113,33 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/user/:id", rateLimiting, (req: Request, res: Response) => {
+		app.get("/person/:id", rateLimiting, (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
 			});
 		});
 
 		/**
-		 * POST /user
-		 * @tags users
-		 * @summary This a new user and saves it to the database
+		 * POST /person
+		 * @tags persons
+		 * @summary This a new person and saves it to the database
 		 * @security BearerAuth
-		 * @param {object} - the new user - application/json
+		 * @param {object} - the new person - application/json
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"name": "string",
-		 * 		"email": "string",
-		 * 		"password": "string",
-		 * 		"role": "Date",
-		 * 	}
+		 * {
+		 * 	"FirstName": ["John"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * }
 		 * @example response - 400 - bad request response example
 		 * {
 		 * 	"status": 400
@@ -158,7 +166,7 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.post(
-			"/user",
+			"/person",
 			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
@@ -169,19 +177,24 @@ export class UserController implements IController {
 		);
 
 		/**
-		 * PUT /user/:id
-		 * @tags users
-		 * @summary This updates a user by id
+		 * PUT /person/:id
+		 * @tags persons
+		 * @summary This updates a person by id
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
+		 * {
+		 * 	"FirstName": ["John"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * }
 		 * @example response - 400 - bad request response example
 		 * {
 		 * 	"status": 400
@@ -208,7 +221,7 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.put(
-			"/user/:id",
+			"/person/:id",
 			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
@@ -219,14 +232,14 @@ export class UserController implements IController {
 		);
 
 		/**
-		 * DELETE /user/:id
-		 * @tags users
-		 * @summary This deletes a user by id
+		 * DELETE /person/:id
+		 * @tags persons
+		 * @summary This deletes a person by id
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"success": true,
-		 * 	}
+		 * {
+		 * 	"success": true,
+		 * }
 		 * @example response - 400 - bad request response example
 		 * {
 		 * 	"status": 400
@@ -252,30 +265,34 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/user/:id", rateLimiting, (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/person/:id",
+			rateLimiting,
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.delete(req, res);
+				});
+			}
+		);
 	}
 
 	private index(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
+		const personDocuments = this._database.listAllDocuments<Person>(
 			this._collectionName
 		);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
+		personDocuments
+			.then((persons) => {
+				if (persons === null) {
+					persons = [];
 				}
 
-				users.forEach((user) => {
+				persons.forEach((person) => {
 					//@ts-ignore
-					delete user._id;
+					delete person._id;
 				});
 
-				res.send(users);
+				res.send(persons);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -285,41 +302,72 @@ export class UserController implements IController {
 
 	private create(req: Request, res: Response): void {
 		console.log(req.body);
-		const user = new User(
+
+		let firstName = req.body.FirstName;
+		let lastName = req.body.LastName;
+		let relatedDataIds = req.body.RelatedDataIds;
+		let familyIds = req.body.FamilyIds;
+		let relationshipIds = req.body.RelationshipIds;
+
+		if (typeof firstName === "string") {
+			firstName = firstName.split(" ");
+		}
+
+		if (typeof lastName === "string") {
+			lastName = lastName.split(" ");
+		}
+
+		if (typeof relatedDataIds === "string") {
+			relatedDataIds = [relatedDataIds];
+		}
+
+		if (typeof familyIds === "string") {
+			familyIds = [familyIds];
+		}
+
+		if (typeof relationshipIds === "string") {
+			relationshipIds = [relationshipIds];
+		}
+
+		const person = new Person(
 			null,
-			req.body.name,
-			req.body.email,
-			req.body.password,
-			new Date(),
-			new Date(),
-			req.body.role
+			firstName,
+			lastName,
+			req.body.DateOfBirth,
+			req.body.DateOfDeath ?? null,
+			req.body.PlaceOfBirth,
+			req.body.PlaceOfDeath ?? null,
+			relatedDataIds,
+			req.body.Notes,
+			familyIds,
+			relationshipIds
 		);
 
 		this._database
-			.createDocument<User>(this._collectionName, user)
+			.createDocument<Person>(this._collectionName, person)
 			.catch((error) => {
 				console.error(error);
 				res.status(500).send({ status: 500, message: error.message });
 			});
 
-		res.send(user);
+		res.send(person);
 	}
 
 	private show(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const personDocument = this._database.findDocument<Person>(
 			this._collectionName,
 			req.params.id
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null) {
+		personDocument
+			.then((person) => {
+				if (person === null) {
 					res.status(404).send({ status: 404 });
 					return;
 				}
 				//@ts-ignore
-				delete user!._id;
-				res.send(user);
+				delete person!._id;
+				res.send(person);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -328,34 +376,66 @@ export class UserController implements IController {
 	}
 
 	private update(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const personDocument = this._database.findDocument<Person>(
 			this._collectionName,
 			req.params.id
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
+		personDocument
+			.then((person) => {
+				if (person === null || person === undefined) {
 					res.status(404).send({ status: 404 });
 					return;
 				}
-				const updatedUser = new User(
-					user.Id,
-					req.body.name ?? user.Name,
-					req.body.email ?? user.Email,
-					req.body.password ?? user.Password,
-					user.CreatedAt,
-					new Date(),
-					req.body.role ?? user.Role
+				let firstName = req.body.FirstName ?? person.FirstName;
+				let lastName = req.body.LastName ?? person.LastName;
+				let relatedDataIds =
+					req.body.RelatedDataIds ?? person.RelatedDataIds;
+				let familyIds = req.body.FamilyIds ?? person.FamilyIds;
+				let relationshipIds =
+					req.body.RelationshipIds ?? person.RelationshipIds;
+
+				if (typeof firstName === "string") {
+					firstName = firstName.split(" ");
+				}
+
+				if (typeof lastName === "string") {
+					lastName = lastName.split(" ");
+				}
+
+				if (typeof relatedDataIds === "string") {
+					relatedDataIds = [relatedDataIds];
+				}
+
+				if (typeof familyIds === "string") {
+					familyIds = [familyIds];
+				}
+
+				if (typeof relationshipIds === "string") {
+					relationshipIds = [relationshipIds];
+				}
+
+				const updatedPerson = new Person(
+					person.Id,
+					firstName,
+					lastName,
+					req.body.DateOfBirth ?? person.DateOfBirth,
+					req.body.DateOfDeath ?? person.DateOfDeath,
+					req.body.PlaceOfBirth ?? person.PlaceOfBirth,
+					req.body.PlaceOfDeath ?? person.PlaceOfDeath,
+					relationshipIds,
+					req.body.Notes ?? person.Notes,
+					familyIds,
+					relatedDataIds
 				);
 
-				const result = JSON.stringify(updatedUser);
+				const result = JSON.stringify(updatedPerson);
 
 				this._database
 					.updateDocument(
 						this._collectionName,
-						userDocument,
-						updatedUser
+						personDocument,
+						updatedPerson
 					)
 					.then(() => {
 						res.status(200).send(result);
@@ -372,23 +452,25 @@ export class UserController implements IController {
 	}
 
 	private delete(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const personDocument = this._database.findDocument<Person>(
 			this._collectionName,
 			req.path.split("/")[2]
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
+		personDocument
+			.then((person) => {
+				if (person === null || person === undefined) {
 					res.status(404).send({ status: 404 });
 					return;
 				}
 				this._database
-					.deleteDocument(this._collectionName, user)
+					.deleteDocument(this._collectionName, person)
 					.then(() => {
 						res.status(200).send({
 							success: true,
-							message: `User ${user.Name} with id ${user.Id} deleted successfully`,
+							message: `User ${
+								person.FirstName + " " + person.LastName
+							} with id ${person.Id} deleted successfully`,
 						});
 					})
 					.catch((error) => {

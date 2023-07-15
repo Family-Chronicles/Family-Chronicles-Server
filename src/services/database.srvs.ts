@@ -159,13 +159,19 @@ export class DatabaseService {
 		collectionName: string,
 		filter: Filter<Document>
 	): Promise<boolean> {
-		const db = await this.connect(
-			this.config.database.host,
-			this.config.database.databasename
-		);
-		const collection = db.collection(collectionName);
-		const result = await collection.deleteOne(filter);
-		return result.acknowledged;
+		try {
+			const db = await this.connect(
+				this.config.database.host,
+				this.config.database.databasename
+			);
+			const collection = db.collection(collectionName);
+
+			const result = await collection.deleteOne(filter);
+			return result.deletedCount > 0;
+		} catch (error) {
+			console.error("Error deleting document:", error);
+			return false;
+		}
 	}
 
 	public async listAllCollections(): Promise<string[]> {

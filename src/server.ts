@@ -8,7 +8,8 @@ import expressJSDocSwagger from "express-jsdoc-swagger";
 import * as url from "url";
 import bodyParser from "body-parser";
 import rateLimiter from "express-rate-limit";
-
+import { Helper } from "./classes/helper.js";
+import GlobalErrorHandler from "./core/error.core.js";
 /**
  * Server
  * @class
@@ -26,11 +27,13 @@ class Server {
 	private port = 8080;
 	private __filename = url.fileURLToPath(import.meta.url);
 	private __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+	private testDataCount = 0;
 
 	constructor() {
 		dotenv.config();
 		ConfigService.getInstance();
 		DatabaseService.getInstance();
+		new GlobalErrorHandler();
 
 		const limiter = rateLimiter({
 			max: 20,
@@ -79,6 +82,11 @@ class Server {
 			console.log(
 				`⚡️[server]: Server is running at http://localhost:${this.port}`
 			);
+			const toggl = false;
+			if (toggl && this.testDataCount === 0) {
+				Helper.testData();
+				this.testDataCount++;
+			}
 		});
 	}
 
