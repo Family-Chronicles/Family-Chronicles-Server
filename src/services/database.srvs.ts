@@ -201,4 +201,17 @@ export class DatabaseService {
 		const documents = await collection.find().toArray();
 		return documents as T[];
 	}
+
+	public async getDocumentByQuery<T>(
+		_collectionName: string,
+		arg1: { [key: string]: any }
+	) {
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection(_collectionName);
+		const documents = await collection.find(arg1).toArray();
+		return documents as T[];
+	}
 }

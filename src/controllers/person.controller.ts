@@ -120,6 +120,153 @@ export class PersonController implements IController {
 		});
 
 		/**
+		 * GET /person/name?firstName&lastName
+		 * @tags persons
+		 * @summary This returns a person by name
+		 * @security BearerAuth
+		 * @param {string} firstName.query.required - the first name of the person
+		 * @param {string} lastName.query.required - the last name of the person
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 	"FirstName": ["John"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * }
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.get(
+			"/person/name?firstName&lastName",
+			rateLimiting,
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.showByName(req, res);
+				});
+			}
+		);
+
+		/**
+		 * GET /person/dateOfBirth/:dateOfBirth
+		 * @tags persons
+		 * @summary This returns persons by date of birth
+		 * @security BearerAuth
+		 * @param {string} dateOfBirth.path.required - the date of birth of the person
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * [{
+		 * 	"FirstName": ["John"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * },
+		 * {
+		 * 	"FirstName": ["Jane"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
+		 * }]
+		 */
+		app.get(
+			"/person/dateOfBirth/:dateOfBirth",
+			rateLimiting,
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.showByDateOfBirth(req, res);
+				});
+			}
+		);
+
+		/**
+		 * GET /person/relatedData/:relatedDataIds
+		 * @tags persons
+		 * @summary This returns persons by related data ids
+		 * @security BearerAuth
+		 * @param {string} relatedDataIds.path.required - the related data ids of the person
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * [{
+		 * 	"FirstName": ["John"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * },
+		 * {
+		 * 	"FirstName": ["Jane"],
+		 * 	"LastName": ["Doe"],
+		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 	"DateOfDeath": null,
+		 * 	"PlaceOfBirth": "New York",
+		 * 	"PlaceOfDeath": null,
+		 * 	"RelationshipIds": [],
+		 * 	"Notes": "",
+		 * 	"FamilyIds": [],
+		 * 	"RelatedDataIds": [],
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
+		 * }]
+		 */
+		app.get(
+			"/person/relatedData/:relatedDataIds",
+			rateLimiting,
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.showByRelatedDataIds(req, res);
+				});
+			}
+		);
+
+		/**
 		 * POST /person
 		 * @tags persons
 		 * @summary This a new person and saves it to the database
@@ -274,6 +421,85 @@ export class PersonController implements IController {
 				});
 			}
 		);
+	}
+
+	private showByRelatedDataIds(req: Request, res: Response) {
+		const relatedDataIds = req.params.relatedDataIds.split(",");
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ RelatedDataIds: { $in: relatedDataIds } }
+		);
+
+		personDocument
+			.then((person) => {
+				if (person === null) {
+					res.status(404).send({ status: 404 });
+					return;
+				}
+
+				//@ts-ignore
+				delete person._id;
+
+				res.send(person);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
+	}
+
+	private showByDateOfBirth(req: Request, res: Response) {
+		const dateOfBirth = req.params.dateOfBirth;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ DateOfBirth: dateOfBirth }
+		);
+
+		personDocument
+			.then((person) => {
+				if (person === null) {
+					res.status(404).send({ status: 404 });
+					return;
+				}
+
+				//@ts-ignore
+				delete person._id;
+
+				res.send(person);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
+	}
+
+	private showByName(req: Request, res: Response) {
+		const firstName = req.query.firstName;
+		const lastName = req.query.lastName;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ FirstName: firstName, LastName: lastName }
+		);
+
+		personDocument
+			.then((person) => {
+				if (person === null) {
+					res.status(404).send({ status: 404 });
+					return;
+				}
+
+				//@ts-ignore
+				delete person._id;
+
+				res.send(person);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send({ status: 500 });
+			});
 	}
 
 	private index(req: Request, res: Response): void {
