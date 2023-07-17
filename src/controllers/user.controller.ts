@@ -166,6 +166,7 @@ export class UserController implements IController {
 		 * PUT /user/:id
 		 * @tags users
 		 * @summary This updates a user by id
+		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
@@ -215,6 +216,7 @@ export class UserController implements IController {
 		 * DELETE /user/:id
 		 * @tags users
 		 * @summary This deletes a user by id
+		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{

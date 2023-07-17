@@ -168,6 +168,7 @@ export class FamilyController implements IController {
 		 * PUT /family/:id
 		 * @tags familys
 		 * @summary This updates a family by id
+		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
@@ -218,6 +219,7 @@ export class FamilyController implements IController {
 		 * DELETE /family/:id
 		 * @tags familys
 		 * @summary This deletes a family by id
+		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{

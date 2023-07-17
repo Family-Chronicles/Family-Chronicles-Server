@@ -322,6 +322,7 @@ export class PersonController implements IController {
 		 * PUT /person/:id
 		 * @tags persons
 		 * @summary This updates a person by id
+		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
@@ -376,6 +377,7 @@ export class PersonController implements IController {
 		 * DELETE /person/:id
 		 * @tags persons
 		 * @summary This deletes a person by id
+		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {

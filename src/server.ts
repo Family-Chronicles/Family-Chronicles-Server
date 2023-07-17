@@ -96,9 +96,10 @@ class Server {
 			openapi: "3.0.0",
 			info: {
 				title: "Express API for " + config.meta.name,
-				version: "1.0.0",
+				version: config.meta.version,
 				description:
-					"This is a REST API application made with Express.",
+					`This is a REST API application made with Express.\n\n` +
+					`${config.meta.description}`,
 				license: {
 					name: "Licensed Under " + config.meta.license,
 					url: "https://github.com/Family-Chronicles/Family-Chronicles-Server/blob/main/LICENSE",
@@ -138,7 +139,7 @@ class Server {
 			// in the `example/configuration/swaggerOptions.js`
 			swaggerUiOptions: {},
 			// multiple option in case you want more that one instance
-			multiple: true,
+			multiple: false,
 		};
 
 		return expressJSDocSwagger(app)(swaggerDefinition);
