@@ -4,7 +4,6 @@ import { DatabaseService } from "../services/database.srvs.js";
 import { Family } from "../models/family.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import { RateLimitRequestHandler } from "express-rate-limit";
 
 export class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -14,7 +13,7 @@ export class FamilyController implements IController {
 	 * Routes family controller
 	 * @param app
 	 */
-	public routes(app: Express, rateLimiting: RateLimitRequestHandler): void {
+	public routes(app: Express): void {
 		/**
 		 * GET /familys
 		 * @tags familys
@@ -59,7 +58,7 @@ export class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/familys", rateLimiting, (req: Request, res: Response) => {
+		app.get("/familys", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
 			});
@@ -107,7 +106,7 @@ export class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/family/:id", rateLimiting, (req: Request, res: Response) => {
+		app.get("/family/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
 			});
@@ -157,7 +156,6 @@ export class FamilyController implements IController {
 		 */
 		app.post(
 			"/family",
-			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -208,7 +206,6 @@ export class FamilyController implements IController {
 		 */
 		app.put(
 			"/family/:id",
-			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -251,15 +248,11 @@ export class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete(
-			"/family/:id",
-			rateLimiting,
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.delete(req, res);
-				});
-			}
-		);
+		app.delete("/family/:id", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.delete(req, res);
+			});
+		});
 	}
 
 	private index(req: Request, res: Response): void {

@@ -47,8 +47,6 @@ class Server {
 			legacyHeaders: false,
 		});
 
-		RouterService.getInstance().buildUpRoutes(this.app, limiter);
-
 		this.swagger(this.app);
 		this.app.use(bodyParser.json());
 		this.app.use(bodyParser.urlencoded({ extended: false }));
@@ -77,6 +75,8 @@ class Server {
 				success: true,
 			})
 		);
+
+		RouterService.getInstance().buildUpRoutes(this.app);
 
 		this.app.listen(this.port, () => {
 			console.log(

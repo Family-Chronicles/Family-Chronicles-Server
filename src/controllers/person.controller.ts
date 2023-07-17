@@ -4,7 +4,6 @@ import { DatabaseService } from "../services/database.srvs.js";
 import { Person } from "../models/person.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import { RateLimitRequestHandler } from "express-rate-limit";
 
 export class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -14,7 +13,7 @@ export class PersonController implements IController {
 	 * Routes person controller
 	 * @param app
 	 */
-	public routes(app: Express, rateLimiting: RateLimitRequestHandler): void {
+	public routes(app: Express): void {
 		/**
 		 * GET /persons
 		 * @tags persons
@@ -61,7 +60,7 @@ export class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/persons", rateLimiting, (req: Request, res: Response) => {
+		app.get("/persons", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
 			});
@@ -113,7 +112,7 @@ export class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/person/:id", rateLimiting, (req: Request, res: Response) => {
+		app.get("/person/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
 			});
@@ -168,7 +167,6 @@ export class PersonController implements IController {
 		 */
 		app.get(
 			"/person/name?firstName&lastName",
-			rateLimiting,
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
 					this.showByName(req, res);
@@ -213,7 +211,6 @@ export class PersonController implements IController {
 		 */
 		app.get(
 			"/person/dateOfBirth/:dateOfBirth",
-			rateLimiting,
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
 					this.showByDateOfBirth(req, res);
@@ -258,7 +255,6 @@ export class PersonController implements IController {
 		 */
 		app.get(
 			"/person/relatedData/:relatedDataIds",
-			rateLimiting,
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
 					this.showByRelatedDataIds(req, res);
@@ -314,7 +310,6 @@ export class PersonController implements IController {
 		 */
 		app.post(
 			"/person",
-			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -369,7 +364,6 @@ export class PersonController implements IController {
 		 */
 		app.put(
 			"/person/:id",
-			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -412,15 +406,11 @@ export class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete(
-			"/person/:id",
-			rateLimiting,
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.delete(req, res);
-				});
-			}
-		);
+		app.delete("/person/:id", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.delete(req, res);
+			});
+		});
 	}
 
 	private showByRelatedDataIds(req: Request, res: Response) {

@@ -4,7 +4,6 @@ import { DatabaseService } from "../services/database.srvs.js";
 import { User } from "../models/user.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import { RateLimitRequestHandler } from "express-rate-limit";
 
 export class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -14,7 +13,7 @@ export class UserController implements IController {
 	 * Routes user controller
 	 * @param app
 	 */
-	public routes(app: Express, rateLimiting: RateLimitRequestHandler): void {
+	public routes(app: Express): void {
 		/**
 		 * GET /users
 		 * @tags users
@@ -65,7 +64,7 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/users", rateLimiting, (req: Request, res: Response) => {
+		app.get("/users", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
 			});
@@ -112,7 +111,7 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/user/:id", rateLimiting, (req: Request, res: Response) => {
+		app.get("/user/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
 			});
@@ -157,16 +156,11 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.post(
-			"/user",
-			rateLimiting,
-			bodyParser.json(),
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
-			}
-		);
+		app.post("/user", bodyParser.json(), (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.create(req, res);
+			});
+		});
 
 		/**
 		 * PUT /user/:id
@@ -209,7 +203,6 @@ export class UserController implements IController {
 		 */
 		app.put(
 			"/user/:id",
-			rateLimiting,
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -252,7 +245,7 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/user/:id", rateLimiting, (req: Request, res: Response) => {
+		app.delete("/user/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.delete(req, res);
 			});
