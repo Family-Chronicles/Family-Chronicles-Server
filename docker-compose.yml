@@ -14,8 +14,6 @@ services:
     depends_on:
       - mongo
       - mongo-express
-      - mysql
-      - phpmyadmin
 
   mongo:
     container_name: mongo
@@ -54,42 +52,6 @@ services:
       ME_CONFIG_MONGODB_URL: mongodb://0.0.0.0:27017
     networks:
       - family-chronicles-network
-
-  mysql:
-    image: mysql:latest
-    container_name: mysql
-    restart: always
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: family-chronicles
-      MYSQL_USER: family-chronicles
-      MYSQL_PASSWORD: family-chronicles
-
-    networks:
-      - family-chronicles-network
-    volumes:
-      - ./mysql:/var/lib/mysql
-    depends_on:
-      - mongo
-      - mongo-express
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: phpmyadmin
-    restart: always
-    ports:
-      - "8082:80"
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: family-chronicles
-      PMA_PASSWORD: family-chronicles
-    networks:
-      - family-chronicles-network
-    depends_on:
-      - mysql
 
 networks:
   family-chronicles-network:

@@ -374,7 +374,7 @@ export class UserController implements IController {
 	private delete(req: Request, res: Response): void {
 		const userDocument = this._database.findDocument<User>(
 			this._collectionName,
-			req.params.id
+			req.path.split("/")[2]
 		);
 
 		userDocument
@@ -384,11 +384,16 @@ export class UserController implements IController {
 					return;
 				}
 				this._database
-					.deleteDocument(this._collectionName, userDocument)
+					.deleteDocument(this._collectionName, user)
 					.then(() => {
 						res.status(200).send({
 							success: true,
+							message: `User ${user.Name} with id ${user.Id} deleted successfully`,
 						});
+					})
+					.catch((error) => {
+						console.error(error);
+						res.status(500).send({ status: 500 });
 					});
 			})
 			.catch((error) => {
