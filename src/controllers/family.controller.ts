@@ -24,21 +24,15 @@ export class FamilyController implements IController {
 		 * @example response - 200 - success response example
 		 * [
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"familyType": "FamilyType"
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	},
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"familyType": "FamilyType"
-		 * 	}
+		 * 	...
 		 * ]
 		 * @example response - 400 - bad request response example
 		 * {
@@ -80,12 +74,13 @@ export class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"familyType": "FamilyType"
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -127,10 +122,13 @@ export class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"name": "string",
-		 * 		"email": "string",
-		 * 		"password": "string",
-		 * 		"role": "Date",
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -175,12 +173,13 @@ export class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"familyType": "FamilyType"
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
