@@ -1,4 +1,4 @@
-FROM node:latest
+FROM node:current
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -10,9 +10,11 @@ COPY package*.json ./
 
 RUN npm config set registry "https://registry.npmjs.org/"
 
+RUN npm cache clean --force
+
 RUN npm install -g npm@latest
 
-RUN npm ci
+RUN NODE_ENV=development npm ci
 
 # Bundle app source
 COPY . .

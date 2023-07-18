@@ -1,43 +1,37 @@
 import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
 import { DatabaseService } from "../services/database.srvs.js";
-import { User } from "../models/user.model.js";
+import { Family } from "../models/family.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
 
-export class UserController implements IController {
+export class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "users";
+	private _collectionName = "familys";
 	/**
-	 * Routes user controller
+	 * Routes family controller
 	 * @param app
 	 */
 	public routes(app: Express): void {
 		/**
-		 * GET /users
-		 * @tags users
-		 * @summary This returns an array of all users
+		 * GET /familys
+		 * @tags familys
+		 * @summary This returns an array of all familys
 		 * @security BearerAuth
 		 * @return {object[]} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	},
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
+		 * 	...
 		 * ]
 		 * @example response - 400 - bad request response example
 		 * {
@@ -64,27 +58,28 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/users", (req: Request, res: Response) => {
+		app.get("/familys", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
 			});
 		});
 
 		/**
-		 * GET /user/:id
-		 * @tags users
-		 * @summary This returns a user by id
+		 * GET /family/:id
+		 * @tags familys
+		 * @summary This returns a family by id
 		 * @security BearerAuth
-		 * @param {string} id.path.required - the id of the user
+		 * @param {string} id.path.required - the id of the family
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -111,25 +106,28 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/user/:id", (req: Request, res: Response) => {
+		app.get("/family/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
 			});
 		});
 
 		/**
-		 * POST /user
-		 * @tags users
-		 * @summary This a new user and saves it to the database
+		 * POST /family
+		 * @tags familys
+		 * @summary This a new family and saves it to the database
 		 * @security BearerAuth
-		 * @param {object} - the new user - application/json
+		 * @param {object} - the new family - application/json
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"name": "string",
-		 * 		"email": "string",
-		 * 		"password": "string",
-		 * 		"role": "Date",
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -156,26 +154,31 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.post("/user", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.create(req, res);
-			});
-		});
+		app.post(
+			"/family",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.create(req, res);
+				});
+			}
+		);
 
 		/**
-		 * PUT /user/:id
-		 * @tags users
-		 * @summary This updates a user by id
+		 * PUT /family/:id
+		 * @tags familys
+		 * @summary This updates a family by id
 		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -203,7 +206,7 @@ export class UserController implements IController {
 		 * }
 		 */
 		app.put(
-			"/user/:id",
+			"/family/:id",
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -213,9 +216,9 @@ export class UserController implements IController {
 		);
 
 		/**
-		 * DELETE /user/:id
-		 * @tags users
-		 * @summary This deletes a user by id
+		 * DELETE /family/:id
+		 * @tags familys
+		 * @summary This deletes a family by id
 		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
@@ -247,7 +250,7 @@ export class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/user/:id", (req: Request, res: Response) => {
+		app.delete("/family/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.delete(req, res);
 			});
@@ -255,22 +258,22 @@ export class UserController implements IController {
 	}
 
 	private index(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
+		const familyDocuments = this._database.listAllDocuments<Family>(
 			this._collectionName
 		);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
+		familyDocuments
+			.then((familys) => {
+				if (familys === null) {
+					familys = [];
 				}
 
-				users.forEach((user) => {
+				familys.forEach((family) => {
 					//@ts-ignore
-					delete user._id;
+					delete family._id;
 				});
 
-				res.send(users);
+				res.send(familys);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -280,41 +283,39 @@ export class UserController implements IController {
 
 	private create(req: Request, res: Response): void {
 		console.log(req.body);
-		const user = new User(
+		const family = new Family(
 			null,
-			req.body.name,
-			req.body.email,
-			req.body.password,
-			new Date(),
-			new Date(),
-			req.body.role
+			req.body.Name,
+			req.body.Description,
+			req.body.Notes,
+			req.body.HistoricalNames
 		);
 
 		this._database
-			.createDocument<User>(this._collectionName, user)
+			.createDocument<Family>(this._collectionName, family)
 			.catch((error) => {
 				console.error(error);
 				res.status(500).send({ status: 500, message: error.message });
 			});
 
-		res.send(user);
+		res.send(family);
 	}
 
 	private show(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const familyDocument = this._database.findDocument<Family>(
 			this._collectionName,
 			req.params.id
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null) {
+		familyDocument
+			.then((family) => {
+				if (family === null) {
 					res.status(404).send({ status: 404 });
 					return;
 				}
 				//@ts-ignore
-				delete user!._id;
-				res.send(user);
+				delete family!._id;
+				res.send(family);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -323,34 +324,32 @@ export class UserController implements IController {
 	}
 
 	private update(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const familyDocument = this._database.findDocument<Family>(
 			this._collectionName,
 			req.params.id
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
+		familyDocument
+			.then((family) => {
+				if (family === null || family === undefined) {
 					res.status(404).send({ status: 404 });
 					return;
 				}
-				const updatedUser = new User(
-					user.Id,
-					req.body.name ?? user.Name,
-					req.body.email ?? user.Email,
-					req.body.password ?? user.Password,
-					user.CreatedAt,
-					new Date(),
-					req.body.role ?? user.Role
+				const updatedFamily = new Family(
+					family.Id,
+					req.body.Name ?? family.Name,
+					req.body.Description ?? family.Description,
+					req.body.Notes ?? family.Notes,
+					req.body.HistoricalNames ?? family.HistoricalNames
 				);
 
-				const result = JSON.stringify(updatedUser);
+				const result = JSON.stringify(updatedFamily);
 
 				this._database
 					.updateDocument(
 						this._collectionName,
-						userDocument,
-						updatedUser
+						familyDocument,
+						updatedFamily
 					)
 					.then(() => {
 						res.status(200).send(result);
@@ -367,23 +366,23 @@ export class UserController implements IController {
 	}
 
 	private delete(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const familyDocument = this._database.findDocument<Family>(
 			this._collectionName,
 			req.path.split("/")[2]
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
+		familyDocument
+			.then((family) => {
+				if (family === null || family === undefined) {
 					res.status(404).send({ status: 404 });
 					return;
 				}
 				this._database
-					.deleteDocument(this._collectionName, user)
+					.deleteDocument(this._collectionName, family)
 					.then(() => {
 						res.status(200).send({
 							success: true,
-							message: `User ${user.Name} with id ${user.Id} deleted successfully`,
+							message: `Family ${family.Name} with id ${family.Id} deleted successfully`,
 						});
 					})
 					.catch((error) => {
