@@ -3,7 +3,6 @@ import { ConfigService } from "../services/config.srvs.js";
 import { DatabaseService } from "../services/database.srvs.js";
 import { IController } from "../interfaces/controller.interface.js";
 import { Config } from "../types/config.type.js";
-import { RateLimitRequestHandler } from "express-rate-limit";
 
 /**
  * Index controller
@@ -12,7 +11,7 @@ export class IndexController implements IController {
 	private _config = ConfigService.getInstance()._config as Config;
 	private _database = DatabaseService.getInstance();
 
-	public routes(app: Express, rateLimiting: RateLimitRequestHandler): void {
+	public routes(app: Express): void {
 		/**
 		 * GET /
 		 * @summary This returns the base data of the API
@@ -23,7 +22,7 @@ export class IndexController implements IController {
 		 * 	"name": "API"
 		 * }
 		 */
-		app.get("/", rateLimiting, (req: Request, res: Response) => {
+		app.get("/", (req: Request, res: Response) => {
 			this.getBaseData(req, res);
 		});
 	}

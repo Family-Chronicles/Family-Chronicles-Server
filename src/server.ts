@@ -3,7 +3,7 @@ import express, { Express } from "express";
 import dotenv from "dotenv";
 import { ConfigService } from "./services/config.srvs.js";
 import { DatabaseService } from "./services/database.srvs.js";
-import { RouterService } from "./services/router.srvs.js";
+import { RouterCore } from "./core/router.core.js";
 import expressJSDocSwagger from "express-jsdoc-swagger";
 import * as url from "url";
 import bodyParser from "body-parser";
@@ -47,8 +47,6 @@ class Server {
 			legacyHeaders: false,
 		});
 
-		RouterService.getInstance().buildUpRoutes(this.app, limiter);
-
 		this.swagger(this.app);
 		this.app.use(bodyParser.json());
 		this.app.use(bodyParser.urlencoded({ extended: false }));
@@ -78,6 +76,8 @@ class Server {
 			})
 		);
 
+		RouterCore.buildUpRoutes(this.app);
+
 		this.app.listen(this.port, () => {
 			console.log(
 				`⚡️[server]: Server is running at http://localhost:${this.port}`
@@ -96,9 +96,10 @@ class Server {
 			openapi: "3.0.0",
 			info: {
 				title: "Express API for " + config.meta.name,
-				version: "1.0.0",
+				version: config.meta.version,
 				description:
-					"This is a REST API application made with Express.",
+					`This is a REST API application made with Express.\n\n` +
+					`${config.meta.description}`,
 				license: {
 					name: "Licensed Under " + config.meta.license,
 					url: "https://github.com/Family-Chronicles/Family-Chronicles-Server/blob/main/LICENSE",
@@ -138,7 +139,7 @@ class Server {
 			// in the `example/configuration/swaggerOptions.js`
 			swaggerUiOptions: {},
 			// multiple option in case you want more that one instance
-			multiple: true,
+			multiple: false,
 		};
 
 		return expressJSDocSwagger(app)(swaggerDefinition);
