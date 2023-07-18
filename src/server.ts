@@ -3,7 +3,7 @@ import express, { Express } from "express";
 import dotenv from "dotenv";
 import { ConfigService } from "./services/config.srvs.js";
 import { DatabaseService } from "./services/database.srvs.js";
-import { RouterService } from "./services/router.srvs.js";
+import { RouterCore } from "./core/router.core.js";
 import expressJSDocSwagger from "express-jsdoc-swagger";
 import * as url from "url";
 import bodyParser from "body-parser";
@@ -76,7 +76,7 @@ class Server {
 			})
 		);
 
-		RouterService.getInstance().buildUpRoutes(this.app);
+		RouterCore.buildUpRoutes(this.app);
 
 		this.app.listen(this.port, () => {
 			console.log(
