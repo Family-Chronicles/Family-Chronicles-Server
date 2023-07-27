@@ -8,7 +8,7 @@ import { Config } from "../types/config.type.js";
  * Index controller
  */
 export class IndexController implements IController {
-	private _config = ConfigService.getInstance()._config as Config;
+	private _config = ConfigService.getInstance().config as Config;
 	private _database = DatabaseService.getInstance();
 
 	public routes(app: Express): void {

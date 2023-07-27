@@ -4,6 +4,8 @@ import { DatabaseService } from "../services/database.srvs.js";
 import { Family } from "../models/family.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
+import { ErrorResult } from "../models/actionResults/error.result.js";
+import { Ok } from "../models/actionResults/ok.result.js";
 
 export class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -277,7 +279,7 @@ export class FamilyController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -310,7 +312,7 @@ export class FamilyController implements IController {
 		familyDocument
 			.then((family) => {
 				if (family === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				//@ts-ignore
@@ -319,7 +321,7 @@ export class FamilyController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -332,7 +334,7 @@ export class FamilyController implements IController {
 		familyDocument
 			.then((family) => {
 				if (family === null || family === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				const updatedFamily = new Family(
@@ -356,12 +358,12 @@ export class FamilyController implements IController {
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -374,25 +376,26 @@ export class FamilyController implements IController {
 		familyDocument
 			.then((family) => {
 				if (family === null || family === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, family)
 					.then(() => {
-						res.status(200).send({
-							success: true,
-							message: `Family ${family.Name} with id ${family.Id} deleted successfully`,
-						});
+						res.status(200).send(
+							new Ok(
+								`Family ${family.Name} with id ${family.Id} deleted successfully`
+							)
+						);
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 }

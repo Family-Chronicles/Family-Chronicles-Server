@@ -4,6 +4,9 @@ import { DatabaseService } from "../services/database.srvs.js";
 import { Person } from "../models/person.model.js";
 import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
+import { Relationship } from "../models/relationship.model.js";
+import { ErrorResult } from "../models/actionResults/error.result.js";
+import { Ok } from "../models/actionResults/ok.result.js";
 
 export class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -413,6 +416,179 @@ export class PersonController implements IController {
 				this.delete(req, res);
 			});
 		});
+
+		/**
+		 * GET /person/:id/relationships
+		 * @tags persons
+		 * @summary This gets the relationships of a person by id
+		 * @security BearerAuth
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * [
+		 * 	{
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 		"RelationPartnerOneId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 		"RelationPartnerTwoId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 		"RelationType": "Married",
+		 * 		"Notes": "",
+		 * 	}
+		 * ]
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.get("/person/:id/relationships", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.showRelationships(req, res);
+			});
+		});
+
+		app.get(
+			"/person/:id/relationships/:relationshipId",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.showRelationship(req, res);
+				});
+			}
+		);
+
+		app.post("/person/:id/relationships", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.addRelationship(req, res);
+			});
+		});
+
+		app.put(
+			"/person/:id/relationships/:relationshipId",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.addRelationship(req, res);
+				});
+			}
+		);
+
+		app.delete(
+			"/person/:id/relationships/:relationshipId",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.deleteRelationship(req, res);
+				});
+			}
+		);
+	}
+
+	private addRelationship(req: Request, res: Response) {
+		const id = req.params.id;
+		const relationshipId = req.params.relationshipId;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((person) => {
+			if (person === null) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			const relationshipIds = person[0].RelationshipIds;
+
+			const relationships = relationshipIds.map((relationshipId) => {
+				return this._database.getDocumentByQuery<Relationship>(
+					"relations",
+					{ Id: relationshipId }
+				);
+			});
+
+			Promise.all(relationships).then((results) => {
+				const relationship = results.find((result) => {
+					return result[0].RelationPartnerOneId === id;
+				});
+
+				if (relationship !== undefined) {
+					res.status(400).send(new ErrorResult(400));
+					return;
+				}
+			});
+
+			if (!relationshipIds.includes(relationshipId)) {
+				relationshipIds.push(relationshipId);
+			}
+
+			const updateDocument = this._database.updateDocument<Person>(
+				this._collectionName,
+				{ Id: id },
+				{ RelationshipIds: relationshipIds }
+			);
+
+			updateDocument.then((result) => {
+				if (result === null) {
+					res.status(404).send(new ErrorResult(404));
+					return;
+				}
+
+				res.status(200).send(new SuccessResult(true));
+			});
+		});
+	}
+
+	private showRelationships(req: Request, res: Response) {
+		const id = req.params.id;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((person) => {
+			if (person === null) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			const relationshipIds = person[0].RelationshipIds;
+
+			const relationshipDocuments =
+				this._database.getDocumentByQuery<Relationship>("relations", {
+					Id: { $in: relationshipIds },
+				});
+
+			relationshipDocuments
+				.then((relationships) => {
+					if (relationships === null || relationships.length === 0) {
+						res.status(404).send(new ErrorResult(404));
+						return;
+					}
+
+					res.status(200).send(relationships);
+				})
+				.catch((error) => {
+					console.error(error);
+					res.status(500).send(new ErrorResult(500));
+				});
+		});
 	}
 
 	private showByRelatedDataIds(req: Request, res: Response) {
@@ -426,7 +602,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 
@@ -437,7 +613,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -452,7 +628,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 
@@ -463,7 +639,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -479,7 +655,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 
@@ -490,7 +666,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -514,7 +690,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -580,7 +756,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				//@ts-ignore
@@ -589,7 +765,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -602,7 +778,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				let firstName = req.body.FirstName ?? person.FirstName;
@@ -660,12 +836,12 @@ export class PersonController implements IController {
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -678,27 +854,28 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, person)
 					.then(() => {
-						res.status(200).send({
-							success: true,
-							message: `User ${
-								person.FirstName + " " + person.LastName
-							} with id ${person.Id} deleted successfully`,
-						});
+						res.status(200).send(
+							new Ok(
+								`User ${
+									person.FirstName + " " + person.LastName
+								} with id ${person.Id} deleted successfully`
+							)
+						);
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 }

@@ -14,17 +14,37 @@ import fs from "fs";
  */
 export class ConfigService {
 	private static _instance: ConfigService;
+	private readonly _configPath: string = "./dist/config/default.config.json";
 
-	public readonly _config: Config = JSON.parse(
-		fs.readFileSync("./dist/config/default.config.json", "utf8")
-	);
+	private _config: Config;
 
-	private constructor() {}
+	public get config(): Config {
+		return this._config;
+	}
+
+	private constructor() {
+		this._config = JSON.parse(fs.readFileSync(this._configPath, "utf8"));
+
+		// Listen for changes in config file
+		this.listenForFileChanges(this._configPath, () => {
+			this._config = JSON.parse(
+				fs.readFileSync(this._configPath, "utf8")
+			);
+		});
+	}
 
 	public static getInstance() {
 		if (!ConfigService._instance) {
 			ConfigService._instance = new ConfigService();
 		}
 		return ConfigService._instance;
+	}
+
+	private listenForFileChanges(path: string, fn: () => void): void {
+		fs.watchFile(path, (curr, prev) => {
+			if (curr.mtime > prev.mtime) {
+				fn();
+			}
+		});
 	}
 }

@@ -25,7 +25,7 @@ import { IModel } from "../interfaces/model.interface.js";
  */
 export class DatabaseService {
 	private static instance: DatabaseService;
-	private config: Config = ConfigService.getInstance()._config;
+	private config: Config = ConfigService.getInstance().config;
 	private client: MongoClient | undefined;
 
 	private constructor() {}

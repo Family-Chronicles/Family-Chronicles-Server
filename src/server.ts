@@ -91,7 +91,7 @@ class Server {
 	}
 
 	private swagger(app: Express): object {
-		const config = ConfigService.getInstance()._config as Config;
+		const config = ConfigService.getInstance().config as Config;
 		const swaggerDefinition = {
 			openapi: "3.0.0",
 			info: {
