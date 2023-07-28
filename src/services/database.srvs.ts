@@ -139,10 +139,10 @@ export class DatabaseService {
 		return document;
 	}
 
-	public async updateDocument(
+	public async updateDocument<T>(
 		collectionName: string,
 		filter: Filter<Document>,
-		update: IModel
+		update: T extends IModel ? Partial<T> : Partial<Document>
 	): Promise<boolean> {
 		const db = await this.connect(
 			this.config.database.host,

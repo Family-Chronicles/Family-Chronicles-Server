@@ -6,11 +6,12 @@ import { AuthorizationService } from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
 import { ErrorResult } from "../models/actionResults/error.result.js";
 import { Ok } from "../models/actionResults/ok.result.js";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 
 export class UserController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "users";
+	private _collectionName = DatabaseCollectionEnum.USERS;
 	/**
 	 * Routes user controller
 	 * @param app

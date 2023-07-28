@@ -18,6 +18,8 @@ export class Ok implements IActionResult {
 	constructor(public readonly message?: string) {
 		if (message) {
 			this.message = message;
+		} else {
+			this.message = "OK";
 		}
 	}
 }
