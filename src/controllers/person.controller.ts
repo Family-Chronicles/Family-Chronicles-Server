@@ -1,18 +1,20 @@
 import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { Person } from "../models/person.model.js";
-import { AuthorizationService } from "../services/auth.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
+import Person from "../models/person.model.js";
+import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
+import Relationship from "../models/relationship.model.js";
+import ErrorResult from "../models/actionResults/error.result.js";
+import Ok from "../models/actionResults/ok.result.js";
+import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 
-export class PersonController implements IController {
+export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "persons";
-	/**
-	 * Routes person controller
-	 * @param app
-	 */
+	private _collectionName = DatabaseCollectionEnum.PERSONS;
+
 	public routes(app: Express): void {
 		/**
 		 * GET /persons
@@ -413,6 +415,476 @@ export class PersonController implements IController {
 				this.delete(req, res);
 			});
 		});
+
+		/**
+		 * GET /person/:id/relationships
+		 * @tags persons
+		 * @summary This gets the relationships of a person by id
+		 * @security BearerAuth
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * [
+		 * 	{
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 		"RelationPartnerOneId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 		"RelationPartnerTwoId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 		"RelationType": "Married",
+		 * 		"Notes": "",
+		 * 	}
+		 * ]
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.get("/person/:id/relationships", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.showRelationships(req, res);
+			});
+		});
+
+		/**
+		 * GET /person/:id/relationships/:relationshipId
+		 * @tags persons
+		 * @summary This gets a relationship of a person by id
+		 * @security BearerAuth
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 	"RelationPartnerOneId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 	"RelationPartnerTwoId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 	"RelationType": "Married",
+		 * 	"Notes": "",
+		 * }
+		 */
+		app.get(
+			"/person/:id/relationships/:relationshipId",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.showRelationship(req, res);
+				});
+			}
+		);
+
+		/**
+		 * POST /person/:id/relationship
+		 * @tags persons
+		 * @summary This adds a relationship to a person by id
+		 * @security BearerAuth
+		 * @param {object} request.body.required - the request body
+		 * @param {string} request.body.relationPartnerOneId.required - the id of the first person in the relationship
+		 * @param {string} request.body.relationPartnerTwoId.required - the id of the second person in the relationship
+		 * @param {string} request.body.relationType.required - the type of relationship
+		 * @param {string} request.body.notes - notes about the relationship
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 	"RelationPartnerOneId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 	"RelationPartnerTwoId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
+		 * 	"RelationType": "Married",
+		 * 	"Notes": "",
+		 * }
+		 */
+		app.post("/person/:id/relationship", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.addRelationship(req, res);
+			});
+		});
+
+		/**
+		 * PUT /person/:id/relationships/:relationshipId
+		 * @tags persons
+		 * @summary This updates a relationship of a person by id
+		 * @security BearerAuth
+		 * @param {object} request.body.required - the request body
+		 * @param {string} request.body.relationPartnerOneId.required - the id of the first person in the relationship
+		 * @param {string} request.body.relationPartnerTwoId.required - the id of the second person in the relationship
+		 * @param {string} request.body.relationType.required - the type of relationship
+		 * @param {string} request.body.notes - notes about the relationship
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 	 status: 200
+		 * }
+		 */
+		app.put(
+			"/person/:id/relationships/:relationshipId",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.updateRelationship(req, res);
+				});
+			}
+		);
+
+		/**
+		 * DELETE /person/:id/relationships/:relationshipId
+		 * @tags persons
+		 * @summary This deletes a relationship of a person by id
+		 * @security BearerAuth
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 	 status: 200
+		 * }
+		 */
+		app.delete(
+			"/person/:id/relationships/:relationshipId",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.deleteRelationship(req, res);
+				});
+			}
+		);
+	}
+
+	private deleteRelationship(req: Request, res: Response) {
+		const id = req.params.id;
+		const relationshipId = req.params.relationshipId;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((persons) => {
+			if (persons.length === 0) {
+				res.status(404).send(new ErrorResult(404, "Person not found"));
+				return;
+			}
+
+			const person = persons[0];
+
+			const relationship =
+				this._database.getDocumentByQuery<Relationship>(
+					DatabaseCollectionEnum.RELATIONS,
+					{ Id: relationshipId }
+				);
+
+			relationship.then((relationships) => {
+				if (relationships.length === 0) {
+					res.status(404).send(
+						new ErrorResult(404, "Relationship not found")
+					);
+					return;
+				}
+
+				const relationship = relationships[0];
+
+				if (
+					relationship.RelationPartnerOneId !== id &&
+					relationship.RelationPartnerTwoId !== id
+				) {
+					res.status(404).send(
+						new ErrorResult(
+							404,
+							"Relationship does not belong to person"
+						)
+					);
+					return;
+				}
+
+				const deletion = this._database.deleteDocument(
+					DatabaseCollectionEnum.RELATIONS,
+					{ Id: relationshipId }
+				);
+
+				deletion.then((status) => {
+					if (!status) {
+						res.status(500).send(
+							new ErrorResult(
+								500,
+								"Failed to delete relationship"
+							)
+						);
+						return;
+					}
+
+					const result = this._database.updateDocument<Person>(
+						this._collectionName,
+						{ Id: id },
+						person
+					);
+
+					result.then((resultPerson) => {
+						if (!resultPerson) {
+							res.status(500).send(
+								new ErrorResult(
+									500,
+									"Failed to delete relationship from person"
+								)
+							);
+							return;
+						}
+
+						res.status(200).send(
+							new Ok(
+								`Deleted relationship for person ${person.Id}`
+							)
+						);
+					});
+				});
+			});
+		});
+	}
+
+	private updateRelationship(req: Request, res: Response) {
+		const id = req.params.id;
+		const relationshipId = req.params.relationshipId;
+
+		const realtionship = JSON.parse(req.body.relationship) as Relationship;
+
+		const resultRelation = new Relationship(
+			relationshipId,
+			id,
+			realtionship.RelationPartnerTwoId ?? "",
+			realtionship.RelationshipType ?? RelationshipTypeEnum.Unknown,
+			realtionship.Notes ?? ""
+		);
+
+		if (resultRelation.RelationPartnerTwoId === "") {
+			res.status(400).send(
+				new ErrorResult(400, "Missing RelationPartnerTwoId")
+			);
+			return;
+		}
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((persons) => {
+			if (persons === null || persons.length === 0) {
+				res.status(404).send(new ErrorResult(404, "Person not found"));
+				return;
+			}
+
+			const relationshipDocument =
+				this._database.getDocumentByQuery<Relationship>(
+					this._collectionName,
+					{
+						Id: relationshipId,
+					}
+				);
+
+			relationshipDocument.then((relationships) => {
+				if (relationships === null || relationships.length === 0) {
+					res.status(404).send(
+						new ErrorResult(404, "Relationship not found")
+					);
+					return;
+				}
+
+				const relationshipFromDb = relationships[0];
+
+				if (relationshipFromDb.RelationPartnerOneId !== id) {
+					res.status(403).send(
+						new ErrorResult(
+							403,
+							"Person is not allowed to update this relationship"
+						)
+					);
+					return;
+				}
+
+				this._database
+					.updateDocument<Relationship>(
+						this._collectionName,
+						relationshipFromDb,
+						resultRelation
+					)
+					.then((result) => {
+						if (result === null) {
+							res.status(500).send(
+								new ErrorResult(
+									500,
+									"Error updating relationship"
+								)
+							);
+							return;
+						}
+
+						res.status(200).send(new Ok("Relationship updated"));
+					});
+			});
+		});
+	}
+
+	private addRelationship(req: Request, res: Response) {
+		const id = req.params.id;
+		const realtionship = JSON.parse(req.body.relationship) as Relationship;
+
+		const resultRelation = new Relationship(
+			null,
+			id,
+			realtionship.RelationPartnerTwoId ?? "",
+			realtionship.RelationshipType ?? RelationshipTypeEnum.Unknown,
+			realtionship.Notes ?? ""
+		);
+
+		if (resultRelation.RelationPartnerTwoId === "") {
+			res.status(400).send(
+				new ErrorResult(400, "Missing RelationPartnerTwoId")
+			);
+			return;
+		}
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((persons) => {
+			if (persons === null || persons.length === 0) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			const person = persons[0];
+
+			if (
+				person.RelationshipIds === undefined ||
+				person.RelationshipIds === null
+			) {
+				person.RelationshipIds = [];
+			}
+
+			person.RelationshipIds.push(resultRelation.Id);
+
+			const updatePerson = this._database.updateDocument(
+				this._collectionName,
+				{ Id: id },
+				person
+			);
+
+			updatePerson.then((result) => {
+				if (result === false) {
+					res.status(500).send(new ErrorResult(500));
+					return;
+				}
+				this._database
+					.createDocument<Relationship>(
+						DatabaseCollectionEnum.RELATIONS,
+						resultRelation
+					)
+					.then((result) => {
+						if (result === false) {
+							res.status(500).send(new ErrorResult(500));
+							return;
+						}
+
+						res.status(200).send(new Ok());
+					});
+			});
+		});
+	}
+
+	private showRelationship(req: Request, res: Response) {
+		const id = req.params.id;
+		const relationshipId = req.params.relationshipId;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((person) => {
+			if (person === null) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			const relationshipIds = person[0].RelationshipIds;
+
+			if (relationshipIds === undefined || relationshipIds === null) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			if (relationshipIds.indexOf(relationshipId) === -1) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			const relationshipDocument =
+				this._database.getDocumentByQuery<Relationship>(
+					DatabaseCollectionEnum.RELATIONS,
+					{
+						Id: relationshipId,
+					}
+				);
+
+			relationshipDocument.then((relationship) => {
+				if (relationship === null) {
+					res.status(404).send(new ErrorResult(404));
+					return;
+				}
+
+				res.status(200).send(relationship[0]);
+			});
+		});
+	}
+
+	private showRelationships(req: Request, res: Response) {
+		const id = req.params.id;
+
+		const personDocument = this._database.getDocumentByQuery<Person>(
+			this._collectionName,
+			{ Id: id }
+		);
+
+		personDocument.then((person) => {
+			if (person === null) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			const relationshipIds = person[0].RelationshipIds;
+
+			const relationshipDocuments =
+				this._database.getDocumentByQuery<Relationship>(
+					DatabaseCollectionEnum.RELATIONS,
+					{
+						Id: { $in: relationshipIds },
+					}
+				);
+
+			relationshipDocuments
+				.then((relationships) => {
+					if (relationships === null || relationships.length === 0) {
+						res.status(404).send(new ErrorResult(404));
+						return;
+					}
+
+					res.status(200).send(relationships);
+				})
+				.catch((error) => {
+					console.error(error);
+					res.status(500).send(new ErrorResult(500));
+				});
+		});
 	}
 
 	private showByRelatedDataIds(req: Request, res: Response) {
@@ -426,7 +898,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 
@@ -437,7 +909,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -452,7 +924,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 
@@ -463,7 +935,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -479,7 +951,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 
@@ -490,7 +962,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -514,7 +986,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -580,7 +1052,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				//@ts-ignore
@@ -589,7 +1061,7 @@ export class PersonController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -602,7 +1074,7 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				let firstName = req.body.FirstName ?? person.FirstName;
@@ -660,12 +1132,12 @@ export class PersonController implements IController {
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -678,27 +1150,28 @@ export class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, person)
 					.then(() => {
-						res.status(200).send({
-							success: true,
-							message: `User ${
-								person.FirstName + " " + person.LastName
-							} with id ${person.Id} deleted successfully`,
-						});
+						res.status(200).send(
+							new Ok(
+								`User ${
+									person.FirstName + " " + person.LastName
+								} with id ${person.Id} deleted successfully`
+							)
+						);
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 }

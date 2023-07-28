@@ -1,14 +1,14 @@
 import { Express, Request, Response } from "express";
-import { ConfigService } from "../services/config.srvs.js";
-import { DatabaseService } from "../services/database.srvs.js";
+import ConfigService from "../services/config.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
 import { IController } from "../interfaces/controller.interface.js";
 import { Config } from "../types/config.type.js";
 
 /**
  * Index controller
  */
-export class IndexController implements IController {
-	private _config = ConfigService.getInstance()._config as Config;
+export default class IndexController implements IController {
+	private _config = ConfigService.getInstance().config as Config;
 	private _database = DatabaseService.getInstance();
 
 	public routes(app: Express): void {

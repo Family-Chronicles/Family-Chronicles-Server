@@ -1,4 +1,4 @@
-import { IModel } from "../interfaces/model.interface";
+import { IModel } from "../interfaces/model.interface.js";
 import crypto from "crypto";
 
 /**
@@ -16,7 +16,7 @@ import crypto from "crypto";
  * const errorModel = new ErrorModel(error.name, error.message, error.stack, new Date());
  * const errorModel = new ErrorModel(error.name, error.message, error.stack, error.date);
  */
-export class ErrorModel implements IModel {
+export default class ErrorModel implements IModel {
 	public readonly Id = crypto.randomUUID();
 	public name: string;
 	public message: string;

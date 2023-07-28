@@ -1,14 +1,14 @@
 import { Config } from "./types/config.type.js";
 import express, { Express } from "express";
 import dotenv from "dotenv";
-import { ConfigService } from "./services/config.srvs.js";
-import { DatabaseService } from "./services/database.srvs.js";
-import { RouterCore } from "./core/router.core.js";
+import ConfigService from "./services/config.srvs.js";
+import DatabaseService from "./services/database.srvs.js";
+import RouterCore from "./core/router.core.js";
 import expressJSDocSwagger from "express-jsdoc-swagger";
 import * as url from "url";
 import bodyParser from "body-parser";
 import rateLimiter from "express-rate-limit";
-import { Helper } from "./classes/helper.js";
+import Helper from "./classes/helper.js";
 import GlobalErrorHandler from "./core/error.core.js";
 /**
  * Server
@@ -31,8 +31,7 @@ class Server {
 
 	constructor() {
 		dotenv.config();
-		ConfigService.getInstance();
-		DatabaseService.getInstance();
+		ConfigService.getInstance(), DatabaseService.getInstance();
 		new GlobalErrorHandler();
 
 		const limiter = rateLimiter({
@@ -91,7 +90,7 @@ class Server {
 	}
 
 	private swagger(app: Express): object {
-		const config = ConfigService.getInstance()._config as Config;
+		const config = ConfigService.getInstance().config as Config;
 		const swaggerDefinition = {
 			openapi: "3.0.0",
 			info: {
@@ -99,7 +98,8 @@ class Server {
 				version: config.meta.version,
 				description:
 					`This is a REST API application made with Express.\n\n` +
-					`${config.meta.description}`,
+					`${config.meta.description} \n\n` +
+					`[swagger.json](/api/v3/swagger.json) (auto-generated from JSDoc)`,
 				license: {
 					name: "Licensed Under " + config.meta.license,
 					url: "https://github.com/Family-Chronicles/Family-Chronicles-Server/blob/main/LICENSE",
@@ -129,9 +129,9 @@ class Server {
 			// Expose OpenAPI UI
 			exposeSwaggerUI: true,
 			// Expose Open API JSON Docs documentation in `apiDocsPath` path.
-			exposeApiDocs: false,
+			exposeApiDocs: true,
 			// Open API JSON Docs endpoint.
-			apiDocsPath: "/v3/docs",
+			apiDocsPath: "/api/v3/swagger.json",
 			// Set non-required fields as nullable by default
 			notRequiredAsNullable: false,
 			// You can customize your UI options.
@@ -139,7 +139,7 @@ class Server {
 			// in the `example/configuration/swaggerOptions.js`
 			swaggerUiOptions: {},
 			// multiple option in case you want more that one instance
-			multiple: false,
+			multiple: true,
 		};
 
 		return expressJSDocSwagger(app)(swaggerDefinition);

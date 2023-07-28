@@ -1,4 +1,4 @@
-import { IModel } from "../interfaces/model.interface";
+import { IModel } from "../interfaces/model.interface.js";
 import crypto from "crypto";
 
 /**
@@ -44,7 +44,7 @@ import crypto from "crypto";
  * 	[]
  * );
  */
-export class Person implements IModel {
+export default class Person implements IModel {
 	// Properties
 	public readonly Id: string;
 	public FirstName: string[];

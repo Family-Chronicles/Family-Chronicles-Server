@@ -1,5 +1,5 @@
 import { Config } from "../types/config.type.js";
-import fs from "fs";
+import ConfigJson from "../config/default.config.json" assert { type: "json" };
 
 /**
  * Config service
@@ -12,14 +12,17 @@ import fs from "fs";
  * const configService = ConfigService.getInstance();
  * const config = configService._config;
  */
-export class ConfigService {
+export default class ConfigService {
 	private static _instance: ConfigService;
+	private _config: Config;
 
-	public readonly _config: Config = JSON.parse(
-		fs.readFileSync("./dist/config/default.config.json", "utf8")
-	);
+	public get config(): Config {
+		return this._config;
+	}
 
-	private constructor() {}
+	private constructor() {
+		this._config = ConfigJson;
+	}
 
 	public static getInstance() {
 		if (!ConfigService._instance) {

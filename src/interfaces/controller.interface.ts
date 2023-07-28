@@ -5,7 +5,7 @@ import { Express } from "express";
  * @interface
  * @property {Function} routes - Routes controller
  * @example
- * export class UserController implements IController {
+ * export default class UserController implements IController {
  * 	public routes(app: Express): void {
  * 		// Routes
  * 	}

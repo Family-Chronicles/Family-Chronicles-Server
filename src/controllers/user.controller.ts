@@ -1,14 +1,17 @@
 import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { User } from "../models/user.model.js";
-import { AuthorizationService } from "../services/auth.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
+import User from "../models/user.model.js";
+import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
+import ErrorResult from "../models/actionResults/error.result.js";
+import Ok from "../models/actionResults/ok.result.js";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 
-export class UserController implements IController {
+export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "users";
+	private _collectionName = DatabaseCollectionEnum.USERS;
 	/**
 	 * Routes user controller
 	 * @param app
@@ -274,7 +277,7 @@ export class UserController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -309,7 +312,7 @@ export class UserController implements IController {
 		userDocument
 			.then((user) => {
 				if (user === null) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				//@ts-ignore
@@ -318,7 +321,7 @@ export class UserController implements IController {
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -331,7 +334,7 @@ export class UserController implements IController {
 		userDocument
 			.then((user) => {
 				if (user === null || user === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				const updatedUser = new User(
@@ -357,12 +360,12 @@ export class UserController implements IController {
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 
@@ -375,25 +378,26 @@ export class UserController implements IController {
 		userDocument
 			.then((user) => {
 				if (user === null || user === undefined) {
-					res.status(404).send({ status: 404 });
+					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, user)
 					.then(() => {
-						res.status(200).send({
-							success: true,
-							message: `User ${user.Name} with id ${user.Id} deleted successfully`,
-						});
+						res.status(200).send(
+							new Ok(
+								`User ${user.Name} with id ${user.Id} deleted successfully`
+							)
+						);
 					})
 					.catch((error) => {
 						console.error(error);
-						res.status(500).send({ status: 500 });
+						res.status(500).send(new ErrorResult(500));
 					});
 			})
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500 });
+				res.status(500).send(new ErrorResult(500));
 			});
 	}
 }

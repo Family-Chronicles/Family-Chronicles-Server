@@ -1,6 +1,6 @@
 import * as util from "util";
-import { DatabaseService } from "../services/database.srvs.js";
-import { ErrorModel } from "../models/error.model.js";
+import DatabaseService from "../services/database.srvs.js";
+import ErrorModel from "../models/error.model.js";
 
 export default class GlobalErrorHandler {
 	private _database: DatabaseService;

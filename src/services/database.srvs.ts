@@ -7,7 +7,7 @@ import {
 	Filter,
 	Document,
 } from "mongodb";
-import { ConfigService } from "./config.srvs.js";
+import ConfigService from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
 
 /**
@@ -23,9 +23,9 @@ import { IModel } from "../interfaces/model.interface.js";
  * const databaseService = DatabaseService.getInstance();
  * const document = await databaseService.findDocument<DocumentModel>("collection", "id");
  */
-export class DatabaseService {
+export default class DatabaseService {
 	private static instance: DatabaseService;
-	private config: Config = ConfigService.getInstance()._config;
+	private config: Config = ConfigService.getInstance().config;
 	private client: MongoClient | undefined;
 
 	private constructor() {}
@@ -139,10 +139,10 @@ export class DatabaseService {
 		return document;
 	}
 
-	public async updateDocument(
+	public async updateDocument<T>(
 		collectionName: string,
 		filter: Filter<Document>,
-		update: IModel
+		update: T extends IModel ? Partial<T> : Partial<Document>
 	): Promise<boolean> {
 		const db = await this.connect(
 			this.config.database.host,
