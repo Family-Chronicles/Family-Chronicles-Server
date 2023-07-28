@@ -98,7 +98,8 @@ class Server {
 				version: config.meta.version,
 				description:
 					`This is a REST API application made with Express.\n\n` +
-					`${config.meta.description}`,
+					`${config.meta.description} \n\n` +
+					`[swagger.json](/api/v3/swagger.json) (auto-generated from JSDoc)`,
 				license: {
 					name: "Licensed Under " + config.meta.license,
 					url: "https://github.com/Family-Chronicles/Family-Chronicles-Server/blob/main/LICENSE",
@@ -128,9 +129,9 @@ class Server {
 			// Expose OpenAPI UI
 			exposeSwaggerUI: true,
 			// Expose Open API JSON Docs documentation in `apiDocsPath` path.
-			exposeApiDocs: false,
+			exposeApiDocs: true,
 			// Open API JSON Docs endpoint.
-			apiDocsPath: "/v3/docs",
+			apiDocsPath: "/api/v3/swagger.json",
 			// Set non-required fields as nullable by default
 			notRequiredAsNullable: false,
 			// You can customize your UI options.
@@ -138,7 +139,7 @@ class Server {
 			// in the `example/configuration/swaggerOptions.js`
 			swaggerUiOptions: {},
 			// multiple option in case you want more that one instance
-			multiple: false,
+			multiple: true,
 		};
 
 		return expressJSDocSwagger(app)(swaggerDefinition);
