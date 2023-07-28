@@ -1,14 +1,14 @@
-import { RelatedData } from "./data.model";
-import { Family } from "./family.model";
-import { Person } from "./person.model";
-import { Relationship } from "./relationship.model";
-import { TaggedPerson } from "./taggedPerson.model";
-import { User } from "./user.model";
+import RelatedData from "./data.model.js";
+import Family from "./family.model.js";
+import Person from "./person.model.js";
+import Relationship from "./relationship.model.js";
+import TaggedPerson from "./taggedPerson.model.js";
+import User from "./user.model.js";
 
 /**
  * Database model
  */
-export class DatabaseModel {
+export default class DatabaseModel {
 	/**
 	 * Familys  of database model
 	 */

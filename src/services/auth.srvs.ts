@@ -10,7 +10,7 @@ import { Request, Response } from "express";
  * 	// Do something
  * });
  */
-export class AuthorizationService {
+export default class AuthorizationService {
 	private static _instance: AuthorizationService;
 
 	private readonly _token: string =

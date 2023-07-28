@@ -1,4 +1,4 @@
-import { IActionResult } from "../../interfaces/actionResult.interface";
+import { IActionResult } from "../../interfaces/actionResult.interface.js";
 
 /**
  * ErrorResult
@@ -11,7 +11,7 @@ import { IActionResult } from "../../interfaces/actionResult.interface";
  * @example
  * const errorResult = new ErrorResult(500, "Internal server error");
  */
-export class ErrorResult implements IActionResult {
+export default class ErrorResult implements IActionResult {
 	constructor(
 		public readonly status: number,
 		public readonly message?: string

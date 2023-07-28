@@ -1,4 +1,4 @@
-import { IActionResult } from "../../interfaces/actionResult.interface";
+import { IActionResult } from "../../interfaces/actionResult.interface.js";
 
 /**
  * Ok result
@@ -12,7 +12,7 @@ import { IActionResult } from "../../interfaces/actionResult.interface";
  * const okResult = new Ok("OK");
  * const okResult = new Ok();
  */
-export class Ok implements IActionResult {
+export default class Ok implements IActionResult {
 	public readonly status: number = 200;
 
 	constructor(public readonly message?: string) {

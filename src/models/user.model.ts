@@ -1,4 +1,4 @@
-import { IModel } from "./../interfaces/model.interface";
+import { IModel } from "./../interfaces/model.interface.js";
 import { Role } from "../types/role.type.js";
 import crypto from "crypto";
 
@@ -33,7 +33,7 @@ import crypto from "crypto";
  * 	UserType.ADMIN
  * );
  */
-export class User implements IModel {
+export default class User implements IModel {
 	// Properties
 	public readonly Id: string;
 	public Name: string;

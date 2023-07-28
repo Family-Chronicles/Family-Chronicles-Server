@@ -1,19 +1,19 @@
 import { H } from "friendly-helper";
 import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { RoleEnum } from "../enums/role.enum.js";
-import { RelatedData } from "../models/data.model.js";
-import { DatabaseModel } from "../models/dataBase.model.js";
-import { Family } from "../models/family.model.js";
-import { Relationship } from "../models/relationship.model.js";
-import { TaggedPerson } from "../models/taggedPerson.model.js";
-import { User } from "../models/user.model.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { Person } from "../models/person.model.js";
+import RelatedData from "../models/data.model.js";
+import DatabaseModel from "../models/dataBase.model.js";
+import Family from "../models/family.model.js";
+import Relationship from "../models/relationship.model.js";
+import TaggedPerson from "../models/taggedPerson.model.js";
+import User from "../models/user.model.js";
+import DatabaseService from "../services/database.srvs.js";
+import Person from "../models/person.model.js";
 
 /**
  * Helper
  */
-export class Helper {
+export default class Helper {
 	/**
 	 * Tests data for the database
 	 * @public

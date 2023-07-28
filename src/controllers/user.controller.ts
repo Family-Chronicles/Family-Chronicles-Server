@@ -1,14 +1,14 @@
 import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { User } from "../models/user.model.js";
-import { AuthorizationService } from "../services/auth.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
+import User from "../models/user.model.js";
+import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import { ErrorResult } from "../models/actionResults/error.result.js";
-import { Ok } from "../models/actionResults/ok.result.js";
+import ErrorResult from "../models/actionResults/error.result.js";
+import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 
-export class UserController implements IController {
+export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
 	private _collectionName = DatabaseCollectionEnum.USERS;

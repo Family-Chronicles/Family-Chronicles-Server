@@ -1,5 +1,8 @@
 FROM node:current
 
+# Delete all the files in the current directory
+RUN rm -rf /usr/src/app/*
+
 # Create app directory
 WORKDIR /usr/src/app
 

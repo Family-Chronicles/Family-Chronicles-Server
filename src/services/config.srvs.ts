@@ -1,5 +1,5 @@
 import { Config } from "../types/config.type.js";
-import fs from "fs";
+import ConfigJson from "../config/default.config.json" assert { type: "json" };
 
 /**
  * Config service
@@ -12,10 +12,8 @@ import fs from "fs";
  * const configService = ConfigService.getInstance();
  * const config = configService._config;
  */
-export class ConfigService {
+export default class ConfigService {
 	private static _instance: ConfigService;
-	private readonly _configPath: string = "./dist/config/default.config.json";
-
 	private _config: Config;
 
 	public get config(): Config {
@@ -23,14 +21,7 @@ export class ConfigService {
 	}
 
 	private constructor() {
-		this._config = JSON.parse(fs.readFileSync(this._configPath, "utf8"));
-
-		// Listen for changes in config file
-		this.listenForFileChanges(this._configPath, () => {
-			this._config = JSON.parse(
-				fs.readFileSync(this._configPath, "utf8")
-			);
-		});
+		this._config = ConfigJson;
 	}
 
 	public static getInstance() {
@@ -38,13 +29,5 @@ export class ConfigService {
 			ConfigService._instance = new ConfigService();
 		}
 		return ConfigService._instance;
-	}
-
-	private listenForFileChanges(path: string, fn: () => void): void {
-		fs.watchFile(path, (curr, prev) => {
-			if (curr.mtime > prev.mtime) {
-				fn();
-			}
-		});
 	}
 }

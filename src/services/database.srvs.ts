@@ -7,7 +7,7 @@ import {
 	Filter,
 	Document,
 } from "mongodb";
-import { ConfigService } from "./config.srvs.js";
+import ConfigService from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
 
 /**
@@ -23,7 +23,7 @@ import { IModel } from "../interfaces/model.interface.js";
  * const databaseService = DatabaseService.getInstance();
  * const document = await databaseService.findDocument<DocumentModel>("collection", "id");
  */
-export class DatabaseService {
+export default class DatabaseService {
 	private static instance: DatabaseService;
 	private config: Config = ConfigService.getInstance().config;
 	private client: MongoClient | undefined;

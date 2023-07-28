@@ -1,9 +1,9 @@
 import { Express } from "express";
-import { FamilyController } from "../controllers/family.controller.js";
-import { IndexController } from "../controllers/index.controller.js";
-import { PersonController } from "../controllers/person.controller.js";
-import { TestController } from "../controllers/test.controller.js";
-import { UserController } from "../controllers/user.controller.js";
+import FamilyController from "../controllers/family.controller.js";
+import IndexController from "../controllers/index.controller.js";
+import PersonController from "../controllers/person.controller.js";
+import TestController from "../controllers/test.controller.js";
+import UserController from "../controllers/user.controller.js";
 
 /**
  * Router service
@@ -13,7 +13,7 @@ import { UserController } from "../controllers/user.controller.js";
  * RouterCore.getInstance().buildUpRoutes(app);
  * @returns {RouterCore} - Router service instance
  */
-export class RouterCore {
+export default class RouterCore {
 	public static buildUpRoutes(app: Express): void {
 		new IndexController().routes(app);
 		new TestController().routes(app);

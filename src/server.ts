@@ -1,14 +1,14 @@
 import { Config } from "./types/config.type.js";
 import express, { Express } from "express";
 import dotenv from "dotenv";
-import { ConfigService } from "./services/config.srvs.js";
-import { DatabaseService } from "./services/database.srvs.js";
-import { RouterCore } from "./core/router.core.js";
+import ConfigService from "./services/config.srvs.js";
+import DatabaseService from "./services/database.srvs.js";
+import RouterCore from "./core/router.core.js";
 import expressJSDocSwagger from "express-jsdoc-swagger";
 import * as url from "url";
 import bodyParser from "body-parser";
 import rateLimiter from "express-rate-limit";
-import { Helper } from "./classes/helper.js";
+import Helper from "./classes/helper.js";
 import GlobalErrorHandler from "./core/error.core.js";
 /**
  * Server
@@ -31,8 +31,7 @@ class Server {
 
 	constructor() {
 		dotenv.config();
-		ConfigService.getInstance();
-		DatabaseService.getInstance();
+		ConfigService.getInstance(), DatabaseService.getInstance();
 		new GlobalErrorHandler();
 
 		const limiter = rateLimiter({

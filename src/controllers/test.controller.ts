@@ -4,7 +4,7 @@ import { Express, Request, Response } from "express";
 /**
  * Test controller
  */
-export class TestController implements IController {
+export default class TestController implements IController {
 	public routes(app: Express): void {
 		/**
 		 * GET /test

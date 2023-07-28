@@ -27,7 +27,7 @@ import crypto from "crypto";
  * 	"John and Jane are brother and sister"
  * );
  */
-export class Relationship implements IModel {
+export default class Relationship implements IModel {
 	// Properties
 	public readonly Id: string;
 	public RelationPartnerOneId: string;

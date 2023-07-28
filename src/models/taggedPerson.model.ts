@@ -1,4 +1,4 @@
-import { IModel } from "../interfaces/model.interface";
+import { IModel } from "../interfaces/model.interface.js";
 import crypto from "crypto";
 
 /**
@@ -29,7 +29,7 @@ import crypto from "crypto";
  * 	"Notes"
  * );
  */
-export class TaggedPerson implements IModel {
+export default class TaggedPerson implements IModel {
 	// Properties
 	public readonly Id: string;
 	public PersonId: string;

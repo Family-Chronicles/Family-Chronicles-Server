@@ -1,5 +1,5 @@
 // a generic paginator class that provides pagination for any type of data
-export class Paginator {
+export default class Paginator {
 	/**
 	 * Paginates paginator
 	 * @template T

@@ -22,7 +22,7 @@ import { Blob, File } from "buffer";
  * 	["1", "2"]
  * );
  */
-export class RelatedData implements IModel {
+export default class RelatedData implements IModel {
 	// Properties
 	public readonly Id: string;
 	public RelatedData: string | Blob | File;
