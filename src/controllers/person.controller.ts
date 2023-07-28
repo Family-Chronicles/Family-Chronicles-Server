@@ -697,9 +697,9 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				const relationship = relationships[0];
+				const relationshipFromDb = relationships[0];
 
-				if (relationship.RelationPartnerOneId !== id) {
+				if (relationshipFromDb.RelationPartnerOneId !== id) {
 					res.status(403).send(
 						new ErrorResult(
 							403,
@@ -712,7 +712,7 @@ export default class PersonController implements IController {
 				this._database
 					.updateDocument<Relationship>(
 						this._collectionName,
-						realtionship,
+						relationshipFromDb,
 						resultRelation
 					)
 					.then((result) => {
