@@ -1,3 +1,4 @@
+import { Sex } from "../enums/sex.enum.js";
 import { IModel } from "../interfaces/model.interface.js";
 import crypto from "crypto";
 
@@ -49,6 +50,8 @@ export default class Person implements IModel {
 	public readonly Id: string;
 	public FirstName: string[];
 	public LastName: string[];
+	public Sex: Sex;
+	public Gender: string;
 	public DateOfBirth: Date;
 	public DateOfDeath: Date | null;
 	public PlaceOfBirth: string;
@@ -63,6 +66,8 @@ export default class Person implements IModel {
 		id: string | null | undefined,
 		firstName: string[],
 		lastName: string[],
+		sex: Sex,
+		gender: string,
 		dateOfBirth: Date,
 		dateOfDeath: Date | null,
 		placeOfBirth: string,
@@ -79,6 +84,8 @@ export default class Person implements IModel {
 		}
 		this.FirstName = firstName;
 		this.LastName = lastName;
+		this.Sex = sex;
+		this.Gender = gender;
 		this.DateOfBirth = dateOfBirth;
 		this.DateOfDeath = dateOfDeath;
 		this.PlaceOfBirth = placeOfBirth;

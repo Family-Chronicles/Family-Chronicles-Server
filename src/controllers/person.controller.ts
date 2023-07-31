@@ -27,6 +27,8 @@ export default class PersonController implements IController {
 		 * 	{
 		 * 		"FirstName": ["John"],
 		 * 		"LastName": ["Doe"],
+		 * 		"Sex": "Male",
+		 * 		"Gender": "Male",
 		 * 		"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 		"DateOfDeath": null,
 		 * 		"PlaceOfBirth": "New York",
@@ -79,6 +81,8 @@ export default class PersonController implements IController {
 		 * {
 		 * 	"FirstName": ["John"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Male",
+		 *  "Gender": "Male",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -132,6 +136,8 @@ export default class PersonController implements IController {
 		 * {
 		 * 	"FirstName": ["John"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Male",
+		 *  "Gender": "Male",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -187,6 +193,8 @@ export default class PersonController implements IController {
 		 * [{
 		 * 	"FirstName": ["John"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Male",
+		 *  "Gender": "Male",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -200,6 +208,8 @@ export default class PersonController implements IController {
 		 * {
 		 * 	"FirstName": ["Jane"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Female",
+		 *  "Gender": "Female",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -231,6 +241,8 @@ export default class PersonController implements IController {
 		 * [{
 		 * 	"FirstName": ["John"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Male",
+		 *  "Gender": "Male",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -244,6 +256,8 @@ export default class PersonController implements IController {
 		 * {
 		 * 	"FirstName": ["Jane"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Female",
+		 *  "Gender": "Female",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -275,6 +289,8 @@ export default class PersonController implements IController {
 		 * {
 		 * 	"FirstName": ["John"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Male",
+		 *  "Gender": "Male",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -330,6 +346,8 @@ export default class PersonController implements IController {
 		 * {
 		 * 	"FirstName": ["John"],
 		 * 	"LastName": ["Doe"],
+		 *  "Sex": "Male",
+		 *  "Gender": "Male",
 		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
 		 * 	"DateOfDeath": null,
 		 * 	"PlaceOfBirth": "New York",
@@ -1023,6 +1041,8 @@ export default class PersonController implements IController {
 			null,
 			firstName,
 			lastName,
+			req.body.sex,
+			req.body.gender,
 			req.body.DateOfBirth,
 			req.body.DateOfDeath ?? null,
 			req.body.PlaceOfBirth,
@@ -1109,6 +1129,8 @@ export default class PersonController implements IController {
 					person.Id,
 					firstName,
 					lastName,
+					req.body.sex,
+					req.body.gender,
 					req.body.DateOfBirth ?? person.DateOfBirth,
 					req.body.DateOfDeath ?? person.DateOfDeath,
 					req.body.PlaceOfBirth ?? person.PlaceOfBirth,
