@@ -9,6 +9,7 @@ import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
+import Paginator from "../classes/paginator.js";
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -67,6 +68,63 @@ export default class PersonController implements IController {
 		app.get("/persons", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
+			});
+		});
+
+		/**
+		 * GET /persons/:pageSize/:page
+		 * @tags persons
+		 * @summary This returns an array of all persons paged
+		 * @security BearerAuth
+		 * @param {string} pageSize.path.required - the page size
+		 * @param {string} page.path.required - the page number
+		 * @return {object[]} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * [
+		 * 	{
+		 * 		"FirstName": ["John"],
+		 * 		"LastName": ["Doe"],
+		 * 		"Sex": "Male",
+		 * 		"Gender": "Male",
+		 * 		"DateOfBirth": "2021-01-01T00:00:00.000Z",
+		 * 		"DateOfDeath": null,
+		 * 		"PlaceOfBirth": "New York",
+		 * 		"PlaceOfDeath": null,
+		 * 		"RelationshipIds": [],
+		 * 		"Notes": "",
+		 * 		"FamilyIds": [],
+		 * 		"RelatedDataIds": [],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
+		 * 	}
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+
+		app.get("/persons/:pageSize/:page", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.indexPaged(req, res);
 			});
 		});
 
@@ -1020,6 +1078,35 @@ export default class PersonController implements IController {
 				});
 
 				res.send(persons);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send(new ErrorResult(500));
+			});
+	}
+
+	private indexPaged(req: Request, res: Response): void {
+		const personDocuments = this._database.listAllDocuments<Person>(
+			this._collectionName
+		);
+
+		personDocuments
+			.then((persons) => {
+				if (persons === null) {
+					persons = [];
+				}
+
+				persons.forEach((person) => {
+					//@ts-ignore
+					delete person._id;
+				});
+
+				const page = parseInt(req.params.page);
+				const pageSize = parseInt(req.params.pageSize);
+
+				const result = Paginator.paginate(persons, page, pageSize);
+
+				res.send(result);
 			})
 			.catch((error) => {
 				console.error(error);

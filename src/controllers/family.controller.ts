@@ -7,6 +7,7 @@ import bodyParser from "body-parser";
 import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
+import Paginator from "../classes/paginator.js";
 
 export default class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -64,6 +65,58 @@ export default class FamilyController implements IController {
 		app.get("/familys", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
+			});
+		});
+
+		/**
+		 * GET /familys/:pageSize/:page
+		 * @tags familys
+		 * @param {string} pageSize.path.required - the page size
+		 * @param {string} page.path.required - the page
+		 * @summary This returns an array of all familys paged
+		 * @security BearerAuth
+		 * @return {object[]} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * [
+		 * 	{
+		 * 		"Id": "string",
+		 * 		"Name": "string",
+		 * 		"Description": "string",
+		 * 		"Notes": "string",
+		 * 		"HistoricalNames": [
+		 * 			"string"
+		 * 		]
+		 * 	},
+		 * 	...
+		 * ]
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.get("/familys/:pageSize/:page", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.indexPaged(req, res);
 			});
 		});
 
@@ -277,6 +330,39 @@ export default class FamilyController implements IController {
 				});
 
 				res.send(familys);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send(new ErrorResult(500));
+			});
+	}
+
+	private indexPaged(req: Request, res: Response): void {
+		const familyDocuments = this._database.listAllDocuments<Family>(
+			this._collectionName
+		);
+
+		familyDocuments
+			.then((familys) => {
+				if (familys === null) {
+					familys = [];
+				}
+
+				familys.forEach((family) => {
+					//@ts-ignore
+					delete family._id;
+				});
+
+				const pageSize = parseInt(req.params.pageSize);
+				const page = parseInt(req.params.page);
+
+				const result = Paginator.paginate<Family>(
+					familys,
+					pageSize,
+					page
+				);
+
+				res.send(result);
 			})
 			.catch((error) => {
 				console.error(error);
