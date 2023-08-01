@@ -583,7 +583,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ Id: id }
+			{
+				Id: id,
+			}
 		);
 
 		personDocument.then((persons) => {
@@ -625,7 +627,9 @@ export default class PersonController implements IController {
 
 				const deletion = this._database.deleteDocument(
 					DatabaseCollectionEnum.RELATIONS,
-					{ Id: relationshipId }
+					{
+						Id: relationshipId,
+					}
 				);
 
 				deletion.then((status) => {
@@ -690,7 +694,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ Id: id }
+			{
+				Id: id,
+			}
 		);
 
 		personDocument.then((persons) => {
@@ -771,7 +777,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ Id: id }
+			{
+				Id: id,
+			}
 		);
 
 		personDocument.then((persons) => {
@@ -825,7 +833,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ Id: id }
+			{
+				Id: id,
+			}
 		);
 
 		personDocument.then((person) => {
@@ -870,7 +880,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ Id: id }
+			{
+				Id: id,
+			}
 		);
 
 		personDocument.then((person) => {
@@ -910,7 +922,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ RelatedDataIds: { $in: relatedDataIds } }
+			{
+				RelatedDataIds: { $in: relatedDataIds },
+			}
 		);
 
 		personDocument
@@ -936,7 +950,9 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ DateOfBirth: dateOfBirth }
+			{
+				DateOfBirth: dateOfBirth,
+			}
 		);
 
 		personDocument
@@ -963,7 +979,10 @@ export default class PersonController implements IController {
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
-			{ FirstName: firstName, LastName: lastName }
+			{
+				FirstName: firstName,
+				LastName: lastName,
+			}
 		);
 
 		personDocument
@@ -1050,7 +1069,8 @@ export default class PersonController implements IController {
 			relatedDataIds,
 			req.body.Notes,
 			familyIds,
-			relationshipIds
+			relationshipIds,
+			req.body.events ?? []
 		);
 
 		this._database
@@ -1138,7 +1158,8 @@ export default class PersonController implements IController {
 					relationshipIds,
 					req.body.Notes ?? person.Notes,
 					familyIds,
-					relatedDataIds
+					relatedDataIds,
+					req.body.events ?? person.Events ?? []
 				);
 
 				const result = JSON.stringify(updatedPerson);

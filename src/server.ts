@@ -97,9 +97,9 @@ class Server {
 				title: "Express API for " + config.meta.name,
 				version: config.meta.version,
 				description:
-					`This is a REST API application made with Express.\n\n` +
+					"This is a REST API application made with Express.\n\n" +
 					`${config.meta.description} \n\n` +
-					`[swagger.json](/api/v3/swagger.json) (auto-generated from JSDoc)`,
+					"[swagger.json](/api/v3/swagger.json) (auto-generated from JSDoc)",
 				license: {
 					name: "Licensed Under " + config.meta.license,
 					url: "https://github.com/Family-Chronicles/Family-Chronicles-Server/blob/main/LICENSE",

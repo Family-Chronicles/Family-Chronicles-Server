@@ -1,6 +1,7 @@
 import { Sex } from "../enums/sex.enum.js";
 import { IModel } from "../interfaces/model.interface.js";
 import crypto from "crypto";
+import EventModel from "./event.model.js";
 
 /**
  * Person model
@@ -35,12 +36,15 @@ import crypto from "crypto";
  * 	null,
  * 	["John"],
  * 	["Doe"],
+ *  "",
+ *  "",
  * 	new Date(),
  * 	null,
  * 	"New York",
  * 	null,
  * 	[],
  * 	"",
+ * 	[],
  * 	[],
  * 	[]
  * );
@@ -60,6 +64,7 @@ export default class Person implements IModel {
 	public Notes: string;
 	public FamilyIds: string[];
 	public RelatedDataIds: string[];
+	public Events: EventModel[];
 
 	// Constructor
 	constructor(
@@ -75,7 +80,8 @@ export default class Person implements IModel {
 		relationshipIds: string[],
 		notes: string,
 		familyIds: string[],
-		relatedDataIds: string[]
+		relatedDataIds: string[],
+		events: EventModel[]
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.Id = crypto.randomUUID();
@@ -94,5 +100,6 @@ export default class Person implements IModel {
 		this.Notes = notes;
 		this.FamilyIds = familyIds;
 		this.RelatedDataIds = relatedDataIds;
+		this.Events = events ?? [];
 	}
 }
