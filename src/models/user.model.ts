@@ -26,7 +26,7 @@ import crypto from "crypto";
  * const user = new User(
  * 	null,
  * 	"John Doe",
- * 	"
+ * 	"",
  * 	"123456",
  * 	new Date(),
  * 	new Date(),

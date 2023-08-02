@@ -2,13 +2,14 @@ import { H } from "friendly-helper";
 import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { RoleEnum } from "../enums/role.enum.js";
 import RelatedData from "../models/data.model.js";
-import DatabaseModel from "../models/dataBase.model.js";
 import Family from "../models/family.model.js";
 import Relationship from "../models/relationship.model.js";
 import TaggedPerson from "../models/taggedPerson.model.js";
 import User from "../models/user.model.js";
 import DatabaseService from "../services/database.srvs.js";
 import Person from "../models/person.model.js";
+import DatabaseModel from "../models/dataBase.model.js";
+import { Sex } from "../enums/sex.enum.js";
 
 /**
  * Helper
@@ -61,6 +62,8 @@ export default class Helper {
 				null,
 				[H.random.generateFirstName()],
 				[H.random.generateLastName()],
+				Sex.OTHER,
+				"Queer AF",
 				new Date(),
 				null,
 				"Test Person Place of Birth " + index,
