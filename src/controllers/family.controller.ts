@@ -121,6 +121,48 @@ export default class FamilyController implements IController {
 		});
 
 		/**
+		 * GET /familys/pageCount/:pageSize
+		 * @tags familys
+		 * @param {string} pageSize.path.required - the page size
+		 * @summary This returns the page count for the familys
+		 * @security BearerAuth
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 	"pageCount": 1
+		 * }
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.get("/familys/pageCount/:pageSize", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.getPageCount(req, res);
+			});
+		});
+
+		/**
 		 * GET /family/:id
 		 * @tags familys
 		 * @summary This returns a family by id
@@ -363,6 +405,37 @@ export default class FamilyController implements IController {
 				);
 
 				res.send(result);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send(new ErrorResult(500));
+			});
+	}
+
+	private getPageCount(req: Request, res: Response): void {
+		const familyDocuments = this._database.listAllDocuments<Family>(
+			this._collectionName
+		);
+
+		familyDocuments
+			.then((familys) => {
+				if (familys === null) {
+					familys = [];
+				}
+
+				familys.forEach((family) => {
+					//@ts-ignore
+					delete family._id;
+				});
+
+				const pageSize = parseInt(req.params.pageSize);
+
+				const result = Paginator.getPageCount<Family>(
+					familys,
+					pageSize
+				);
+
+				res.send({ pageCount: result });
 			})
 			.catch((error) => {
 				console.error(error);

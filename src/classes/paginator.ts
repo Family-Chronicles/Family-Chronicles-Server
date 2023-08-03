@@ -20,4 +20,18 @@ export default class Paginator {
 		const startIndex = (currentPage - 1) * pageSize;
 		return items.slice(startIndex, startIndex + pageSize);
 	}
+
+	/**
+	 * Gets page count
+	 * @template T
+	 * @param items
+	 * @param pageSize
+	 * @returns page count
+	 */
+	public static getPageCount<T>(items: T[], pageSize: number): number {
+		if (!items || !items.length) return 0;
+		if (!pageSize) pageSize = 10;
+
+		return Math.ceil(items.length / pageSize);
+	}
 }

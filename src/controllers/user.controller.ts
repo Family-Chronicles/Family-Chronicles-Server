@@ -132,6 +132,12 @@ export default class UserController implements IController {
 			});
 		});
 
+		app.get("/users/pageCount/:pageSize", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.getPageCount(req, res);
+			});
+		});
+
 		/**
 		 * GET /user/:id
 		 * @tags users
@@ -362,6 +368,37 @@ export default class UserController implements IController {
 				const result = Paginator.paginate(users, pageSize, page);
 
 				res.send(result);
+			})
+			.catch((error) => {
+				console.error(error);
+				res.status(500).send(new ErrorResult(500));
+			});
+	}
+
+	private getPageCount(req: Request, res: Response): void {
+		const userDocuments = this._database.listAllDocuments<User>(
+			this._collectionName
+		);
+
+		userDocuments
+			.then((users) => {
+				if (users === null) {
+					users = [];
+				}
+
+				users.forEach((family) => {
+					//@ts-ignore
+					delete family._id;
+				});
+
+				const pageSize = parseInt(req.params.pageSize);
+
+				const result = Paginator.getPageCount<User>(
+					users,
+					pageSize
+				);
+
+				res.send({ pageCount: result });
 			})
 			.catch((error) => {
 				console.error(error);
