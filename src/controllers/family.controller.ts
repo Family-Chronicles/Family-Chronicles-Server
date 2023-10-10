@@ -156,11 +156,14 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/familys/pageCount/:pageSize", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.getPageCount(req, res);
-			});
-		});
+		app.get(
+			"/familys/pageCount/:pageSize",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.getPageCount(req, res);
+				});
+			}
+		);
 
 		/**
 		 * GET /family/:id

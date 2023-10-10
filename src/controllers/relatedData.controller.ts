@@ -1,46 +1,33 @@
 import { Express, Request, Response } from "express";
 import { IController } from "../interfaces/controller.interface.js";
 import DatabaseService from "../services/database.srvs.js";
-import User from "../models/user.model.js";
 import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
 import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
+import RelatedData from "../models/data.model.js";
 
-export default class UserController implements IController {
+export default class RelatedDataController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = DatabaseCollectionEnum.USERS;
-	/**
-	 * Routes user controller
-	 * @param app
-	 */
+	private _collectionName = DatabaseCollectionEnum.DATA;
+
 	public routes(app: Express): void {
 		/**
-		 * GET /users
-		 * @tags users
-		 * @summary This returns an array of all users
+		 * GET /relatedData
+		 * @tags relatedData
+		 * @summary This returns an array of all relatedData
 		 * @security BearerAuth
 		 * @return {object[]} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	},
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"RelatedData": "Related data",
+		 * 		"Notes": "Notes",
+		 * 		"TaggedPersonsIds": ["1", "2"],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * ]
 		 * @example response - 400 - bad request response example
@@ -68,37 +55,27 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/users", (req: Request, res: Response) => {
+		app.get("/relatedData", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.index(req, res);
 			});
 		});
 
 		/**
-		 * GET /users/:pageSize/:page
-		 * @tags users
-		 * @summary This returns an array of all users paged
+		 * GET /relatedData/:pageSize/:page
+		 * @tags relatedData
+		 * @summary This returns an array of all relatedData paged
 		 * @security BearerAuth
 		 * @param {string} pageSize.path.required - the page size
-		 * @param {string} page.path.required - the page
+		 * @param {string} page.path.required - the page number
 		 * @return {object[]} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [
 		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	},
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * 		"RelatedData": "Related data",
+		 * 		"Notes": "Notes",
+		 * 		"TaggedPersonsIds": ["1", "2"],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * ]
 		 * @example response - 400 - bad request response example
@@ -126,33 +103,73 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/users/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
-		});
-
-		app.get("/users/pageCount/:pageSize", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.getPageCount(req, res);
-			});
-		});
+		app.get(
+			"/relatedData/:pageSize/:page",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.indexPaged(req, res);
+				});
+			}
+		);
 
 		/**
-		 * GET /user/:id
-		 * @tags users
-		 * @summary This returns a user by id
+		 * GET /relatedData/pageCount/:pageSize
+		 * @tags relatedData
+		 * @summary This returns the page count of all relatedData
 		 * @security BearerAuth
-		 * @param {string} id.path.required - the id of the user
+		 * @param {string} pageSize.path.required - the page size
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * {
+		 * 		"pageCount": 1
+		 * }
+		 * @example response - 400 - bad request response example
+		 * {
+		 * 	"status": 400
+		 * }
+		 * @example response - 401 - unauthorized response example
+		 * {
+		 * 	"status": 401
+		 * }
+		 * @example response - 403 - forbidden response example
+		 * {
+		 * 	"status": 403
+		 * }
+		 * @example response - 404 - not found response example
+		 * {
+		 * 	"status": 404
+		 * }
+		 * @example response - 500 - internal server error response example
+		 * {
+		 * 	"status": 500
+		 * }
+		 * @example response - 503 - service unavailable response example
+		 * {
+		 * 	"status": 503
+		 * }
+		 */
+		app.get(
+			"/relatedData/pageCount/:pageSize",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.getPageCount(req, res);
+				});
+			}
+		);
+
+		/**
+		 * GET /relatedData/:id
+		 * @tags relatedData
+		 * @summary This returns a relatedData by id
+		 * @security BearerAuth
+		 * @param {string} id.path.required - the id of the relatedData
+		 * @return {object} 200 - success response - application/json
+		 * @example response - 200 - success response example
+		 * {
+		 * 		"RelatedData": "Related data",
+		 * 		"Notes": "Notes",
+		 * 		"TaggedPersonsIds": ["1", "2"],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -179,25 +196,25 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/user/:id", (req: Request, res: Response) => {
+		app.get("/relatedData/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.show(req, res);
 			});
 		});
 
 		/**
-		 * POST /user
-		 * @tags users
-		 * @summary This a new user and saves it to the database
+		 * POST /relatedData
+		 * @tags relatedData
+		 * @summary This a new relatedData and saves it to the database
 		 * @security BearerAuth
-		 * @param {object} - the new user - application/json
+		 * @param {object} - the new relatedData - application/json
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"name": "string",
-		 * 		"email": "string",
-		 * 		"password": "string",
-		 * 		"role": "Date",
+		 * {
+		 * 		"RelatedData": "Related data",
+		 * 		"Notes": "Notes",
+		 * 		"TaggedPersonsIds": ["1", "2"],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -224,26 +241,28 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.post("/user", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.create(req, res);
-			});
-		});
+		app.post(
+			"/relatedData",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.create(req, res);
+				});
+			}
+		);
 
 		/**
-		 * PUT /user/:id
-		 * @tags users
-		 * @summary This updates a user by id
+		 * PUT /relatedData/:id
+		 * @tags relatedData
+		 * @summary This updates a relatedData by id
 		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
+		 * {
+		 * 		"RelatedData": "Related data",
+		 * 		"Notes": "Notes",
+		 * 		"TaggedPersonsIds": ["1", "2"],
+		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
 		 * {
@@ -271,7 +290,7 @@ export default class UserController implements IController {
 		 * }
 		 */
 		app.put(
-			"/user/:id",
+			"/relatedData/:id",
 			bodyParser.json(),
 			(req: Request, res: Response) => {
 				this._authorization.authorize(req, res, () => {
@@ -281,15 +300,15 @@ export default class UserController implements IController {
 		);
 
 		/**
-		 * DELETE /user/:id
-		 * @tags users
-		 * @summary This deletes a user by id
+		 * DELETE /relatedData/:id
+		 * @tags relatedData
+		 * @summary This deletes a relatedData by id
 		 * @security BearerAuth
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"success": true,
-		 * 	}
+		 * {
+		 * 	"success": true,
+		 * }
 		 * @example response - 400 - bad request response example
 		 * {
 		 * 	"status": 400
@@ -315,7 +334,7 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/user/:id", (req: Request, res: Response) => {
+		app.delete("/relatedData/:id", (req: Request, res: Response) => {
 			this._authorization.authorize(req, res, () => {
 				this.delete(req, res);
 			});
@@ -323,22 +342,22 @@ export default class UserController implements IController {
 	}
 
 	private index(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
+		const dataDocuments = this._database.listAllDocuments<RelatedData>(
 			this._collectionName
 		);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
+		dataDocuments
+			.then((dataArray) => {
+				if (dataArray === null) {
+					dataArray = [];
 				}
 
-				users.forEach((user) => {
+				dataArray.forEach((data) => {
 					//@ts-ignore
-					delete user._id;
+					delete data._id;
 				});
 
-				res.send(users);
+				res.send(dataArray);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -347,25 +366,25 @@ export default class UserController implements IController {
 	}
 
 	private indexPaged(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
+		const dataDocuments = this._database.listAllDocuments<RelatedData>(
 			this._collectionName
 		);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
+		dataDocuments
+			.then((dataArray) => {
+				if (dataArray === null) {
+					dataArray = [];
 				}
 
-				users.forEach((user) => {
+				dataArray.forEach((data) => {
 					//@ts-ignore
-					delete user._id;
+					delete data._id;
 				});
 
-				const pageSize = parseInt(req.params.pageSize);
 				const page = parseInt(req.params.page);
+				const pageSize = parseInt(req.params.pageSize);
 
-				const result = Paginator.paginate(users, pageSize, page);
+				const result = Paginator.paginate(dataArray, page, pageSize);
 
 				res.send(result);
 			})
@@ -376,24 +395,27 @@ export default class UserController implements IController {
 	}
 
 	private getPageCount(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
+		const dataDocuments = this._database.listAllDocuments<RelatedData>(
 			this._collectionName
 		);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
+		dataDocuments
+			.then((dataArray) => {
+				if (dataArray === null) {
+					dataArray = [];
 				}
 
-				users.forEach((family) => {
+				dataArray.forEach((data) => {
 					//@ts-ignore
-					delete family._id;
+					delete data._id;
 				});
 
 				const pageSize = parseInt(req.params.pageSize);
 
-				const result = Paginator.getPageCount<User>(users, pageSize);
+				const result = Paginator.getPageCount<RelatedData>(
+					dataArray,
+					pageSize
+				);
 
 				res.send({ pageCount: result });
 			})
@@ -404,42 +426,57 @@ export default class UserController implements IController {
 	}
 
 	private create(req: Request, res: Response): void {
-		console.log(req.body);
-		const user = new User(
-			null,
-			req.body.name,
-			req.body.email,
-			req.body.password,
-			new Date(),
-			new Date(),
-			req.body.role
+		let relatedData:
+			| string
+			| import("buffer").Blob
+			| import("buffer").File = req.body.relatedData;
+
+		let notes: string = req.body.notes || "";
+		let taggedPersonsIds: string[] = req.body.taggedPersonsIds || [];
+
+		if (typeof relatedData === "string") {
+			relatedData = relatedData.trim();
+		}
+
+		if (typeof notes === "string") {
+			notes = notes.trim();
+		}
+
+		if (typeof taggedPersonsIds === "string") {
+			taggedPersonsIds = [taggedPersonsIds];
+		}
+
+		const newRelatedData = new RelatedData(
+			relatedData,
+			notes,
+			taggedPersonsIds
 		);
 
 		this._database
-			.createDocument<User>(this._collectionName, user)
+			.createDocument<RelatedData>(this._collectionName, newRelatedData)
 			.catch((error) => {
 				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
+				res.status(500).send(new ErrorResult(500));
 			});
 
-		res.send(user);
+		res.send(newRelatedData);
 	}
 
 	private show(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const dataDocument = this._database.findDocument<RelatedData>(
 			this._collectionName,
 			req.params.id
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null) {
+		dataDocument
+			.then((data) => {
+				if (data === null) {
 					res.status(404).send(new ErrorResult(404));
-					return;
+				} else {
+					//@ts-ignore
+					delete data._id;
+					res.send(data);
 				}
-				//@ts-ignore
-				delete user!._id;
-				res.send(user);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -448,42 +485,55 @@ export default class UserController implements IController {
 	}
 
 	private update(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const dataDocument = this._database.findDocument<RelatedData>(
 			this._collectionName,
 			req.params.id
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
+		dataDocument
+			.then((data) => {
+				if (data === null || data === undefined) {
 					res.status(404).send(new ErrorResult(404));
-					return;
+				} else {
+					let relatedData:
+						| string
+						| import("buffer").Blob
+						| import("buffer").File = req.body.relatedData;
+
+					let notes: string = req.body.notes || "";
+					let taggedPersonsIds: string[] =
+						req.body.taggedPersonsIds || [];
+
+					if (typeof relatedData === "string") {
+						relatedData = relatedData.trim();
+					}
+
+					if (typeof notes === "string") {
+						notes = notes.trim();
+					}
+
+					if (typeof taggedPersonsIds === "string") {
+						taggedPersonsIds = [taggedPersonsIds];
+					}
+
+					const updatedData = new RelatedData(
+						relatedData,
+						notes,
+						taggedPersonsIds
+					);
+
+					this._database
+						.updateDocument<RelatedData>(
+							this._collectionName,
+							dataDocument,
+							updatedData
+						)
+						.catch(() => {
+							res.status(500).send(new ErrorResult(500));
+						});
+
+					res.send(data);
 				}
-				const updatedUser = new User(
-					user.Id,
-					req.body.name ?? user.Name,
-					req.body.email ?? user.Email,
-					req.body.password ?? user.Password,
-					user.CreatedAt,
-					new Date(),
-					req.body.role ?? user.Role
-				);
-
-				const result = JSON.stringify(updatedUser);
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						userDocument,
-						updatedUser
-					)
-					.then(() => {
-						res.status(200).send(result);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
 			})
 			.catch((error) => {
 				console.error(error);
@@ -492,23 +542,23 @@ export default class UserController implements IController {
 	}
 
 	private delete(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
+		const dataDocument = this._database.findDocument<RelatedData>(
 			this._collectionName,
 			req.path.split("/")[2]
 		);
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
+		dataDocument
+			.then((data) => {
+				if (data === null || data === undefined) {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
 				this._database
-					.deleteDocument(this._collectionName, user)
+					.deleteDocument(this._collectionName, data)
 					.then(() => {
 						res.status(200).send(
 							new Ok(
-								`User ${user.Name} with id ${user.Id} deleted successfully`
+								`Related Data with id ${data.Id} deleted successfully`
 							)
 						);
 					})

@@ -10,6 +10,7 @@ import DatabaseService from "../services/database.srvs.js";
 import Person from "../models/person.model.js";
 import DatabaseModel from "../models/dataBase.model.js";
 import { Sex } from "../enums/sex.enum.js";
+import EventModel from "../models/event.model.js";
 
 /**
  * Helper
@@ -71,7 +72,31 @@ export default class Helper {
 				[H.guid.generate(), H.guid.generate()],
 				"Test Person Notes ",
 				["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-				[H.guid.generate(), H.guid.generate()]
+				[H.guid.generate(), H.guid.generate()],
+				[
+					new EventModel(
+						"isfj",
+						"Birth",
+						new Date(),
+						"New York",
+						null,
+						null,
+						[],
+						"",
+						""
+					),
+					new EventModel(
+						"isfj",
+						"Death",
+						new Date(),
+						"New York",
+						null,
+						null,
+						[],
+						"",
+						""
+					),
+				]
 			);
 			const relationship = new Relationship(
 				null,
