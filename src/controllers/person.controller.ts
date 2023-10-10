@@ -163,11 +163,14 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/persons/pageCount/:pageSize", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.getPageCount(req, res);
-			});
-		});
+		app.get(
+			"/persons/pageCount/:pageSize",
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.getPageCount(req, res);
+				});
+			}
+		);
 
 		/**
 		 * GET /person/:id

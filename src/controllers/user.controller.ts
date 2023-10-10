@@ -393,10 +393,7 @@ export default class UserController implements IController {
 
 				const pageSize = parseInt(req.params.pageSize);
 
-				const result = Paginator.getPageCount<User>(
-					users,
-					pageSize
-				);
+				const result = Paginator.getPageCount<User>(users, pageSize);
 
 				res.send({ pageCount: result });
 			})
