@@ -24,4 +24,8 @@ export type Config = {
 		password: string;
 		collections: string[];
 	};
+	auth: {
+		secret: string;
+		expiresIn: string;
+	};
 };

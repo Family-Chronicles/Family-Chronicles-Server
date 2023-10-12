@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 
 /**
  * Authorization service
@@ -12,9 +13,6 @@ import { Request, Response } from "express";
  */
 export default class AuthorizationService {
 	private static _instance: AuthorizationService;
-
-	private readonly _token: string =
-		"Bearer cc092ff1-7650-4514-8c4f-73eeff3ed943";
 
 	private constructor() {}
 
@@ -52,6 +50,11 @@ export default class AuthorizationService {
 	}
 
 	private verifyToken(token: string): boolean {
-		return token === this._token;
+		try {
+			const decoded = jwt.verify(token, process.env.SECRET as string);
+			return decoded !== undefined;
+		} catch (error) {
+			return false;
+		}
 	}
 }

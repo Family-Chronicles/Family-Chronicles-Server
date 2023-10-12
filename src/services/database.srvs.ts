@@ -9,6 +9,7 @@ import {
 } from "mongodb";
 import ConfigService from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
+import User from "../models/user.model.js";
 
 /**
  * Database service
@@ -213,5 +214,25 @@ export default class DatabaseService {
 		const collection = db.collection(_collectionName);
 		const documents = await collection.find(arg1).toArray();
 		return documents as T[];
+	}
+
+	public async getUserByUsername(username: string): Promise<User | null> {
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection("users");
+		const user = await collection.findOne<User>({ username });
+		return user;
+	}
+
+	public async addUser(user: User): Promise<boolean> {
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection("users");
+		const result = await collection.insertOne(user);
+		return result.acknowledged;
 	}
 }

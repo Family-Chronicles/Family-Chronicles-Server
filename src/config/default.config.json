@@ -32,5 +32,9 @@
       "relations",
       "tags"
     ]
-  }
+  },
+	"auth": {
+		"secret": "TOKEN_SECRET",
+		"expiresIn": "1d"
+	}
 }
