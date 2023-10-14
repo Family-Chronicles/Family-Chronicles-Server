@@ -6,6 +6,7 @@ import User from "../models/user.model";
 import ErrorResult from "../models/actionResults/error.result";
 import DatabaseService from "./database.srvs";
 import { RoleEnum } from "../enums/role.enum";
+import FailedAttemptModel from "../models/failedAttempts.model";
 
 /**
  * Authorization service
@@ -21,8 +22,15 @@ export default class AuthorizationService {
 	private static _instance: AuthorizationService;
 	private _config = ConfigService.getInstance().config as Config;
 	private _database = DatabaseService.getInstance();
+	private _failedAttempts: FailedAttemptModel[] = [];
 
-	private constructor() {}
+	private constructor() {
+		this._database
+			.listAllDocuments<FailedAttemptModel>("failedAttempts")
+			.then((failedAttempts) => {
+				this._failedAttempts = failedAttempts;
+			});
+	}
 
 	public static getInstance() {
 		if (!this._instance) {
@@ -65,37 +73,55 @@ export default class AuthorizationService {
 
 		if (!user) {
 			return res.status(404).send(
-				new ErrorResult(
-					404,
-					JSON.stringify({
-						auth: false,
-						message: "No user found.",
+				this.addFailedAttempt(decoded.Id, req.ip)
+					.then(() => {
+						new ErrorResult(
+							404,
+							JSON.stringify({
+								auth: false,
+								message: "No user found.",
+							})
+						);
 					})
-				)
+					.catch((err) => {
+						new ErrorResult(500, err.message);
+					})
 			);
 		}
 
 		if (user.Password !== decoded.Password) {
 			return res.status(401).send(
-				new ErrorResult(
-					401,
-					JSON.stringify({
-						auth: false,
-						message: "Invalid password.",
+				this.addFailedAttempt(decoded.Id, req.ip)
+					.then(() => {
+						new ErrorResult(
+							401,
+							JSON.stringify({
+								auth: false,
+								message: "Invalid password.",
+							})
+						);
 					})
-				)
+					.catch((err) => {
+						new ErrorResult(500, err.message);
+					})
 			);
 		}
 
 		if (user.SessoionID !== decoded.SessoionID) {
 			return res.status(401).send(
-				new ErrorResult(
-					401,
-					JSON.stringify({
-						auth: false,
-						message: "Invalid session.",
+				this.addFailedAttempt(decoded.Id, req.ip)
+					.then(() => {
+						new ErrorResult(
+							401,
+							JSON.stringify({
+								auth: false,
+								message: "Invalid session.",
+							})
+						);
 					})
-				)
+					.catch((err) => {
+						new ErrorResult(500, err.message);
+					})
 			);
 		}
 
@@ -134,5 +160,68 @@ export default class AuthorizationService {
 		return jwt.sign(payload, secret, {
 			expiresIn: this._config.auth.expiresIn,
 		});
+	}
+
+	public async addFailedAttempt(userId: string, ip: string): Promise<void> {
+		const failedAttempt = this._failedAttempts.find(
+			(fa) => fa.UserId === userId
+		);
+		if (failedAttempt) {
+			failedAttempt.Attempts++;
+			failedAttempt.LastAttempt = new Date();
+			failedAttempt.FailedIPs.push(ip);
+			await this._database.updateDocument<FailedAttemptModel>(
+				"failedAttempts",
+				{ Id: failedAttempt.Id },
+				failedAttempt
+			);
+		} else {
+			const newFailedAttempt = new FailedAttemptModel(
+				null,
+				userId,
+				1,
+				new Date(),
+				[ip]
+			);
+			await this._database.createDocument<FailedAttemptModel>(
+				"failedAttempts",
+				newFailedAttempt
+			);
+		}
+	}
+
+	public async syncFailedAttempts(): Promise<void> {
+		this._failedAttempts =
+			await this._database.listAllDocuments<FailedAttemptModel>(
+				"failedAttempts"
+			);
+	}
+
+	public async resetFailedAttempts(userId: string): Promise<void> {
+		const failedAttempt = this._failedAttempts.find(
+			(fa) => fa.UserId === userId
+		);
+		if (failedAttempt) {
+			failedAttempt.Attempts = 0;
+			failedAttempt.LastAttempt = new Date();
+			failedAttempt.FailedIPs = [];
+			await this._database.updateDocument<FailedAttemptModel>(
+				"failedAttempts",
+				{ Id: failedAttempt.Id },
+				failedAttempt
+			);
+		}
+	}
+
+	public async lockUser(userId: string): Promise<void> {
+		const user = await this._database.getUserById(userId);
+		if (user) {
+			user.Locked = true;
+			await this._database.updateDocument<User>(
+				"users",
+				{ Id: user.Id },
+				user
+			);
+		}
 	}
 }

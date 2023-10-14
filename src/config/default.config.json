@@ -30,7 +30,8 @@
       "families",
       "persons",
       "relations",
-      "tags"
+      "tags",
+			"failedAttempts"
     ]
   },
 	"auth": {

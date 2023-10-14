@@ -8,6 +8,7 @@ import Ok from "../models/actionResults/ok.result";
 import "dotenv/config";
 import AuthorizationService from "../services/auth.srvs";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
+import { RoleEnum } from "../enums/role.enum";
 
 /**
  * Login controller
@@ -127,7 +128,8 @@ export default class LoginController implements IController {
 					hashedPassword,
 					new Date(),
 					new Date(),
-					"Viewer"
+					RoleEnum.UNAUTHORIZED,
+					false
 				);
 				this._database
 					.addUser(newUser)
@@ -169,10 +171,24 @@ export default class LoginController implements IController {
 					hashedPassword || user.Password,
 					user.CreatedAt,
 					new Date(),
-					body.Role || user.Role
+					user.Role,
+					user.Locked,
 				);
+
+				if (body.Role !== user.Role || body.Locked !== user.Locked ) {
+					if (user.Role !== RoleEnum.ADMIN) {
+						res.status(401).send(
+							new ErrorResult(401, "Unauthorized")
+						);
+						return;
+					} else {
+						newUser.Role = body.Role;
+						newUser.Locked = body.Locked;
+					}
+				}
+
 				this._database
-					.addUser(newUser)
+					.updateDocument<User>( this._collectionName, { Id: newUser.Id }, newUser)
 					.then(() => {
 						res.send(new Ok("User updated successfully"));
 					})

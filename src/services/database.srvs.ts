@@ -226,6 +226,16 @@ export default class DatabaseService {
 		return user;
 	}
 
+	public async getUserById(id: string): Promise<User | null> {
+		const db = await this.connect(
+			this.config.database.host,
+			this.config.database.databasename
+		);
+		const collection = db.collection("users");
+		const user = await collection.findOne<User>({ Id: id });
+		return user;
+	}
+
 	public async addUser(user: User): Promise<boolean> {
 		const db = await this.connect(
 			this.config.database.host,
