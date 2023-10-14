@@ -42,6 +42,7 @@ export default class User implements IModel {
 	public CreatedAt: Date;
 	public UpdatedAt: Date;
 	public Role: Role;
+	public SessoionID?: string;
 
 	// Constructor
 	constructor(
@@ -51,7 +52,8 @@ export default class User implements IModel {
 		password: string,
 		createdAt: Date,
 		updatedAt: Date,
-		role: Role
+		role: Role,
+		sessionID?: string
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.Id = crypto.randomUUID();
@@ -64,5 +66,6 @@ export default class User implements IModel {
 		this.CreatedAt = createdAt;
 		this.UpdatedAt = updatedAt;
 		this.Role = role;
+		this.SessoionID = sessionID || undefined;
 	}
 }
