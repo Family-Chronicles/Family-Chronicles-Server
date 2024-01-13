@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import ConfigService from "./config.srvs";
+import ConfigService from "./config.srvs.js";
 import { Config } from "../types/config.type";
-import User from "../models/user.model";
-import ErrorResult from "../models/actionResults/error.result";
-import DatabaseService from "./database.srvs";
-import { RoleEnum } from "../enums/role.enum";
-import FailedAttemptModel from "../models/failedAttempts.model";
+import User from "../models/user.model.js";
+import ErrorResult from "../models/actionResults/error.result.js";
+import DatabaseService from "./database.srvs.js";
+import { RoleEnum } from "../enums/role.enum.js";
+import FailedAttemptModel from "../models/failedAttempts.model.js";
 
 /**
  * Authorization service
