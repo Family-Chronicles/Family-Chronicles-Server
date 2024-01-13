@@ -1,7 +1,8 @@
 import { IController } from "../interfaces/controller.interface";
 import DatabaseService from "../services/database.srvs";
 import { Express, Request, Response } from "express";
-import bcrypt from "bcrypt";
+import crypto from "crypto";
+import NodeRSA from "node-rsa";
 import ErrorResult from "../models/actionResults/error.result";
 import User from "../models/user.model";
 import Ok from "../models/actionResults/ok.result";
@@ -9,6 +10,7 @@ import "dotenv/config";
 import AuthorizationService from "../services/auth.srvs";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { RoleEnum } from "../enums/role.enum";
+import ConfigService from "../services/config.srvs";
 
 /**
  * Login controller
@@ -25,6 +27,7 @@ export default class LoginController implements IController {
 	private _database = DatabaseService.getInstance();
 	private _authorization = AuthorizationService.getInstance();
 	private _collectionName = DatabaseCollectionEnum.USERS;
+	private _config = ConfigService.getInstance();
 
 	public routes(app: Express): void {
 		/**
@@ -73,6 +76,8 @@ export default class LoginController implements IController {
 
 	private login(req: Request, res: Response): void {
 		const { username, password } = req.body;
+		const key = new NodeRSA(this._config.config.auth.privateKey);
+
 		if (!username || !password) {
 			res.status(400).send("Missing username or password");
 			return;
@@ -87,13 +92,27 @@ export default class LoginController implements IController {
 					);
 					return;
 				}
-				if (!this.comparePassword(password, user.Password)) {
+				if (
+					!this._authorization.comparePassword(
+						key.decrypt(password, "utf8"),
+						user.Password
+					)
+				) {
 					res.status(400).send(
 						new ErrorResult(400, "Wrong password")
 					);
 					return;
 				}
+
+				if (user.Locked) {
+					res.status(401).send(
+						new ErrorResult(401, "User is locked")
+					);
+					return;
+				}
+
 				user.SessoionID = crypto.randomUUID();
+
 				const token = this._authorization.generateToken(user);
 				res.send(new Ok(token));
 			})
@@ -103,6 +122,7 @@ export default class LoginController implements IController {
 	}
 
 	private register(req: Request, res: Response): void {
+		const key = new NodeRSA(this._config.config.auth.privateKey);
 		const body: User = req.body;
 		if (!body.Name || !body.Password) {
 			res.status(400).send(
@@ -120,7 +140,9 @@ export default class LoginController implements IController {
 					);
 					return;
 				}
-				const hashedPassword = this.hashPassword(body.Password);
+				const hashedPassword = this._authorization.hashPassword(
+					key.decrypt(body.Password, "utf8")
+				);
 				const newUser = new User(
 					null,
 					body.Name,
@@ -129,7 +151,8 @@ export default class LoginController implements IController {
 					new Date(),
 					new Date(),
 					RoleEnum.UNAUTHORIZED,
-					false
+					false,
+					undefined
 				);
 				this._database
 					.addUser(newUser)
@@ -146,6 +169,7 @@ export default class LoginController implements IController {
 	}
 
 	private updateAccount(req: Request, res: Response): void {
+		const key = new NodeRSA(this._config.config.auth.privateKey);
 		const body: User = req.body;
 		if (!body.Name || !body.Password) {
 			res.status(400).send(
@@ -163,7 +187,10 @@ export default class LoginController implements IController {
 					);
 					return;
 				}
-				const hashedPassword = this.hashPassword(body.Password);
+				const hashedPassword = key.decrypt(
+					this._authorization.hashPassword(body.Password),
+					"utf8"
+				);
 				const newUser = new User(
 					body.Id || null,
 					body.Name || user.Name,
@@ -173,9 +200,10 @@ export default class LoginController implements IController {
 					new Date(),
 					user.Role,
 					user.Locked,
+					user.SessoionID
 				);
 
-				if (body.Role !== user.Role || body.Locked !== user.Locked ) {
+				if (body.Role !== user.Role || body.Locked !== user.Locked) {
 					if (user.Role !== RoleEnum.ADMIN) {
 						res.status(401).send(
 							new ErrorResult(401, "Unauthorized")
@@ -188,7 +216,11 @@ export default class LoginController implements IController {
 				}
 
 				this._database
-					.updateDocument<User>( this._collectionName, { Id: newUser.Id }, newUser)
+					.updateDocument<User>(
+						this._collectionName,
+						{ Id: newUser.Id },
+						newUser
+					)
 					.then(() => {
 						res.send(new Ok("User updated successfully"));
 					})
@@ -199,15 +231,6 @@ export default class LoginController implements IController {
 			.catch((err) => {
 				res.status(500).send(new ErrorResult(500, err.message));
 			});
-	}
-
-	private hashPassword(password: string): string {
-		const salt = bcrypt.genSaltSync(10);
-		return bcrypt.hashSync(password, salt);
-	}
-
-	private comparePassword(password: string, hash: string): boolean {
-		return bcrypt.compareSync(password, hash);
 	}
 
 	private logout(req: Request, res: Response): void {
@@ -255,15 +278,18 @@ export default class LoginController implements IController {
 
 				user.SessoionID = undefined;
 
-				this._database.updateDocument<User>(
-					this._collectionName,
-					{ Id: user.Id },
-					user
-				).then(() => {
-					res.send(new Ok("User logged out successfully"));
-				}).catch((err) => {
-					res.status(500).send(new ErrorResult(500, err.message));
-				});
+				this._database
+					.updateDocument<User>(
+						this._collectionName,
+						{ Id: user.Id },
+						user
+					)
+					.then(() => {
+						res.send(new Ok("User logged out successfully"));
+					})
+					.catch((err) => {
+						res.status(500).send(new ErrorResult(500, err.message));
+					});
 			})
 			.catch((err) => {
 				res.status(500).send(new ErrorResult(500, err.message));

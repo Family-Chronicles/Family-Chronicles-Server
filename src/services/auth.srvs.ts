@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import ConfigService from "./config.srvs";
 import { Config } from "../types/config.type";
 import User from "../models/user.model";
@@ -39,6 +40,15 @@ export default class AuthorizationService {
 		return this._instance;
 	}
 
+	public hashPassword(password: string): string {
+		const salt = bcrypt.genSaltSync(10);
+		return bcrypt.hashSync(password, salt);
+	}
+
+	public comparePassword(password: string, hash: string): boolean {
+		return bcrypt.compareSync(password, hash);
+	}
+
 	public async authorize(req: Request, res: Response, next: () => void) {
 		const token = req.headers["authorization"];
 		if (
@@ -73,7 +83,7 @@ export default class AuthorizationService {
 
 		if (!user) {
 			return res.status(404).send(
-				this.addFailedAttempt(decoded.Id, req.ip)
+				this.addFailedAttempt(decoded.Id, req.ip!)
 					.then(() => {
 						new ErrorResult(
 							404,
@@ -91,7 +101,7 @@ export default class AuthorizationService {
 
 		if (user.Password !== decoded.Password) {
 			return res.status(401).send(
-				this.addFailedAttempt(decoded.Id, req.ip)
+				this.addFailedAttempt(decoded.Id, req.ip!)
 					.then(() => {
 						new ErrorResult(
 							401,
@@ -109,7 +119,7 @@ export default class AuthorizationService {
 
 		if (user.SessoionID !== decoded.SessoionID) {
 			return res.status(401).send(
-				this.addFailedAttempt(decoded.Id, req.ip)
+				this.addFailedAttempt(decoded.Id, req.ip!)
 					.then(() => {
 						new ErrorResult(
 							401,
@@ -141,9 +151,9 @@ export default class AuthorizationService {
 	}
 
 	public decodeToken<T>(token: string): string | JwtPayload | null | T {
-		let secret = this._config.auth.secret;
+		let secret = this._config.auth.privateKey;
 
-		if (!secret || secret === "" || secret === "TOKEN_SECRET") {
+		if (!secret || secret === "") {
 			secret = process.env.SECRET as string;
 		}
 
@@ -151,14 +161,15 @@ export default class AuthorizationService {
 	}
 
 	public generateToken(payload: string | object | Buffer): string {
-		let secret = this._config.auth.secret;
+		let secret = this._config.auth.privateKey;
 
-		if (!secret || secret === "" || secret === "TOKEN_SECRET") {
+		if (!secret || secret === "") {
 			secret = process.env.SECRET as string;
 		}
 
 		return jwt.sign(payload, secret, {
-			expiresIn: this._config.auth.expiresIn,
+			expiresIn: this._config.auth.tokenExpiration,
+			algorithm: "HS256",
 		});
 	}
 

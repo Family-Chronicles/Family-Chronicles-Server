@@ -25,7 +25,8 @@ export type Config = {
 		collections: string[];
 	};
 	auth: {
-		secret: string;
-		expiresIn: string;
+		privateKey: string;
+		publicKey: string;
+		tokenExpiration: string;
 	};
 };
