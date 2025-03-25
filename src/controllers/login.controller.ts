@@ -65,11 +65,11 @@ export default class LoginController implements IController {
 		 *  "message": "User updated successfully",
 		 * }
 		 */
-		app.put("/user/update", (req: Request, res: Response) => {
+		app.put("/user/update", this._authorization.authorize.bind(this._authorization), (req: Request, res: Response) => {
 			this.updateAccount(req, res);
 		});
 
-		app.delete("/user/logout", (req: Request, res: Response) => {
+		app.delete("/user/logout", this._authorization.authorize.bind(this._authorization), (req: Request, res: Response) => {
 			this.logout(req, res);
 		});
 	}
