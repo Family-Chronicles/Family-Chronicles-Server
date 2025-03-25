@@ -508,7 +508,14 @@ export default class FamilyController implements IController {
 					req.body.HistoricalNames ?? family.HistoricalNames
 				);
 
-				const result = JSON.stringify(updatedFamily);
+				// Sanitize the updatedFamily object
+				const sanitizedFamily = {
+					Id: updatedFamily.Id,
+					Name: escapeHtml(updatedFamily.Name),
+					Description: escapeHtml(updatedFamily.Description),
+					Notes: escapeHtml(updatedFamily.Notes),
+					HistoricalNames: updatedFamily.HistoricalNames.map(escapeHtml),
+				};
 
 				this._database
 					.updateDocument(
@@ -517,7 +524,7 @@ export default class FamilyController implements IController {
 						updatedFamily
 					)
 					.then(() => {
-						res.status(200).send(result);
+						res.status(200).send(sanitizedFamily);
 					})
 					.catch((error) => {
 						console.error(error);
@@ -561,4 +568,19 @@ export default class FamilyController implements IController {
 				res.status(500).send(new ErrorResult(500));
 			});
 	}
+}
+
+// Utility function to escape HTML
+function escapeHtml(input: string): string {
+	return input.replace(/[&<>'"/]/g, (char) => {
+		const escapeChars: { [key: string]: string } = {
+			'&': '&amp;',
+			'<': '&lt;',
+			'>': '&gt;',
+			"'": '&#39;',
+			'"': '&quot;',
+			'/': '&#x2F;',
+		};
+		return escapeChars[char] || char;
+	});
 }
