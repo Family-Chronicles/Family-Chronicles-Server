@@ -10,6 +10,7 @@ import Ok from "../models/actionResults/ok.result.js";
 import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
+import escapeHtml from 'escape-html';
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -1335,7 +1336,8 @@ export default class PersonController implements IController {
 						updatedPerson
 					)
 					.then(() => {
-						res.status(200).send(result);
+						const sanitizedResult = escapeHtml(result);
+						res.status(200).send(sanitizedResult);
 					})
 					.catch((error) => {
 						console.error(error);

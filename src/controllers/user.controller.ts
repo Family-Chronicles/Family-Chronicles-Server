@@ -8,6 +8,7 @@ import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
+import escapeHtml from 'escape-html';
 
 export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -482,7 +483,8 @@ export default class UserController implements IController {
 						updatedUser
 					)
 					.then(() => {
-						res.status(200).send(result);
+						const sanitizedResult = escapeHtml(result);
+						res.status(200).send(sanitizedResult);
 					})
 					.catch((error) => {
 						console.error(error);
