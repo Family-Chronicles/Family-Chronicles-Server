@@ -1,4 +1,5 @@
 import RelatedData from "./data.model.js";
+import FailedAttemptModel from "./failedAttempts.model.js";
 import Family from "./family.model.js";
 import Person from "./person.model.js";
 import Relationship from "./relationship.model.js";
@@ -40,6 +41,11 @@ export default class DatabaseModel {
 	public users: User[];
 
 	/**
+	 * Failed attempts of database model
+	 */
+	public failedAttempts: FailedAttemptModel[];
+
+	/**
 	 * Creates an instance of database model.
 	 */
 	constructor() {
@@ -49,5 +55,6 @@ export default class DatabaseModel {
 		this.relationships = [];
 		this.taggedPersons = [];
 		this.users = [];
+		this.failedAttempts = [];
 	}
 }

@@ -8,6 +8,7 @@ import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
+import escapeHtml from 'escape-html';
 
 export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -412,7 +413,9 @@ export default class UserController implements IController {
 			req.body.password,
 			new Date(),
 			new Date(),
-			req.body.role
+			req.body.role,
+			false,
+			req.body.sessionID ?? undefined
 		);
 
 		this._database
@@ -466,7 +469,9 @@ export default class UserController implements IController {
 					req.body.password ?? user.Password,
 					user.CreatedAt,
 					new Date(),
-					req.body.role ?? user.Role
+					req.body.role ?? user.Role,
+					req.body.locked ?? user.Locked,
+					req.body.sessionID ?? user.SessoionID ?? undefined
 				);
 
 				const result = JSON.stringify(updatedUser);
@@ -478,7 +483,8 @@ export default class UserController implements IController {
 						updatedUser
 					)
 					.then(() => {
-						res.status(200).send(result);
+						const sanitizedResult = escapeHtml(result);
+						res.status(200).send(sanitizedResult);
 					})
 					.catch((error) => {
 						console.error(error);

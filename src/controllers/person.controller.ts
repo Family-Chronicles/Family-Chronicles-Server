@@ -10,6 +10,7 @@ import Ok from "../models/actionResults/ok.result.js";
 import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
+import escapeHtml from 'escape-html';
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -285,11 +286,11 @@ export default class PersonController implements IController {
 		);
 
 		/**
-		 * GET /person/dateOfBirth/:dateOfBirth
+		 * POST /person/dateOfBirth
 		 * @tags persons
 		 * @summary This returns persons by date of birth
 		 * @security BearerAuth
-		 * @param {string} dateOfBirth.path.required - the date of birth of the person
+		 * @param {string} dateOfBirth.body.required - the date of birth of the person
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * [{
@@ -323,14 +324,11 @@ export default class PersonController implements IController {
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
 		 * }]
 		 */
-		app.get(
-			"/person/dateOfBirth/:dateOfBirth",
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByDateOfBirth(req, res);
-				});
-			}
-		);
+		app.post("/person/dateOfBirth", bodyParser.json(), (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.showByDateOfBirth(req, res);
+			});
+		});
 
 		/**
 		 * GET /person/relatedData/:relatedDataIds
@@ -1048,7 +1046,12 @@ export default class PersonController implements IController {
 	}
 
 	private showByDateOfBirth(req: Request, res: Response) {
-		const dateOfBirth = req.params.dateOfBirth;
+		const dateOfBirth = req.body.dateOfBirth;
+
+		if (!dateOfBirth) {
+			res.status(400).send(new ErrorResult(400, "Missing dateOfBirth"));
+			return;
+		}
 
 		const personDocument = this._database.getDocumentByQuery<Person>(
 			this._collectionName,
@@ -1333,7 +1336,8 @@ export default class PersonController implements IController {
 						updatedPerson
 					)
 					.then(() => {
-						res.status(200).send(result);
+						const sanitizedResult = escapeHtml(result);
+						res.status(200).send(sanitizedResult);
 					})
 					.catch((error) => {
 						console.error(error);

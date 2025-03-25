@@ -44,6 +44,7 @@ export default class Helper {
 			relationships: [],
 			taggedPersons: [],
 			users: [],
+			failedAttempts: [],
 		};
 
 		for (let index = 0; index < 10; index++) {
@@ -125,7 +126,8 @@ export default class Helper {
 				),
 				new Date(),
 				new Date(),
-				RoleEnum.ADMIN
+				RoleEnum.ADMIN,
+				false
 			);
 
 			testData.familys.push(family);

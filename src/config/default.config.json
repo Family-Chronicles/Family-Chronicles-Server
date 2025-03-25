@@ -30,7 +30,13 @@
       "families",
       "persons",
       "relations",
-      "tags"
+      "tags",
+      "failedAttempts"
     ]
+  },
+  "auth": {
+    "privateKey": "",
+    "publicKey": "",
+    "tokenExpiration": "1d"
   }
 }
