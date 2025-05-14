@@ -63,9 +63,9 @@ export default class FamilyController implements IController {
 		 * }
 		 */
 		app.get("/familys", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
+			this._authorization.requireRole(req, res, () => {
 				this.index(req, res);
-			});
+			}, ["Admin", "Editor", "Viewer"]);
 		});
 
 		/**
@@ -259,9 +259,9 @@ export default class FamilyController implements IController {
 			"/family",
 			bodyParser.json(),
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
+				this._authorization.requireRole(req, res, () => {
 					this.create(req, res);
-				});
+				}, ["Admin", "Editor"]);
 			}
 		);
 
@@ -310,9 +310,9 @@ export default class FamilyController implements IController {
 			"/family/:id",
 			bodyParser.json(),
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
+				this._authorization.requireRole(req, res, () => {
 					this.update(req, res);
-				});
+				}, ["Admin", "Editor"]);
 			}
 		);
 
@@ -352,9 +352,9 @@ export default class FamilyController implements IController {
 		 * }
 		 */
 		app.delete("/family/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
+			this._authorization.requireRole(req, res, () => {
 				this.delete(req, res);
-			});
+			}, ["Admin"]);
 		});
 
 		/**
@@ -365,9 +365,9 @@ export default class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 */
 		app.post("/family/:id/addMember", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
+			this._authorization.requireRole(req, res, () => {
 				this.addMember(req, res);
-			});
+			}, ["Admin", "Editor"]);
 		});
 
 		/**
@@ -378,9 +378,9 @@ export default class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 */
 		app.post("/family/:id/removeMember", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
+			this._authorization.requireRole(req, res, () => {
 				this.removeMember(req, res);
-			});
+			}, ["Admin", "Editor"]);
 		});
 
 		/**
@@ -390,9 +390,9 @@ export default class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 */
 		app.get("/family/:id/lastnames", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
+			this._authorization.requireRole(req, res, () => {
 				this.getLastNames(req, res);
-			});
+			}, ["Admin", "Editor", "Viewer"]);
 		});
 	}
 

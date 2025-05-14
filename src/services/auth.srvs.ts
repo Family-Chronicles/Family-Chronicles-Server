@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt, { JwtPayload, Secret } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import ConfigService from "./config.srvs.js";
 import User from "../models/user.model.js";
@@ -151,21 +151,18 @@ export default class AuthorizationService {
 
 	public decodeToken<T>(token: string): string | JwtPayload | null | T {
 		let secret = this._config.auth.privateKey;
-
 		if (!secret || secret === "") {
 			secret = process.env.SECRET as string;
 		}
-
-		return jwt.verify(token, process.env.SECRET as string) as T;
+		return jwt.verify(token, secret as Secret) as T;
 	}
 
 	public generateToken(payload: string | object | Buffer): string {
 		let secret = this._config.auth.privateKey;
-
 		if (!secret || secret === "") {
 			secret = process.env.SECRET as string;
 		}
-
+		// @ts-ignore: Typdefinitionen von jsonwebtoken stimmen nicht mit der Praxis überein
 		return jwt.sign(payload, secret, {
 			expiresIn: this._config.auth.tokenExpiration,
 			algorithm: "HS256",
@@ -233,5 +230,27 @@ export default class AuthorizationService {
 				user
 			);
 		}
+	}
+
+	/**
+	 * Prüft, ob der aktuelle User die geforderte Rolle besitzt
+	 */
+	public async requireRole(req: Request, res: Response, next: () => void, allowedRoles: string[]) {
+		const token = req.headers["authorization"];
+		if (!token) {
+			return res.status(401).send(new ErrorResult(401, JSON.stringify({ auth: false, message: "No token provided." })));
+		}
+		const decoded = this.decodeToken<any>(token as string);
+		if (!decoded || !decoded.Name) {
+			return res.status(401).send(new ErrorResult(401, JSON.stringify({ auth: false, message: "Invalid token." })));
+		}
+		const user = await this._database.getUserByUsername(decoded.Name);
+		if (!user) {
+			return res.status(404).send(new ErrorResult(404, JSON.stringify({ auth: false, message: "No user found." })));
+		}
+		if (!allowedRoles.includes(user.Role)) {
+			return res.status(403).send(new ErrorResult(403, JSON.stringify({ auth: false, message: "Insufficient permissions." })));
+		}
+		next();
 	}
 }

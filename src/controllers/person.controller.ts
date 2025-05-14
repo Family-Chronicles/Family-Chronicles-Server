@@ -11,6 +11,7 @@ import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
 import escapeHtml from 'escape-html';
+import RelatedData from "../models/data.model.js";
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -693,6 +694,33 @@ export default class PersonController implements IController {
 				});
 			}
 		);
+
+		/**
+		 * POST /person/:id/uploadMedia
+		 * @summary Lädt eine Mediendatei (Bild, Video, etc.) für eine Person hoch
+		 * @param {string} id.path.required - die ID der Person
+		 * @param {file} file.formData.required - die Mediendatei
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.post("/person/:id/uploadMedia", (req: Request, res: Response) => {
+			this._authorization.requireRole(req, res, () => {
+				this.uploadMedia(req, res);
+			}, ["Admin", "Editor"]);
+		});
+
+		/**
+		 * POST /person/:id/tagMedia
+		 * @summary Verknüpft ein Medium mit einer Person und taggt weitere Personen
+		 * @param {string} id.path.required - die ID der Person
+		 * @param {string} mediaId.body.required - die ID des Mediums
+		 * @param {string[]} taggedPersonIds.body.required - die zu taggenden Personen
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.post("/person/:id/tagMedia", bodyParser.json(), (req: Request, res: Response) => {
+			this._authorization.requireRole(req, res, () => {
+				this.tagMedia(req, res);
+			}, ["Admin", "Editor"]);
+		});
 	}
 
 	private deleteRelationship(req: Request, res: Response) {
@@ -1415,5 +1443,57 @@ export default class PersonController implements IController {
 				console.error(error);
 				res.status(500).send(new ErrorResult(500));
 			});
+	}
+
+	/**
+	 * Lädt eine Mediendatei für eine Person hoch und verknüpft sie
+	 * Hinweis: Für File-Upload muss express-fileupload oder multer als Middleware im Server eingebunden sein!
+	 */
+	private async uploadMedia(req: Request, res: Response): Promise<void> {
+		const personId = req.params.id;
+		// @ts-ignore
+		const files = req.files as any;
+		if (!files || !files.file) {
+			res.status(400).send(new ErrorResult(400, "Keine Datei hochgeladen."));
+			return;
+		}
+		const file = files.file;
+		const relatedData = new RelatedData(file.data, file.name, [personId]);
+		try {
+			await this._database.createDocument(DatabaseCollectionEnum.DATA, relatedData);
+			const person = await this._database.findDocument(DatabaseCollectionEnum.PERSONS, personId) as any;
+			if (person) {
+				person.RelatedDataIds = person.RelatedDataIds || [];
+				person.RelatedDataIds.push(relatedData.Id);
+				await this._database.updateDocument(DatabaseCollectionEnum.PERSONS, { Id: personId }, person);
+			}
+			res.status(200).send({ success: true, mediaId: relatedData.Id });
+		} catch (error: any) {
+			res.status(500).send(new ErrorResult(500, error.message));
+		}
+	}
+
+	/**
+	 * Taggt weitere Personen auf einem Medium (RelatedData)
+	 */
+	private async tagMedia(req: Request, res: Response): Promise<void> {
+		const personId = req.params.id;
+		const { mediaId, taggedPersonIds } = req.body;
+		if (!mediaId || !Array.isArray(taggedPersonIds)) {
+			res.status(400).send(new ErrorResult(400, "mediaId oder taggedPersonIds fehlen."));
+			return;
+		}
+		try {
+			const media = await this._database.findDocument(DatabaseCollectionEnum.DATA, mediaId) as any;
+			if (!media) {
+				res.status(404).send(new ErrorResult(404, "Medium nicht gefunden."));
+				return;
+			}
+			media.TaggedPersonsIds = Array.from(new Set([...(media.TaggedPersonsIds || []), personId, ...taggedPersonIds]));
+			await this._database.updateDocument(DatabaseCollectionEnum.DATA, { Id: mediaId }, media);
+			res.status(200).send({ success: true, mediaId, taggedPersonIds: media.TaggedPersonsIds });
+		} catch (error: any) {
+			res.status(500).send(new ErrorResult(500, error.message));
+		}
 	}
 }
