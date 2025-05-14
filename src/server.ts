@@ -10,6 +10,9 @@ import bodyParser from "body-parser";
 import rateLimiter from "express-rate-limit";
 import Helper from "./classes/helper.js";
 import GlobalErrorHandler from "./core/error.core.js";
+import morgan from "morgan";
+import helmet from "helmet";
+
 /**
  * Server
  * @class
@@ -49,6 +52,8 @@ class Server {
 		this.swagger(this.app);
 		this.app.use(bodyParser.json());
 		this.app.use(bodyParser.urlencoded({ extended: false }));
+		this.app.use(helmet());
+		this.app.use(morgan("combined"));
 		this.app.use(limiter);
 		this.app.use((req, res, next) => {
 			res.header("Access-Control-Allow-Origin", "*");

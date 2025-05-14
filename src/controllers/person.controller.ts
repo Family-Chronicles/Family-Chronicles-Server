@@ -12,6 +12,7 @@ import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
 import escapeHtml from 'escape-html';
 import RelatedData from "../models/data.model.js";
+import { body, param, validationResult } from "express-validator";
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -225,11 +226,21 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/person/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/person/:id",
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.authorize(req, res, () => {
+					this.show(req, res);
+				});
+			}
+		);
 
 		/**
 		 * GET /person/name?firstName&lastName
@@ -440,7 +451,23 @@ export default class PersonController implements IController {
 		app.post(
 			"/person",
 			bodyParser.json(),
+			[
+				body("FirstName").isArray().withMessage("FirstName muss ein Array sein."),
+				body("LastName").isArray().withMessage("LastName muss ein Array sein."),
+				body("DateOfBirth").optional().isISO8601().withMessage("DateOfBirth muss ein gültiges Datum sein."),
+				body("DateOfDeath").optional().isISO8601().withMessage("DateOfDeath muss ein gültiges Datum sein."),
+				body("PlaceOfBirth").optional().isString(),
+				body("PlaceOfDeath").optional().isString(),
+				body("Notes").optional().isString(),
+				body("FamilyIds").optional().isArray(),
+				body("RelationshipIds").optional().isArray(),
+				body("RelatedDataIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.authorize(req, res, () => {
 					this.create(req, res);
 				});
@@ -499,7 +526,24 @@ export default class PersonController implements IController {
 		app.put(
 			"/person/:id",
 			bodyParser.json(),
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+				body("FirstName").optional().isArray(),
+				body("LastName").optional().isArray(),
+				body("DateOfBirth").optional().isISO8601(),
+				body("DateOfDeath").optional().isISO8601(),
+				body("PlaceOfBirth").optional().isString(),
+				body("PlaceOfDeath").optional().isString(),
+				body("Notes").optional().isString(),
+				body("FamilyIds").optional().isArray(),
+				body("RelationshipIds").optional().isArray(),
+				body("RelatedDataIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.authorize(req, res, () => {
 					this.update(req, res);
 				});
@@ -541,11 +585,21 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/person/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/person/:id",
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.authorize(req, res, () => {
+					this.delete(req, res);
+				});
+			}
+		);
 
 		/**
 		 * GET /person/:id/relationships
@@ -665,42 +719,6 @@ export default class PersonController implements IController {
 		 * {
 		 * 	 status: 200
 		 * }
-		 */
-		app.put(
-			"/person/:id/relationships/:relationshipId",
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.updateRelationship(req, res);
-				});
-			}
-		);
-
-		/**
-		 * DELETE /person/:id/relationships/:relationshipId
-		 * @tags persons
-		 * @summary This deletes a relationship of a person by id
-		 * @security BearerAuth
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	 status: 200
-		 * }
-		 */
-		app.delete(
-			"/person/:id/relationships/:relationshipId",
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.deleteRelationship(req, res);
-				});
-			}
-		);
-
-		/**
-		 * POST /person/:id/uploadMedia
-		 * @summary Lädt eine Mediendatei (Bild, Video, etc.) für eine Person hoch
-		 * @param {string} id.path.required - die ID der Person
-		 * @param {file} file.formData.required - die Mediendatei
-		 * @return {object} 200 - success response - application/json
 		 */
 		app.post("/person/:id/uploadMedia", (req: Request, res: Response) => {
 			this._authorization.requireRole(req, res, () => {

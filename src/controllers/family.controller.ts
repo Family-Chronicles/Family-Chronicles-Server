@@ -8,6 +8,7 @@ import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
+import { body, param, validationResult } from "express-validator";
 
 export default class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -207,11 +208,21 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/family/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/family/:id",
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.authorize(req, res, () => {
+					this.show(req, res);
+				});
+			}
+		);
 
 		/**
 		 * POST /family
@@ -258,7 +269,17 @@ export default class FamilyController implements IController {
 		app.post(
 			"/family",
 			bodyParser.json(),
+			[
+				body("Name").isString().withMessage("Name muss ein String sein."),
+				body("Description").optional().isString(),
+				body("Notes").optional().isString(),
+				body("HistoricalNames").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.requireRole(req, res, () => {
 					this.create(req, res);
 				}, ["Admin", "Editor"]);
@@ -309,7 +330,18 @@ export default class FamilyController implements IController {
 		app.put(
 			"/family/:id",
 			bodyParser.json(),
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+				body("Name").optional().isString(),
+				body("Description").optional().isString(),
+				body("Notes").optional().isString(),
+				body("HistoricalNames").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.requireRole(req, res, () => {
 					this.update(req, res);
 				}, ["Admin", "Editor"]);
@@ -351,11 +383,21 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/family/:id", (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.delete(req, res);
-			}, ["Admin"]);
-		});
+		app.delete(
+			"/family/:id",
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(req, res, () => {
+					this.delete(req, res);
+				}, ["Admin"]);
+			}
+		);
 
 		/**
 		 * POST /family/:id/addMember

@@ -8,6 +8,7 @@ import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
 import RelatedData from "../models/data.model.js";
+import { body, param, validationResult } from "express-validator";
 
 export default class RelatedDataController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -196,11 +197,21 @@ export default class RelatedDataController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/relatedData/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/relatedData/:id",
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.authorize(req, res, () => {
+					this.show(req, res);
+				});
+			}
+		);
 
 		/**
 		 * POST /relatedData
@@ -244,7 +255,16 @@ export default class RelatedDataController implements IController {
 		app.post(
 			"/relatedData",
 			bodyParser.json(),
+			[
+				body("RelatedData").isString().withMessage("RelatedData muss ein String sein."),
+				body("Notes").optional().isString(),
+				body("TaggedPersonsIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.authorize(req, res, () => {
 					this.create(req, res);
 				});
@@ -292,7 +312,17 @@ export default class RelatedDataController implements IController {
 		app.put(
 			"/relatedData/:id",
 			bodyParser.json(),
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+				body("RelatedData").optional().isString(),
+				body("Notes").optional().isString(),
+				body("TaggedPersonsIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.authorize(req, res, () => {
 					this.update(req, res);
 				});
@@ -334,11 +364,21 @@ export default class RelatedDataController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/relatedData/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/relatedData/:id",
+			[
+				param("id").isString().withMessage("ID muss angegeben werden."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.authorize(req, res, () => {
+					this.delete(req, res);
+				});
+			}
+		);
 	}
 
 	private index(req: Request, res: Response): void {
