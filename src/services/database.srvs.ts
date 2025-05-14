@@ -10,6 +10,7 @@ import {
 import ConfigService from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
 import User from "../models/user.model.js";
+import AuditLogModel from "../models/auditLog.model.js";
 
 /**
  * Database service
@@ -50,6 +51,9 @@ export default class DatabaseService {
 			(collection) => collection.name
 		);
 		const configCollections = this.#config.database.collections;
+		if (!configCollections.includes("auditlogs")) {
+			configCollections.push("auditlogs");
+		}
 		configCollections.forEach(async (collection) => {
 			if (!collectionNames.includes(collection)) {
 				await db.createCollection(collection);
@@ -117,7 +121,8 @@ export default class DatabaseService {
 
 	public async createDocument<T>(
 		collectionName: string,
-		document: T
+		document: T,
+		userId?: string // optional: für Audit-Log
 	): Promise<boolean> {
 		const db = await this.connect(
 			this.#config.database.host,
@@ -125,6 +130,19 @@ export default class DatabaseService {
 		);
 		const collection = db.collection(collectionName);
 		const result = await collection.insertOne(document!);
+
+		// Audit-Log für Create
+		if (collectionName !== "auditlogs") {
+			const auditLog = new AuditLogModel({
+				operation: "create",
+				collection: collectionName,
+				documentId: (document as any).Id || (document as any)._id || "unknown",
+				timestamp: new Date(),
+				userId,
+				newValue: document
+			});
+			await db.collection("auditlogs").insertOne(auditLog);
+		}
 		return result.acknowledged;
 	}
 
@@ -143,31 +161,65 @@ export default class DatabaseService {
 	public async updateDocument<T>(
 		collectionName: string,
 		filter: Filter<Document>,
-		update: T extends IModel ? Partial<T> : Partial<Document>
+		update: T extends IModel ? Partial<T> : Partial<Document>,
+		userId?: string
 	): Promise<boolean> {
+		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
+		if (collectionName === "auditlogs") {
+			throw new Error("Audit-Log-Collection ist read-only und kann nicht verändert werden.");
+		}
 		const db = await this.connect(
 			this.#config.database.host,
 			this.#config.database.databasename
 		);
 		const collection = db.collection(collectionName);
+		const oldDoc = await collection.findOne(filter);
 		const result = await collection.updateOne(filter, {
 			$set: update,
 		});
+		if (collectionName !== "auditlogs" && oldDoc) {
+			const auditLog = new AuditLogModel({
+				operation: "update",
+				collection: collectionName,
+				documentId: oldDoc.Id || oldDoc._id || "unknown",
+				timestamp: new Date(),
+				userId,
+				oldValue: oldDoc,
+				newValue: { ...oldDoc, ...update }
+			});
+			await db.collection("auditlogs").insertOne(auditLog);
+		}
 		return result.acknowledged;
 	}
 
 	public async deleteDocument(
 		collectionName: string,
-		filter: Filter<Document>
+		filter: Filter<Document>,
+		userId?: string
 	): Promise<boolean> {
+		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
+		if (collectionName === "auditlogs") {
+			throw new Error("Audit-Log-Collection ist read-only und kann nicht verändert werden.");
+		}
 		try {
 			const db = await this.connect(
 				this.#config.database.host,
 				this.#config.database.databasename
 			);
 			const collection = db.collection(collectionName);
-
+			const oldDoc = await collection.findOne(filter);
 			const result = await collection.deleteOne(filter);
+			if (collectionName !== "auditlogs" && oldDoc) {
+				const auditLog = new AuditLogModel({
+					operation: "delete",
+					collection: collectionName,
+					documentId: oldDoc.Id || oldDoc._id || "unknown",
+					timestamp: new Date(),
+					userId,
+					oldValue: oldDoc
+				});
+				await db.collection("auditlogs").insertOne(auditLog);
+			}
 			return result.deletedCount > 0;
 		} catch (error) {
 			console.error("Error deleting document:", error);

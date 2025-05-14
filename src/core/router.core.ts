@@ -4,6 +4,7 @@ import IndexController from "../controllers/index.controller.js";
 import PersonController from "../controllers/person.controller.js";
 import TestController from "../controllers/test.controller.js";
 import UserController from "../controllers/user.controller.js";
+import { AuditLogController } from "../controllers/auditLog.controller.js";
 
 /**
  * Router service
@@ -20,5 +21,6 @@ export default class RouterCore {
 		new UserController().routes(app);
 		new PersonController().routes(app);
 		new FamilyController().routes(app);
+		new AuditLogController().routes(app);
 	}
 }
