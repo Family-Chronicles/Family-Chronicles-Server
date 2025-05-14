@@ -14,6 +14,7 @@ import EventModel from "./event.model.js";
  * @property {Date | null} dateOfDeath - Person date of death
  * @property {string} placeOfBirth - Person place of birth
  * @property {string | null} placeOfDeath - Person place of death
+ * @property {string | null} reasonOfDeath - Person reason of death
  * @property {string[]} relationshipIds - Person relationship ids
  * @property {string} notes - Person notes
  * @property {string[]} familyIds - Person family ids
@@ -26,6 +27,7 @@ import EventModel from "./event.model.js";
  * @param {Date | null} dateOfDeath - Person date of death
  * @param {string} placeOfBirth - Person place of birth
  * @param {string | null} placeOfDeath - Person place of death
+ * @param {string | null} reasonOfDeath - Person reason of death
  * @param {string[]} relationshipIds - Person relationship ids
  * @param {string} notes - Person notes
  * @param {string[]} familyIds - Person family ids
@@ -41,6 +43,7 @@ import EventModel from "./event.model.js";
  * 	new Date(),
  * 	null,
  * 	"New York",
+ * 	null,
  * 	null,
  * 	[],
  * 	"",
@@ -60,6 +63,7 @@ export default class Person implements IModel {
 	public DateOfDeath: Date | null;
 	public PlaceOfBirth: string;
 	public PlaceOfDeath: string | null;
+	public ReasonOfDeath: string | null;
 	public RelationshipIds: string[];
 	public Notes: string;
 	public FamilyIds: string[];
@@ -81,7 +85,8 @@ export default class Person implements IModel {
 		notes: string,
 		familyIds: string[],
 		relatedDataIds: string[],
-		events: EventModel[]
+		events: EventModel[],
+		reasonOfDeath: string | null
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.Id = crypto.randomUUID();
@@ -96,6 +101,7 @@ export default class Person implements IModel {
 		this.DateOfDeath = dateOfDeath;
 		this.PlaceOfBirth = placeOfBirth;
 		this.PlaceOfDeath = placeOfDeath;
+		this.ReasonOfDeath = reasonOfDeath ?? null;
 		this.RelationshipIds = relationshipIds;
 		this.Notes = notes;
 		this.FamilyIds = familyIds;

@@ -39,6 +39,7 @@ export default class PersonController implements IController {
 		 * 		"Notes": "",
 		 * 		"FamilyIds": [],
 		 * 		"RelatedDataIds": [],
+		 * 		 "ReasonOfDeath": null,
 		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
@@ -95,6 +96,7 @@ export default class PersonController implements IController {
 		 * 		"Notes": "",
 		 * 		"FamilyIds": [],
 		 * 		"RelatedDataIds": [],
+		 * 		 "ReasonOfDeath": null,
 		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
@@ -194,6 +196,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -249,6 +252,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -306,6 +310,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * },
 		 * {
@@ -321,6 +326,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
 		 * }]
 		 */
@@ -351,6 +357,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * },
 		 * {
@@ -366,6 +373,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
 		 * }]
 		 */
@@ -384,6 +392,7 @@ export default class PersonController implements IController {
 		 * @summary This a new person and saves it to the database
 		 * @security BearerAuth
 		 * @param {object} - the new person - application/json
+		 * @param {string | null} ReasonOfDeath.body.optional - the reason of death of the person
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
@@ -399,6 +408,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -441,6 +451,7 @@ export default class PersonController implements IController {
 		 * @tags persons
 		 * @summary This updates a person by id
 		 * @security BearerAuth
+		 * @param {string | null} ReasonOfDeath.body.optional - the reason of death of the person
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
@@ -456,6 +467,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -615,14 +627,17 @@ export default class PersonController implements IController {
 		 * @param {string} request.body.relationPartnerTwoId.required - the id of the second person in the relationship
 		 * @param {string} request.body.relationType.required - the type of relationship
 		 * @param {string} request.body.notes - notes about the relationship
+		 * @param {string} request.body.role - role of the person in the relationship
+		 * @param {string} request.body.startDate - start date of the relationship (ISO string)
+		 * @param {string} request.body.endDate - end date of the relationship (ISO string)
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
-		 * 	"RelationPartnerOneId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
-		 * 	"RelationPartnerTwoId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
-		 * 	"RelationType": "Married",
-		 * 	"Notes": "",
+		 *   "Id": "...",
+		 *   ...
+		 *   "Role": "Mutter",
+		 *   "StartDate": "2020-01-01T00:00:00.000Z",
+		 *   "EndDate": null
 		 * }
 		 */
 		app.post("/person/:id/relationship", (req: Request, res: Response) => {
@@ -641,6 +656,9 @@ export default class PersonController implements IController {
 		 * @param {string} request.body.relationPartnerTwoId.required - the id of the second person in the relationship
 		 * @param {string} request.body.relationType.required - the type of relationship
 		 * @param {string} request.body.notes - notes about the relationship
+		 * @param {string} request.body.role - role of the person in the relationship
+		 * @param {string} request.body.startDate - start date of the relationship (ISO string)
+		 * @param {string} request.body.endDate - end date of the relationship (ISO string)
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
@@ -774,15 +792,23 @@ export default class PersonController implements IController {
 	private updateRelationship(req: Request, res: Response) {
 		const id = req.params.id;
 		const relationshipId = req.params.relationshipId;
+		const rel = typeof req.body.relationship === "string"
+			? JSON.parse(req.body.relationship)
+			: req.body.relationship;
 
-		const realtionship = JSON.parse(req.body.relationship) as Relationship;
+		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
+		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
+		const role = rel.Role ?? null;
 
 		const resultRelation = new Relationship(
 			relationshipId,
 			id,
-			realtionship.RelationPartnerTwoId ?? "",
-			realtionship.RelationshipType ?? RelationshipTypeEnum.Unknown,
-			realtionship.Notes ?? ""
+			rel.RelationPartnerTwoId ?? "",
+			rel.RelationshipType ?? RelationshipTypeEnum.Unknown,
+			rel.Notes ?? "",
+			startDate,
+			endDate,
+			role
 		);
 
 		if (resultRelation.RelationPartnerTwoId === "") {
@@ -807,7 +833,7 @@ export default class PersonController implements IController {
 
 			const relationshipDocument =
 				this._database.getDocumentByQuery<Relationship>(
-					this._collectionName,
+					DatabaseCollectionEnum.RELATIONS,
 					{
 						Id: relationshipId,
 					}
@@ -835,7 +861,7 @@ export default class PersonController implements IController {
 
 				this._database
 					.updateDocument<Relationship>(
-						this._collectionName,
+						DatabaseCollectionEnum.RELATIONS,
 						relationshipFromDb,
 						resultRelation
 					)
@@ -858,14 +884,23 @@ export default class PersonController implements IController {
 
 	private addRelationship(req: Request, res: Response) {
 		const id = req.params.id;
-		const realtionship = JSON.parse(req.body.relationship) as Relationship;
+		const rel = typeof req.body.relationship === "string"
+			? JSON.parse(req.body.relationship)
+			: req.body.relationship;
+
+		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
+		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
+		const role = rel.Role ?? null;
 
 		const resultRelation = new Relationship(
 			null,
 			id,
-			realtionship.RelationPartnerTwoId ?? "",
-			realtionship.RelationshipType ?? RelationshipTypeEnum.Unknown,
-			realtionship.Notes ?? ""
+			rel.RelationPartnerTwoId ?? "",
+			rel.RelationshipType ?? RelationshipTypeEnum.Unknown,
+			rel.Notes ?? "",
+			startDate,
+			endDate,
+			role
 		);
 
 		if (resultRelation.RelationPartnerTwoId === "") {
@@ -890,10 +925,7 @@ export default class PersonController implements IController {
 
 			const person = persons[0];
 
-			if (
-				person.RelationshipIds === undefined ||
-				person.RelationshipIds === null
-			) {
+			if (!person.RelationshipIds) {
 				person.RelationshipIds = [];
 			}
 
@@ -1235,7 +1267,8 @@ export default class PersonController implements IController {
 			req.body.Notes,
 			familyIds,
 			relationshipIds,
-			req.body.events ?? []
+			req.body.events ?? [],
+			req.body.ReasonOfDeath ?? null // NEU
 		);
 
 		this._database
@@ -1324,7 +1357,8 @@ export default class PersonController implements IController {
 					req.body.Notes ?? person.Notes,
 					familyIds,
 					relatedDataIds,
-					req.body.events ?? person.Events ?? []
+					req.body.events ?? person.Events ?? [],
+					req.body.ReasonOfDeath ?? person.ReasonOfDeath // NEU
 				);
 
 				const result = JSON.stringify(updatedPerson);
@@ -1351,27 +1385,26 @@ export default class PersonController implements IController {
 	}
 
 	private delete(req: Request, res: Response): void {
+		const id = req.params.id;
 		const personDocument = this._database.findDocument<Person>(
 			this._collectionName,
-			req.path.split("/")[2]
+			id
 		);
 
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send(new ErrorResult(404));
+					res.status(404).send(new ErrorResult(404, "Person not found"));
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, person)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`User ${
-									person.FirstName + " " + person.LastName
-								} with id ${person.Id} deleted successfully`
-							)
-						);
+					.then((result) => {
+						if (!result) {
+							res.status(500).send(new ErrorResult(500, "Failed to delete person"));
+							return;
+						}
+						res.status(200).send({ success: true, message: `Person ${person.Id} deleted successfully` });
 					})
 					.catch((error) => {
 						console.error(error);

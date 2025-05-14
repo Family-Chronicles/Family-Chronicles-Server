@@ -356,6 +356,44 @@ export default class FamilyController implements IController {
 				this.delete(req, res);
 			});
 		});
+
+		/**
+		 * POST /family/:id/addMember
+		 * @summary Fügt eine Person (ID) zur Familie hinzu
+		 * @param {string} id.path.required - die ID der Familie
+		 * @param {string} personId.body.required - die ID der Person
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.post("/family/:id/addMember", bodyParser.json(), (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.addMember(req, res);
+			});
+		});
+
+		/**
+		 * POST /family/:id/removeMember
+		 * @summary Entfernt eine Person (ID) aus der Familie
+		 * @param {string} id.path.required - die ID der Familie
+		 * @param {string} personId.body.required - die ID der Person
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.post("/family/:id/removeMember", bodyParser.json(), (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.removeMember(req, res);
+			});
+		});
+
+		/**
+		 * GET /family/:id/lastnames
+		 * @summary Gibt die Nachnamen aller Mitglieder der Familie zurück
+		 * @param {string} id.path.required - die ID der Familie
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.get("/family/:id/lastnames", (req: Request, res: Response) => {
+			this._authorization.authorize(req, res, () => {
+				this.getLastNames(req, res);
+			});
+		});
 	}
 
 	private index(req: Request, res: Response): void {
@@ -453,7 +491,8 @@ export default class FamilyController implements IController {
 			req.body.Name,
 			req.body.Description,
 			req.body.Notes,
-			req.body.HistoricalNames
+			req.body.HistoricalNames,
+			req.body.MemberIds ?? []
 		);
 
 		this._database
@@ -505,7 +544,8 @@ export default class FamilyController implements IController {
 					req.body.Name ?? family.Name,
 					req.body.Description ?? family.Description,
 					req.body.Notes ?? family.Notes,
-					req.body.HistoricalNames ?? family.HistoricalNames
+					req.body.HistoricalNames ?? family.HistoricalNames,
+					req.body.MemberIds ?? family.MemberIds
 				);
 
 				// Sanitize the updatedFamily object
@@ -567,6 +607,83 @@ export default class FamilyController implements IController {
 				console.error(error);
 				res.status(500).send(new ErrorResult(500));
 			});
+	}
+
+	/**
+	 * Fügt eine Person (personId) zur Familie (id) hinzu
+	 */
+	private addMember(req: Request, res: Response): void {
+		const familyId = req.params.id;
+		const personId = req.body.personId;
+		if (!personId) {
+			res.status(400).send({ status: 400, message: "personId fehlt" });
+			return;
+		}
+		this._database.findDocument<Family>(this._collectionName, familyId)
+			.then((family) => {
+				if (!family) {
+					res.status(404).send({ status: 404, message: "Familie nicht gefunden" });
+					return;
+				}
+				if (!family.MemberIds.includes(personId)) {
+					family.MemberIds.push(personId);
+				}
+				this._database.updateDocument(this._collectionName, { Id: familyId }, family)
+					.then(() => res.status(200).send({ success: true, MemberIds: family.MemberIds }))
+					.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+			})
+			.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+	}
+
+	/**
+	 * Entfernt eine Person (personId) aus der Familie (id)
+	 */
+	private removeMember(req: Request, res: Response): void {
+		const familyId = req.params.id;
+		const personId = req.body.personId;
+		if (!personId) {
+			res.status(400).send({ status: 400, message: "personId fehlt" });
+			return;
+		}
+		this._database.findDocument<Family>(this._collectionName, familyId)
+			.then((family) => {
+				if (!family) {
+					res.status(404).send({ status: 404, message: "Familie nicht gefunden" });
+					return;
+				}
+				family.MemberIds = family.MemberIds.filter((id) => id !== personId);
+				this._database.updateDocument(this._collectionName, { Id: familyId }, family)
+					.then(() => res.status(200).send({ success: true, MemberIds: family.MemberIds }))
+					.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+			})
+			.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+	}
+
+	/**
+	 * Gibt die Nachnamen aller Mitglieder der Familie zurück
+	 */
+	private getLastNames(req: Request, res: Response): void {
+		const familyId = req.params.id;
+		this._database.findDocument<Family>(this._collectionName, familyId)
+			.then((family) => {
+				if (!family) {
+					res.status(404).send({ status: 404, message: "Familie nicht gefunden" });
+					return;
+				}
+				if (!family.MemberIds || family.MemberIds.length === 0) {
+					res.status(200).send({ lastNames: [] });
+					return;
+				}
+				this._database.listAllDocuments<any>(DatabaseCollectionEnum.PERSONS)
+					.then((persons) => {
+						const lastNames = persons
+							.filter((p: any) => family.MemberIds.includes(p.Id))
+							.flatMap((p: any) => p.LastName || []);
+						res.status(200).send({ lastNames: Array.from(new Set(lastNames)) });
+					})
+					.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+			})
+			.catch((error) => res.status(500).send({ status: 500, message: error.message }));
 	}
 }
 
