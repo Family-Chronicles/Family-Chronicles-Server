@@ -235,21 +235,58 @@ export default class AuthorizationService {
 	/**
 	 * Prüft, ob der aktuelle User die geforderte Rolle besitzt
 	 */
-	public async requireRole(req: Request, res: Response, next: () => void, allowedRoles: string[]) {
+	public async requireRole(
+		req: Request,
+		res: Response,
+		next: () => void,
+		allowedRoles: string[]
+	) {
 		const token = req.headers["authorization"];
 		if (!token) {
-			return res.status(401).send(new ErrorResult(401, JSON.stringify({ auth: false, message: "No token provided." })));
+			return res.status(401).send(
+				new ErrorResult(
+					401,
+					JSON.stringify({
+						auth: false,
+						message: "No token provided.",
+					})
+				)
+			);
 		}
 		const decoded = this.decodeToken<any>(token as string);
 		if (!decoded || !decoded.Name) {
-			return res.status(401).send(new ErrorResult(401, JSON.stringify({ auth: false, message: "Invalid token." })));
+			return res.status(401).send(
+				new ErrorResult(
+					401,
+					JSON.stringify({
+						auth: false,
+						message: "Invalid token.",
+					})
+				)
+			);
 		}
 		const user = await this._database.getUserByUsername(decoded.Name);
 		if (!user) {
-			return res.status(404).send(new ErrorResult(404, JSON.stringify({ auth: false, message: "No user found." })));
+			return res.status(404).send(
+				new ErrorResult(
+					404,
+					JSON.stringify({
+						auth: false,
+						message: "No user found.",
+					})
+				)
+			);
 		}
 		if (!allowedRoles.includes(user.Role)) {
-			return res.status(403).send(new ErrorResult(403, JSON.stringify({ auth: false, message: "Insufficient permissions." })));
+			return res.status(403).send(
+				new ErrorResult(
+					403,
+					JSON.stringify({
+						auth: false,
+						message: "Insufficient permissions.",
+					})
+				)
+			);
 		}
 		next();
 	}

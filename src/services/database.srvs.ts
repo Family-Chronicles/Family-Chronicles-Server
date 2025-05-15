@@ -136,10 +136,11 @@ export default class DatabaseService {
 			const auditLog = new AuditLogModel({
 				operation: "create",
 				collection: collectionName,
-				documentId: (document as any).Id || (document as any)._id || "unknown",
+				documentId:
+					(document as any).Id || (document as any)._id || "unknown",
 				timestamp: new Date(),
 				userId,
-				newValue: document
+				newValue: document,
 			});
 			await db.collection("auditlogs").insertOne(auditLog);
 		}
@@ -166,7 +167,9 @@ export default class DatabaseService {
 	): Promise<boolean> {
 		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
 		if (collectionName === "auditlogs") {
-			throw new Error("Audit-Log-Collection ist read-only und kann nicht verändert werden.");
+			throw new Error(
+				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
+			);
 		}
 		const db = await this.connect(
 			this.#config.database.host,
@@ -185,7 +188,7 @@ export default class DatabaseService {
 				timestamp: new Date(),
 				userId,
 				oldValue: oldDoc,
-				newValue: { ...oldDoc, ...update }
+				newValue: { ...oldDoc, ...update },
 			});
 			await db.collection("auditlogs").insertOne(auditLog);
 		}
@@ -199,7 +202,9 @@ export default class DatabaseService {
 	): Promise<boolean> {
 		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
 		if (collectionName === "auditlogs") {
-			throw new Error("Audit-Log-Collection ist read-only und kann nicht verändert werden.");
+			throw new Error(
+				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
+			);
 		}
 		try {
 			const db = await this.connect(
@@ -216,7 +221,7 @@ export default class DatabaseService {
 					documentId: oldDoc.Id || oldDoc._id || "unknown",
 					timestamp: new Date(),
 					userId,
-					oldValue: oldDoc
+					oldValue: oldDoc,
 				});
 				await db.collection("auditlogs").insertOne(auditLog);
 			}

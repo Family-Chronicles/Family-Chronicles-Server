@@ -199,9 +199,7 @@ export default class RelatedDataController implements IController {
 		 */
 		app.get(
 			"/relatedData/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -256,7 +254,9 @@ export default class RelatedDataController implements IController {
 			"/relatedData",
 			bodyParser.json(),
 			[
-				body("RelatedData").isString().withMessage("RelatedData muss ein String sein."),
+				body("RelatedData")
+					.isString()
+					.withMessage("RelatedData muss ein String sein."),
 				body("Notes").optional().isString(),
 				body("TaggedPersonsIds").optional().isArray(),
 			],
@@ -366,9 +366,7 @@ export default class RelatedDataController implements IController {
 		 */
 		app.delete(
 			"/relatedData/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {

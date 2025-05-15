@@ -10,7 +10,7 @@ import Ok from "../models/actionResults/ok.result.js";
 import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
-import escapeHtml from 'escape-html';
+import escapeHtml from "escape-html";
 import RelatedData from "../models/data.model.js";
 import { body, param, validationResult } from "express-validator";
 
@@ -228,9 +228,7 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/person/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -342,11 +340,15 @@ export default class PersonController implements IController {
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
 		 * }]
 		 */
-		app.post("/person/dateOfBirth", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.showByDateOfBirth(req, res);
-			});
-		});
+		app.post(
+			"/person/dateOfBirth",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.authorize(req, res, () => {
+					this.showByDateOfBirth(req, res);
+				});
+			}
+		);
 
 		/**
 		 * GET /person/relatedData/:relatedDataIds
@@ -452,10 +454,20 @@ export default class PersonController implements IController {
 			"/person",
 			bodyParser.json(),
 			[
-				body("FirstName").isArray().withMessage("FirstName muss ein Array sein."),
-				body("LastName").isArray().withMessage("LastName muss ein Array sein."),
-				body("DateOfBirth").optional().isISO8601().withMessage("DateOfBirth muss ein gültiges Datum sein."),
-				body("DateOfDeath").optional().isISO8601().withMessage("DateOfDeath muss ein gültiges Datum sein."),
+				body("FirstName")
+					.isArray()
+					.withMessage("FirstName muss ein Array sein."),
+				body("LastName")
+					.isArray()
+					.withMessage("LastName muss ein Array sein."),
+				body("DateOfBirth")
+					.optional()
+					.isISO8601()
+					.withMessage("DateOfBirth muss ein gültiges Datum sein."),
+				body("DateOfDeath")
+					.optional()
+					.isISO8601()
+					.withMessage("DateOfDeath muss ein gültiges Datum sein."),
 				body("PlaceOfBirth").optional().isString(),
 				body("PlaceOfDeath").optional().isString(),
 				body("Notes").optional().isString(),
@@ -587,9 +599,7 @@ export default class PersonController implements IController {
 		 */
 		app.delete(
 			"/person/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -721,9 +731,14 @@ export default class PersonController implements IController {
 		 * }
 		 */
 		app.post("/person/:id/uploadMedia", (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.uploadMedia(req, res);
-			}, ["Admin", "Editor"]);
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.uploadMedia(req, res);
+				},
+				["Admin", "Editor"]
+			);
 		});
 
 		/**
@@ -734,11 +749,20 @@ export default class PersonController implements IController {
 		 * @param {string[]} taggedPersonIds.body.required - die zu taggenden Personen
 		 * @return {object} 200 - success response - application/json
 		 */
-		app.post("/person/:id/tagMedia", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.tagMedia(req, res);
-			}, ["Admin", "Editor"]);
-		});
+		app.post(
+			"/person/:id/tagMedia",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.tagMedia(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 	}
 
 	private deleteRelationship(req: Request, res: Response) {
@@ -838,9 +862,10 @@ export default class PersonController implements IController {
 	private updateRelationship(req: Request, res: Response) {
 		const id = req.params.id;
 		const relationshipId = req.params.relationshipId;
-		const rel = typeof req.body.relationship === "string"
-			? JSON.parse(req.body.relationship)
-			: req.body.relationship;
+		const rel =
+			typeof req.body.relationship === "string"
+				? JSON.parse(req.body.relationship)
+				: req.body.relationship;
 
 		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
 		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
@@ -930,9 +955,10 @@ export default class PersonController implements IController {
 
 	private addRelationship(req: Request, res: Response) {
 		const id = req.params.id;
-		const rel = typeof req.body.relationship === "string"
-			? JSON.parse(req.body.relationship)
-			: req.body.relationship;
+		const rel =
+			typeof req.body.relationship === "string"
+				? JSON.parse(req.body.relationship)
+				: req.body.relationship;
 
 		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
 		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
@@ -1440,17 +1466,24 @@ export default class PersonController implements IController {
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send(new ErrorResult(404, "Person not found"));
+					res.status(404).send(
+						new ErrorResult(404, "Person not found")
+					);
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, person)
 					.then((result) => {
 						if (!result) {
-							res.status(500).send(new ErrorResult(500, "Failed to delete person"));
+							res.status(500).send(
+								new ErrorResult(500, "Failed to delete person")
+							);
 							return;
 						}
-						res.status(200).send({ success: true, message: `Person ${person.Id} deleted successfully` });
+						res.status(200).send({
+							success: true,
+							message: `Person ${person.Id} deleted successfully`,
+						});
 					})
 					.catch((error) => {
 						console.error(error);
@@ -1472,18 +1505,30 @@ export default class PersonController implements IController {
 		// @ts-ignore
 		const files = req.files as any;
 		if (!files || !files.file) {
-			res.status(400).send(new ErrorResult(400, "Keine Datei hochgeladen."));
+			res.status(400).send(
+				new ErrorResult(400, "Keine Datei hochgeladen.")
+			);
 			return;
 		}
 		const file = files.file;
 		const relatedData = new RelatedData(file.data, file.name, [personId]);
 		try {
-			await this._database.createDocument(DatabaseCollectionEnum.DATA, relatedData);
-			const person = await this._database.findDocument(DatabaseCollectionEnum.PERSONS, personId) as any;
+			await this._database.createDocument(
+				DatabaseCollectionEnum.DATA,
+				relatedData
+			);
+			const person = (await this._database.findDocument(
+				DatabaseCollectionEnum.PERSONS,
+				personId
+			)) as any;
 			if (person) {
 				person.RelatedDataIds = person.RelatedDataIds || [];
 				person.RelatedDataIds.push(relatedData.Id);
-				await this._database.updateDocument(DatabaseCollectionEnum.PERSONS, { Id: personId }, person);
+				await this._database.updateDocument(
+					DatabaseCollectionEnum.PERSONS,
+					{ Id: personId },
+					person
+				);
 			}
 			res.status(200).send({ success: true, mediaId: relatedData.Id });
 		} catch (error: any) {
@@ -1498,18 +1543,39 @@ export default class PersonController implements IController {
 		const personId = req.params.id;
 		const { mediaId, taggedPersonIds } = req.body;
 		if (!mediaId || !Array.isArray(taggedPersonIds)) {
-			res.status(400).send(new ErrorResult(400, "mediaId oder taggedPersonIds fehlen."));
+			res.status(400).send(
+				new ErrorResult(400, "mediaId oder taggedPersonIds fehlen.")
+			);
 			return;
 		}
 		try {
-			const media = await this._database.findDocument(DatabaseCollectionEnum.DATA, mediaId) as any;
+			const media = (await this._database.findDocument(
+				DatabaseCollectionEnum.DATA,
+				mediaId
+			)) as any;
 			if (!media) {
-				res.status(404).send(new ErrorResult(404, "Medium nicht gefunden."));
+				res.status(404).send(
+					new ErrorResult(404, "Medium nicht gefunden.")
+				);
 				return;
 			}
-			media.TaggedPersonsIds = Array.from(new Set([...(media.TaggedPersonsIds || []), personId, ...taggedPersonIds]));
-			await this._database.updateDocument(DatabaseCollectionEnum.DATA, { Id: mediaId }, media);
-			res.status(200).send({ success: true, mediaId, taggedPersonIds: media.TaggedPersonsIds });
+			media.TaggedPersonsIds = Array.from(
+				new Set([
+					...(media.TaggedPersonsIds || []),
+					personId,
+					...taggedPersonIds,
+				])
+			);
+			await this._database.updateDocument(
+				DatabaseCollectionEnum.DATA,
+				{ Id: mediaId },
+				media
+			);
+			res.status(200).send({
+				success: true,
+				mediaId,
+				taggedPersonIds: media.TaggedPersonsIds,
+			});
 		} catch (error: any) {
 			res.status(500).send(new ErrorResult(500, error.message));
 		}

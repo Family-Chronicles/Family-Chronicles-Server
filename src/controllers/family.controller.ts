@@ -64,9 +64,14 @@ export default class FamilyController implements IController {
 		 * }
 		 */
 		app.get("/familys", (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.index(req, res);
-			}, ["Admin", "Editor", "Viewer"]);
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -210,9 +215,7 @@ export default class FamilyController implements IController {
 		 */
 		app.get(
 			"/family/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -270,7 +273,9 @@ export default class FamilyController implements IController {
 			"/family",
 			bodyParser.json(),
 			[
-				body("Name").isString().withMessage("Name muss ein String sein."),
+				body("Name")
+					.isString()
+					.withMessage("Name muss ein String sein."),
 				body("Description").optional().isString(),
 				body("Notes").optional().isString(),
 				body("HistoricalNames").optional().isArray(),
@@ -280,9 +285,14 @@ export default class FamilyController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.requireRole(req, res, () => {
-					this.create(req, res);
-				}, ["Admin", "Editor"]);
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -342,9 +352,14 @@ export default class FamilyController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.requireRole(req, res, () => {
-					this.update(req, res);
-				}, ["Admin", "Editor"]);
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -385,17 +400,20 @@ export default class FamilyController implements IController {
 		 */
 		app.delete(
 			"/family/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.requireRole(req, res, () => {
-					this.delete(req, res);
-				}, ["Admin"]);
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin"]
+				);
 			}
 		);
 
@@ -406,11 +424,20 @@ export default class FamilyController implements IController {
 		 * @param {string} personId.body.required - die ID der Person
 		 * @return {object} 200 - success response - application/json
 		 */
-		app.post("/family/:id/addMember", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.addMember(req, res);
-			}, ["Admin", "Editor"]);
-		});
+		app.post(
+			"/family/:id/addMember",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.addMember(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 
 		/**
 		 * POST /family/:id/removeMember
@@ -419,11 +446,20 @@ export default class FamilyController implements IController {
 		 * @param {string} personId.body.required - die ID der Person
 		 * @return {object} 200 - success response - application/json
 		 */
-		app.post("/family/:id/removeMember", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.removeMember(req, res);
-			}, ["Admin", "Editor"]);
-		});
+		app.post(
+			"/family/:id/removeMember",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.removeMember(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 
 		/**
 		 * GET /family/:id/lastnames
@@ -432,9 +468,14 @@ export default class FamilyController implements IController {
 		 * @return {object} 200 - success response - application/json
 		 */
 		app.get("/family/:id/lastnames", (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, () => {
-				this.getLastNames(req, res);
-			}, ["Admin", "Editor", "Viewer"]);
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.getLastNames(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 	}
 
@@ -596,7 +637,8 @@ export default class FamilyController implements IController {
 					Name: escapeHtml(updatedFamily.Name),
 					Description: escapeHtml(updatedFamily.Description),
 					Notes: escapeHtml(updatedFamily.Notes),
-					HistoricalNames: updatedFamily.HistoricalNames.map(escapeHtml),
+					HistoricalNames:
+						updatedFamily.HistoricalNames.map(escapeHtml),
 				};
 
 				this._database
@@ -661,20 +703,40 @@ export default class FamilyController implements IController {
 			res.status(400).send({ status: 400, message: "personId fehlt" });
 			return;
 		}
-		this._database.findDocument<Family>(this._collectionName, familyId)
+		this._database
+			.findDocument<Family>(this._collectionName, familyId)
 			.then((family) => {
 				if (!family) {
-					res.status(404).send({ status: 404, message: "Familie nicht gefunden" });
+					res.status(404).send({
+						status: 404,
+						message: "Familie nicht gefunden",
+					});
 					return;
 				}
 				if (!family.MemberIds.includes(personId)) {
 					family.MemberIds.push(personId);
 				}
-				this._database.updateDocument(this._collectionName, { Id: familyId }, family)
-					.then(() => res.status(200).send({ success: true, MemberIds: family.MemberIds }))
-					.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+				this._database
+					.updateDocument(
+						this._collectionName,
+						{ Id: familyId },
+						family
+					)
+					.then(() =>
+						res.status(200).send({
+							success: true,
+							MemberIds: family.MemberIds,
+						})
+					)
+					.catch((error) =>
+						res
+							.status(500)
+							.send({ status: 500, message: error.message })
+					);
 			})
-			.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+			.catch((error) =>
+				res.status(500).send({ status: 500, message: error.message })
+			);
 	}
 
 	/**
@@ -687,18 +749,40 @@ export default class FamilyController implements IController {
 			res.status(400).send({ status: 400, message: "personId fehlt" });
 			return;
 		}
-		this._database.findDocument<Family>(this._collectionName, familyId)
+		this._database
+			.findDocument<Family>(this._collectionName, familyId)
 			.then((family) => {
 				if (!family) {
-					res.status(404).send({ status: 404, message: "Familie nicht gefunden" });
+					res.status(404).send({
+						status: 404,
+						message: "Familie nicht gefunden",
+					});
 					return;
 				}
-				family.MemberIds = family.MemberIds.filter((id) => id !== personId);
-				this._database.updateDocument(this._collectionName, { Id: familyId }, family)
-					.then(() => res.status(200).send({ success: true, MemberIds: family.MemberIds }))
-					.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+				family.MemberIds = family.MemberIds.filter(
+					(id) => id !== personId
+				);
+				this._database
+					.updateDocument(
+						this._collectionName,
+						{ Id: familyId },
+						family
+					)
+					.then(() =>
+						res.status(200).send({
+							success: true,
+							MemberIds: family.MemberIds,
+						})
+					)
+					.catch((error) =>
+						res
+							.status(500)
+							.send({ status: 500, message: error.message })
+					);
 			})
-			.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+			.catch((error) =>
+				res.status(500).send({ status: 500, message: error.message })
+			);
 	}
 
 	/**
@@ -706,26 +790,39 @@ export default class FamilyController implements IController {
 	 */
 	private getLastNames(req: Request, res: Response): void {
 		const familyId = req.params.id;
-		this._database.findDocument<Family>(this._collectionName, familyId)
+		this._database
+			.findDocument<Family>(this._collectionName, familyId)
 			.then((family) => {
 				if (!family) {
-					res.status(404).send({ status: 404, message: "Familie nicht gefunden" });
+					res.status(404).send({
+						status: 404,
+						message: "Familie nicht gefunden",
+					});
 					return;
 				}
 				if (!family.MemberIds || family.MemberIds.length === 0) {
 					res.status(200).send({ lastNames: [] });
 					return;
 				}
-				this._database.listAllDocuments<any>(DatabaseCollectionEnum.PERSONS)
+				this._database
+					.listAllDocuments<any>(DatabaseCollectionEnum.PERSONS)
 					.then((persons) => {
 						const lastNames = persons
 							.filter((p: any) => family.MemberIds.includes(p.Id))
 							.flatMap((p: any) => p.LastName || []);
-						res.status(200).send({ lastNames: Array.from(new Set(lastNames)) });
+						res.status(200).send({
+							lastNames: Array.from(new Set(lastNames)),
+						});
 					})
-					.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+					.catch((error) =>
+						res
+							.status(500)
+							.send({ status: 500, message: error.message })
+					);
 			})
-			.catch((error) => res.status(500).send({ status: 500, message: error.message }));
+			.catch((error) =>
+				res.status(500).send({ status: 500, message: error.message })
+			);
 	}
 }
 
@@ -733,12 +830,12 @@ export default class FamilyController implements IController {
 function escapeHtml(input: string): string {
 	return input.replace(/[&<>'"/]/g, (char) => {
 		const escapeChars: { [key: string]: string } = {
-			'&': '&amp;',
-			'<': '&lt;',
-			'>': '&gt;',
-			"'": '&#39;',
-			'"': '&quot;',
-			'/': '&#x2F;',
+			"&": "&amp;",
+			"<": "&lt;",
+			">": "&gt;",
+			"'": "&#39;",
+			'"': "&quot;",
+			"/": "&#x2F;",
 		};
 		return escapeChars[char] || char;
 	});

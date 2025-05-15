@@ -36,21 +36,35 @@ export class AuditLogController {
 	 */
 	public routes(app: Express): void {
 		app.get("/auditlogs", (req: Request, res: Response) => {
-			this._authorization.requireRole(req, res, async () => {
-				try {
-					const { from, to } = req.query;
-					let filter: any = {};
-					if (from || to) {
-						filter.timestamp = {};
-						if (from) filter.timestamp.$gte = new Date(from as string);
-						if (to) filter.timestamp.$lte = new Date(to as string);
+			this._authorization.requireRole(
+				req,
+				res,
+				async () => {
+					try {
+						const { from, to } = req.query;
+						let filter: any = {};
+						if (from || to) {
+							filter.timestamp = {};
+							if (from)
+								filter.timestamp.$gte = new Date(
+									from as string
+								);
+							if (to)
+								filter.timestamp.$lte = new Date(to as string);
+						}
+						const logs = await this._database.getDocumentByQuery(
+							"auditlogs",
+							filter
+						);
+						res.status(200).json(logs);
+					} catch (err) {
+						res.status(500).json({
+							error: "Fehler beim Laden der Audit-Logs.",
+						});
 					}
-					const logs = await this._database.getDocumentByQuery("auditlogs", filter);
-					res.status(200).json(logs);
-				} catch (err) {
-					res.status(500).json({ error: "Fehler beim Laden der Audit-Logs." });
-				}
-			}, [RoleEnum.ADMIN]);
+				},
+				[RoleEnum.ADMIN]
+			);
 		});
 	}
 }

@@ -8,7 +8,7 @@ import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import Paginator from "../classes/paginator.js";
-import escapeHtml from 'escape-html';
+import escapeHtml from "escape-html";
 import { body, param, validationResult } from "express-validator";
 
 export default class UserController implements IController {
@@ -183,9 +183,7 @@ export default class UserController implements IController {
 		 */
 		app.get(
 			"/user/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -240,13 +238,17 @@ export default class UserController implements IController {
 			"/user",
 			bodyParser.json(),
 			[
-				body("name").isString().withMessage("Name muss ein String sein."),
+				body("name")
+					.isString()
+					.withMessage("Name muss ein String sein."),
 				body("email").isEmail().withMessage("Email muss gültig sein."),
 				body("password")
 					.isString()
 					.isLength({ min: 8 })
 					.withMessage("Passwort muss mindestens 8 Zeichen haben."),
-				body("role").isString().withMessage("Rolle muss ein String sein."),
+				body("role")
+					.isString()
+					.withMessage("Rolle muss ein String sein."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -357,9 +359,7 @@ export default class UserController implements IController {
 		 */
 		app.delete(
 			"/user/:id",
-			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
-			],
+			[param("id").isString().withMessage("ID muss angegeben werden.")],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {

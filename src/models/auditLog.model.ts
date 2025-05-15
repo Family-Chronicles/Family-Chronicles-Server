@@ -46,13 +46,13 @@ export default class AuditLogModel {
 	public newValue?: any;
 
 	constructor(params: {
-		operation: "create" | "update" | "delete",
-		collection: string,
-		documentId: string,
-		timestamp?: Date,
-		userId?: string,
-		oldValue?: any,
-		newValue?: any
+		operation: "create" | "update" | "delete";
+		collection: string;
+		documentId: string;
+		timestamp?: Date;
+		userId?: string;
+		oldValue?: any;
+		newValue?: any;
 	}) {
 		this.operation = params.operation;
 		this.collection = params.collection;
