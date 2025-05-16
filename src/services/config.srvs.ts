@@ -1,5 +1,6 @@
 import { Config } from "../types/config.type.js";
-import ConfigJson from "../config/default.config.json" assert { type: "json" };
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Config service
@@ -19,9 +20,11 @@ export default class ConfigService {
 	public get config(): Config {
 		return this._config;
 	}
-
 	private constructor() {
-		this._config = ConfigJson;
+		// Konfigurationsdatei direkt laden ohne Import-Assertions
+		const configPath = path.resolve(process.cwd(), 'src/config/default.config.json');
+		const configFile = fs.readFileSync(configPath, 'utf8');
+		this._config = JSON.parse(configFile) as Config;
 	}
 
 	public static getInstance() {
