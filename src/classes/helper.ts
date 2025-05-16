@@ -97,7 +97,8 @@ export default class Helper {
 						"",
 						""
 					),
-				]
+				],
+				"Test Person Reason of Death " + index
 			);
 			const relationship = new Relationship(
 				null,
