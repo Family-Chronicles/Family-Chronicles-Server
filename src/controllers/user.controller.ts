@@ -1,15 +1,14 @@
+import escapeHtml from "escape-html";
 import { Express, Request, Response } from "express";
+import { body, param, validationResult } from "express-validator";
+import Paginator from "../classes/paginator.js";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import User from "../models/user.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
-import bodyParser from "body-parser";
 import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
-import escapeHtml from "escape-html";
-import { body, param, validationResult } from "express-validator";
+import User from "../models/user.model.js";
+import AuthorizationService from "../services/auth.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
 
 export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -236,19 +235,18 @@ export default class UserController implements IController {
 		 */
 		app.post(
 			"/user",
-			bodyParser.json(),
 			[
-				body("name")
+				body("Name")
 					.isString()
-					.withMessage("Name muss ein String sein."),
-				body("email").isEmail().withMessage("Email muss gültig sein."),
-				body("password")
+					.notEmpty()
+					.withMessage("Name ist erforderlich."),
+				body("Password")
 					.isString()
-					.isLength({ min: 8 })
-					.withMessage("Passwort muss mindestens 8 Zeichen haben."),
-				body("role")
-					.isString()
-					.withMessage("Rolle muss ein String sein."),
+					.notEmpty()
+					.withMessage("Password ist erforderlich."),
+				body("Email")
+					.isEmail()
+					.withMessage("Gültige Email ist erforderlich."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -303,13 +301,11 @@ export default class UserController implements IController {
 		 */
 		app.put(
 			"/user/:id",
-			bodyParser.json(),
 			[
 				param("id").isString().withMessage("ID muss angegeben werden."),
-				body("name").optional().isString(),
-				body("email").optional().isEmail(),
-				body("password").optional().isString().isLength({ min: 8 }),
-				body("role").optional().isString(),
+				body("Name").optional().isString(),
+				body("Email").optional().isEmail(),
+				body("Password").optional().isString(),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);

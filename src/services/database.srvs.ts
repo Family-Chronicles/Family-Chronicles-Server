@@ -1,16 +1,16 @@
-import { Config } from "../types/config.type.js";
 import {
-	MongoClient,
 	Collection,
 	Db,
-	MongoClientOptions,
-	Filter,
 	Document,
+	Filter,
+	MongoClient,
+	MongoClientOptions,
 } from "mongodb";
-import ConfigService from "./config.srvs.js";
 import { IModel } from "../interfaces/model.interface.js";
-import User from "../models/user.model.js";
 import AuditLogModel from "../models/auditLog.model.js";
+import User from "../models/user.model.js";
+import { Config } from "../types/config.type.js";
+import ConfigService from "./config.srvs.js";
 
 /**
  * Database service
@@ -225,10 +225,14 @@ export default class DatabaseService {
 				});
 				await db.collection("auditlogs").insertOne(auditLog);
 			}
-			return result.deletedCount > 0;
+			if (result.deletedCount > 0) {
+				return true;
+			} else {
+				throw new Error("Document not found or could not be deleted.");
+			}
 		} catch (error) {
 			console.error("Error deleting document:", error);
-			return false;
+			throw error;
 		}
 	}
 

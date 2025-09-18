@@ -1,12 +1,12 @@
+import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import ConfigService from "./config.srvs.js";
-import User from "../models/user.model.js";
-import ErrorResult from "../models/actionResults/error.result.js";
-import DatabaseService from "./database.srvs.js";
 import { RoleEnum } from "../enums/role.enum.js";
+import ErrorResult from "../models/actionResults/error.result.js";
 import FailedAttemptModel from "../models/failedAttempts.model.js";
+import User from "../models/user.model.js";
+import ConfigService from "./config.srvs.js";
+import DatabaseService from "./database.srvs.js";
 
 /**
  * Authorization service
@@ -50,100 +50,41 @@ export default class AuthorizationService {
 
 	public async authorize(req: Request, res: Response, next: () => void) {
 		const token = req.headers["authorization"];
-		if (
-			token === undefined ||
-			token === null ||
-			token === "" ||
-			token.length <= 0
-		) {
-			return res.status(401).send({
-				auth: false,
-				message: "No token provided.",
-			});
+		if (!token) {
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "No token provided."));
 		}
 
-		const decoded = this.decodeToken<User>(
-			token as unknown as string
-		) as User | null;
-
-		if (!decoded || decoded === null) {
-			return res.status(500).send(
-				new ErrorResult(
-					500,
-					JSON.stringify({
-						auth: false,
-						message: "Failed to authenticate token.",
-					})
-				)
-			);
+		const decoded = this.decodeToken<User>(token as string) as User | null;
+		if (!decoded) {
+			return res
+				.status(500)
+				.send(new ErrorResult(500, "Failed to authenticate token."));
 		}
 
 		const user = await this._database.getUserByUsername(decoded.Name);
-
 		if (!user) {
-			return res.status(404).send(
-				this.addFailedAttempt(decoded.Id, req.ip!)
-					.then(() => {
-						new ErrorResult(
-							404,
-							JSON.stringify({
-								auth: false,
-								message: "No user found.",
-							})
-						);
-					})
-					.catch((err) => {
-						new ErrorResult(500, err.message);
-					})
-			);
+			await this.addFailedAttempt(decoded.Id, req.ip!);
+			return res.status(404).send(new ErrorResult(404, "No user found."));
 		}
 
 		if (user.Password !== decoded.Password) {
-			return res.status(401).send(
-				this.addFailedAttempt(decoded.Id, req.ip!)
-					.then(() => {
-						new ErrorResult(
-							401,
-							JSON.stringify({
-								auth: false,
-								message: "Invalid password.",
-							})
-						);
-					})
-					.catch((err) => {
-						new ErrorResult(500, err.message);
-					})
-			);
+			await this.addFailedAttempt(decoded.Id, req.ip!);
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "Invalid password."));
 		}
 
 		if (user.SessoionID !== decoded.SessoionID) {
-			return res.status(401).send(
-				this.addFailedAttempt(decoded.Id, req.ip!)
-					.then(() => {
-						new ErrorResult(
-							401,
-							JSON.stringify({
-								auth: false,
-								message: "Invalid session.",
-							})
-						);
-					})
-					.catch((err) => {
-						new ErrorResult(500, err.message);
-					})
-			);
+			await this.addFailedAttempt(decoded.Id, req.ip!);
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "Invalid session."));
 		}
 
 		if (user.Role === RoleEnum.UNAUTHORIZED) {
-			return res.status(401).send(
-				new ErrorResult(
-					401,
-					JSON.stringify({
-						auth: false,
-						message: "Unauthorized.",
-					})
-				)
-			);
+			return res.status(401).send(new ErrorResult(401, "Unauthorized."));
 		}
 
 		next();
@@ -243,50 +184,22 @@ export default class AuthorizationService {
 	) {
 		const token = req.headers["authorization"];
 		if (!token) {
-			return res.status(401).send(
-				new ErrorResult(
-					401,
-					JSON.stringify({
-						auth: false,
-						message: "No token provided.",
-					})
-				)
-			);
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "No token provided."));
 		}
 		const decoded = this.decodeToken<any>(token as string);
 		if (!decoded || !decoded.Name) {
-			return res.status(401).send(
-				new ErrorResult(
-					401,
-					JSON.stringify({
-						auth: false,
-						message: "Invalid token.",
-					})
-				)
-			);
+			return res.status(401).send(new ErrorResult(401, "Invalid token."));
 		}
 		const user = await this._database.getUserByUsername(decoded.Name);
 		if (!user) {
-			return res.status(404).send(
-				new ErrorResult(
-					404,
-					JSON.stringify({
-						auth: false,
-						message: "No user found.",
-					})
-				)
-			);
+			return res.status(404).send(new ErrorResult(404, "No user found."));
 		}
 		if (!allowedRoles.includes(user.Role)) {
-			return res.status(403).send(
-				new ErrorResult(
-					403,
-					JSON.stringify({
-						auth: false,
-						message: "Insufficient permissions.",
-					})
-				)
-			);
+			return res
+				.status(403)
+				.send(new ErrorResult(403, "Insufficient permissions."));
 		}
 		next();
 	}
