@@ -1,7 +1,7 @@
-import { Request, Response, Express } from "express";
-import DatabaseService from "../services/database.srvs.js";
-import AuthorizationService from "../services/auth.srvs.js";
-import { RoleEnum } from "../enums/role.enum.js";
+import { Express, Request, Response } from "express";
+import { RoleEnum } from "../enums/role.enum";
+import AuthorizationService from "../services/auth.srvs";
+import DatabaseService from "../services/database.srvs";
 
 export class AuditLogController {
 	private _database = DatabaseService.getInstance();

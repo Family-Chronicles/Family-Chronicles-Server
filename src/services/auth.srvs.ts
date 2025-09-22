@@ -1,12 +1,12 @@
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
-import { RoleEnum } from "../enums/role.enum.js";
-import ErrorResult from "../models/actionResults/error.result.js";
-import FailedAttemptModel from "../models/failedAttempts.model.js";
-import User from "../models/user.model.js";
-import ConfigService from "./config.srvs.js";
-import DatabaseService from "./database.srvs.js";
+import { RoleEnum } from "../enums/role.enum";
+import ErrorResult from "../models/actionResults/error.result";
+import FailedAttemptModel from "../models/failedAttempts.model";
+import User from "../models/user.model";
+import ConfigService from "./config.srvs";
+import DatabaseService from "./database.srvs";
 
 /**
  * Authorization service
@@ -19,6 +19,50 @@ import DatabaseService from "./database.srvs.js";
  * });
  */
 export default class AuthorizationService {
+	/**
+	 * Erstellt eine neue SessionID für einen User und speichert sie
+	 */
+	public async createSession(user: User): Promise<string> {
+		const sessionID = crypto.randomUUID();
+		user.SessoionID = sessionID;
+		await this._database.updateDocument<User>(
+			"users",
+			{ Id: user.Id },
+			user
+		);
+		return sessionID;
+	}
+
+	/**
+	 * Löscht die SessionID eines Users (Logout)
+	 */
+	public async destroySession(user: User): Promise<void> {
+		user.SessoionID = undefined;
+		await this._database.updateDocument<User>(
+			"users",
+			{ Id: user.Id },
+			user
+		);
+	}
+
+	/**
+	 * Prüft, ob die Session gültig ist (optional: Timeout)
+	 */
+	public async isSessionValid(
+		user: User,
+		sessionID: string
+	): Promise<boolean> {
+		if (!user.SessoionID || user.SessoionID !== sessionID) return false;
+		// Optional: Timeout-Logik ergänzen
+		return true;
+	}
+
+	/**
+	 * Setzt die Session zurück (z.B. nach Passwort-Änderung)
+	 */
+	public async resetSession(user: User): Promise<string> {
+		return await this.createSession(user);
+	}
 	private static _instance: AuthorizationService;
 	private _config = ConfigService.getInstance().config;
 	private _database = DatabaseService.getInstance();

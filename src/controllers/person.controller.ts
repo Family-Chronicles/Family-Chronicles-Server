@@ -1,18 +1,18 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import Person from "../models/person.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import Relationship from "../models/relationship.model.js";
-import ErrorResult from "../models/actionResults/error.result.js";
-import Ok from "../models/actionResults/ok.result.js";
-import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
 import escapeHtml from "escape-html";
-import RelatedData from "../models/data.model.js";
+import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
+import Paginator from "../classes/paginator";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
+import { RelationshipTypeEnum } from "../enums/relationship.enum";
+import { IController } from "../interfaces/controller.interface.js";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import RelatedData from "../models/data.model";
+import Person from "../models/person.model";
+import Relationship from "../models/relationship.model";
+import AuthorizationService from "../services/auth.srvs";
+import DatabaseService from "../services/database.srvs";
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();

@@ -1,16 +1,15 @@
-import { IController } from "../interfaces/controller.interface";
-import DatabaseService from "../services/database.srvs";
-import { Express, Request, Response } from "express";
-import crypto from "crypto";
-import NodeRSA from "node-rsa";
-import ErrorResult from "../models/actionResults/error.result";
-import User from "../models/user.model";
-import Ok from "../models/actionResults/ok.result";
 import "dotenv/config";
-import AuthorizationService from "../services/auth.srvs";
+import { Express, Request, Response } from "express";
+import NodeRSA from "node-rsa";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { RoleEnum } from "../enums/role.enum";
+import { IController } from "../interfaces/controller.interface";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import User from "../models/user.model";
+import AuthorizationService from "../services/auth.srvs";
 import ConfigService from "../services/config.srvs";
+import DatabaseService from "../services/database.srvs";
 
 /**
  * Login controller
@@ -39,9 +38,9 @@ export default class LoginController implements IController {
 		 *  "token": "TOKEN",
 		 * }
 		 */
-		app.get("/user/login", (req: Request, res: Response) => {
-			this.login(req, res);
-		});
+		 app.post("/user/login", (req: Request, res: Response) => {
+			 this.login(req, res);
+		 });
 
 		/**
 		 * POST /user/register
@@ -87,40 +86,52 @@ export default class LoginController implements IController {
 		const key = new NodeRSA(this._config.config.auth.privateKey);
 
 		if (!username || !password) {
-			res.status(400).send("Missing username or password");
+			res.status(400).send(
+				new ErrorResult(400, "Missing username or password")
+			);
 			return;
 		}
-		// eslint-disable-next-line no-unused-vars
 		this._database
 			.getUserByUsername(username)
-			.then((user: User | null) => {
+			.then(async (user: User | null) => {
 				if (!user) {
 					res.status(400).send(
 						new ErrorResult(400, "User not found")
 					);
 					return;
 				}
-				if (
-					!this._authorization.comparePassword(
-						key.decrypt(password, "utf8"),
-						user.Password
-					)
-				) {
-					res.status(400).send(
-						new ErrorResult(400, "Wrong password")
-					);
-					return;
-				}
-
+			   let decryptedPassword;
+			   try {
+				   decryptedPassword = key.decrypt(password, "utf8");
+				   console.log('Login: Passwort entschlüsselt:', decryptedPassword);
+			   } catch (err) {
+				   console.error('Login: Fehler beim Entschlüsseln des Passworts:', err);
+				   res.status(500).send(new ErrorResult(500, 'Fehler beim Entschlüsseln des Passworts'));
+				   return;
+			   }
+			   let passwordMatch;
+			   try {
+				   passwordMatch = this._authorization.comparePassword(decryptedPassword, user.Password);
+				   console.log('Login: Passwortvergleich:', passwordMatch);
+			   } catch (err) {
+				   console.error('Login: Fehler beim Passwortvergleich:', err);
+				   res.status(500).send(new ErrorResult(500, 'Fehler beim Passwortvergleich'));
+				   return;
+			   }
+			   if (!passwordMatch) {
+				   res.status(400).send(
+					   new ErrorResult(400, "Wrong password")
+				   );
+				   return;
+			   }
 				if (user.Locked) {
 					res.status(401).send(
 						new ErrorResult(401, "User is locked")
 					);
 					return;
 				}
-
-				user.SessoionID = crypto.randomUUID();
-
+				// Session generieren und speichern
+				await this._authorization.createSession(user);
 				const token = this._authorization.generateToken(user);
 				res.send(new Ok(token));
 			})
@@ -269,35 +280,22 @@ export default class LoginController implements IController {
 
 		this._database
 			.getUserByUsername(decoded.Name)
-			.then((user: User | null) => {
+			.then(async (user: User | null) => {
 				if (!user) {
 					res.status(404).send(
 						new ErrorResult(404, "No user found.")
 					);
 					return;
 				}
-
 				if (user.Password !== decoded.Password) {
 					res.status(401).send(
 						new ErrorResult(401, "Invalid password.")
 					);
 					return;
 				}
-
-				user.SessoionID = undefined;
-
-				this._database
-					.updateDocument<User>(
-						this._collectionName,
-						{ Id: user.Id },
-						user
-					)
-					.then(() => {
-						res.send(new Ok("User logged out successfully"));
-					})
-					.catch((err) => {
-						res.status(500).send(new ErrorResult(500, err.message));
-					});
+				// Session entfernen
+				await this._authorization.destroySession(user);
+				res.send(new Ok("User logged out successfully"));
 			})
 			.catch((err) => {
 				res.status(500).send(new ErrorResult(500, err.message));

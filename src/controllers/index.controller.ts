@@ -1,7 +1,7 @@
 import { Express, Request, Response } from "express";
-import ConfigService from "../services/config.srvs.js";
-import DatabaseService from "../services/database.srvs.js";
 import { IController } from "../interfaces/controller.interface.js";
+import ConfigService from "../services/config.srvs";
+import DatabaseService from "../services/database.srvs";
 import { Config } from "../types/config.type.js";
 
 /**

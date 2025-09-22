@@ -1,0 +1,42 @@
+{
+	"meta": {
+		"name": "family-chronicles-server-test",
+		"version": "0.0.1-test",
+		"description": "Test-Konfiguration für Family Chronicles Server.",
+		"homepage_url": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+		"author": {
+			"name": "Jonas Pfalzgraf",
+			"email": "info@josunlp.de"
+		},
+		"contributors": [
+			{
+				"name": "Jonas Pfalzgraf",
+				"email": "info@josunlp.de"
+			}
+		],
+		"license": "MPL-2.0",
+		"repository": "git+https://github.com/Family-Chronicles/Family-Chronicles-Server.git",
+		"homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+		"bugs": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
+	},
+	"database": {
+		"host": "mongodb://localhost:27017",
+		"databasename": "family-chronicles-test",
+		"username": "admin",
+		"password": "admin",
+		"collections": [
+			"users",
+			"data",
+			"families",
+			"persons",
+			"relations",
+			"tags",
+			"failedAttempts"
+		]
+	},
+	"auth": {
+		"privateKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIBOgIBAAJBAIcrFGbCu9xUM/BMRnvXLhj9EWM2n2YUMPG6WIBdvn4JyuXqS8Jb\nKkqP22e0dM2TXOgYj4AOUDV0CAbQVtWycDsCAwEAAQJAQbsjWq2MKaMQ9uRAymxj\n0GcQk4y2iy96dbLG4vWzcxqX7T4Hhy3abG5GE70wPgfUzuH3R4nkMpE6Q41G2L2y\n4QIhAPYqmw/vLWhsae1rzW+Y/K7BeDVTdEdUOgkLg1SX4yHJAiEAjJFdCytqBXO5\n6zRgsuSt64OzyjelK4dk6m2La0rFI+MCIQCdwCPqjC2fM4qWWXUnRPT40IbGNZrY\ncwNV9IjO1x748QIgWWrKriVCvw8bsFPUQ1gWjl9sCfGVvvfUqQ9gBbM9bpMCIEjJ\nOBapEkIdKQHKHg9R9wHXU3DINuskXfmqVCl6buOW\n-----END RSA PRIVATE KEY-----",
+		"publicKey": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIcrFGbCu9xUM/BMRnvXLhj9EWM2n2YU\nMPG6WIBdvn4JyuXqS8JbKkqP22e0dM2TXOgYj4AOUDV0CAbQVtWycDsCAwEAAQ==\n-----END PUBLIC KEY-----",
+		"tokenExpiration": "1d"
+	}
+}

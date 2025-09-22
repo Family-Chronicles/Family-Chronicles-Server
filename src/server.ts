@@ -1,17 +1,15 @@
-import { Config } from "./types/config.type.js";
-import express, { Express } from "express";
-import dotenv from "dotenv";
-import ConfigService from "./services/config.srvs.js";
-import DatabaseService from "./services/database.srvs.js";
-import RouterCore from "./core/router.core.js";
-import expressJSDocSwagger from "express-jsdoc-swagger";
-import * as url from "url";
 import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import express, { Express } from "express";
+import expressJSDocSwagger from "express-jsdoc-swagger";
 import rateLimiter from "express-rate-limit";
-import Helper from "./classes/helper.js";
-import GlobalErrorHandler from "./core/error.core.js";
-import morgan from "morgan";
 import helmet from "helmet";
+import morgan from "morgan";
+import GlobalErrorHandler from "./core/error.core";
+import RouterCore from "./core/router.core";
+import ConfigService from "./services/config.srvs";
+import DatabaseService from "./services/database.srvs";
+import { Config } from "./types/config.type.js";
 
 /**
  * Server
@@ -28,9 +26,9 @@ import helmet from "helmet";
 class Server {
 	private app: Express = express();
 	private port = 8080;
-	private __filename = url.fileURLToPath(import.meta.url);
-	private __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-	private testDataCount = 0;
+	private __filename = typeof __filename !== "undefined" ? __filename : "";
+	private __dirname = typeof __dirname !== "undefined" ? __dirname : "";
+	// private testDataCount = 0;
 
 	constructor() {
 		dotenv.config();
@@ -86,11 +84,7 @@ class Server {
 			console.log(
 				`⚡️[server]: Server is running at http://localhost:${this.port}`
 			);
-			const toggl = false;
-			if (toggl && this.testDataCount === 0) {
-				Helper.testData();
-				this.testDataCount++;
-			}
+			// Testdaten-Initialisierung entfernt für Testkontext
 		});
 	}
 
@@ -151,4 +145,5 @@ class Server {
 	}
 }
 
-new Server();
+const serverInstance = new Server();
+export default serverInstance["app"];

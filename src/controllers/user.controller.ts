@@ -1,14 +1,14 @@
 import escapeHtml from "escape-html";
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
-import Paginator from "../classes/paginator.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
+import Paginator from "../classes/paginator";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { IController } from "../interfaces/controller.interface.js";
-import ErrorResult from "../models/actionResults/error.result.js";
-import Ok from "../models/actionResults/ok.result.js";
-import User from "../models/user.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
-import DatabaseService from "../services/database.srvs.js";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import User from "../models/user.model";
+import AuthorizationService from "../services/auth.srvs";
+import DatabaseService from "../services/database.srvs";
 
 export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -19,6 +19,56 @@ export default class UserController implements IController {
 	 * @param app
 	 */
 	public routes(app: Express): void {
+		/**
+		 * @swagger
+		 * components:
+		 *   securitySchemes:
+		 *     BearerAuth:
+		 *       type: http
+		 *       scheme: bearer
+		 *       bearerFormat: JWT
+		 *   schemas:
+		 *     User:
+		 *       type: object
+		 *       properties:
+		 *         Id:
+		 *           type: string
+		 *         Name:
+		 *           type: string
+		 *         Email:
+		 *           type: string
+		 *         Password:
+		 *           type: string
+		 *         CreatedAt:
+		 *           type: string
+		 *           format: date-time
+		 *         UpdatedAt:
+		 *           type: string
+		 *           format: date-time
+		 *         Role:
+		 *           type: string
+		 *           enum: [Admin, Editor, Viewer, Unauthorized]
+		 *         SessoionID:
+		 *           type: string
+		 *         Locked:
+		 *           type: boolean
+		 *     AuthResponse:
+		 *       type: object
+		 *       properties:
+		 *         token:
+		 *           type: string
+		 *         user:
+		 *           $ref: '#/components/schemas/User'
+		 *     ErrorResult:
+		 *       type: object
+		 *       properties:
+		 *         status:
+		 *           type: integer
+		 *         message:
+		 *           type: string
+		 * security:
+		 *   - BearerAuth: []
+		 */
 		/**
 		 * GET /users
 		 * @tags users
@@ -70,9 +120,14 @@ export default class UserController implements IController {
 		 * }
 		 */
 		app.get("/users", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -128,15 +183,25 @@ export default class UserController implements IController {
 		 * }
 		 */
 		app.get("/users/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.indexPaged(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		app.get("/users/pageCount/:pageSize", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.getPageCount(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.getPageCount(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -188,9 +253,14 @@ export default class UserController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.show(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -247,15 +317,24 @@ export default class UserController implements IController {
 				body("Email")
 					.isEmail()
 					.withMessage("Gültige Email ist erforderlich."),
+				body("Role")
+					.isString()
+					.isIn(["Admin", "Editor", "Viewer", "Unauthorized"])
+					.withMessage("Ungültige Rolle."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin"]
+				);
 			}
 		);
 
@@ -306,15 +385,25 @@ export default class UserController implements IController {
 				body("Name").optional().isString(),
 				body("Email").optional().isEmail(),
 				body("Password").optional().isString(),
+				body("Role")
+					.optional()
+					.isString()
+					.isIn(["Admin", "Editor", "Viewer", "Unauthorized"]),
+				body("Locked").optional().isBoolean(),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -361,9 +450,14 @@ export default class UserController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.delete(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin"]
+				);
 			}
 		);
 	}

@@ -1,14 +1,14 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import Family from "../models/family.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import ErrorResult from "../models/actionResults/error.result.js";
-import Ok from "../models/actionResults/ok.result.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
+import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
+import Paginator from "../classes/paginator";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
+import { IController } from "../interfaces/controller.interface.js";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import Family from "../models/family.model";
+import AuthorizationService from "../services/auth.srvs";
+import DatabaseService from "../services/database.srvs";
 
 export default class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();

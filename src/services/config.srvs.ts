@@ -20,12 +20,15 @@ export default class ConfigService {
 	public get config(): Config {
 		return this._config;
 	}
-	private constructor() {
-		// Konfigurationsdatei direkt laden ohne Import-Assertions
-		const configPath = path.resolve(process.cwd(), 'src/config/default.config.json');
-		const configFile = fs.readFileSync(configPath, 'utf8');
-		this._config = JSON.parse(configFile) as Config;
-	}
+	   private constructor() {
+		   // Testkontext: test.config.json laden
+		   const configFileName = process.env.NODE_ENV === 'test'
+			   ? 'test.config.json'
+			   : 'default.config.json';
+		   const configPath = path.resolve(process.cwd(), 'src/config', configFileName);
+		   const configFile = fs.readFileSync(configPath, 'utf8');
+		   this._config = JSON.parse(configFile) as Config;
+	   }
 
 	public static getInstance() {
 		if (!ConfigService._instance) {

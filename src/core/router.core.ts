@@ -1,10 +1,11 @@
 import { Express } from "express";
-import FamilyController from "../controllers/family.controller.js";
-import IndexController from "../controllers/index.controller.js";
-import PersonController from "../controllers/person.controller.js";
-import TestController from "../controllers/test.controller.js";
-import UserController from "../controllers/user.controller.js";
-import { AuditLogController } from "../controllers/auditLog.controller.js";
+import { AuditLogController } from "../controllers/auditLog.controller";
+import FamilyController from "../controllers/family.controller";
+import IndexController from "../controllers/index.controller";
+import PersonController from "../controllers/person.controller";
+import TestController from "../controllers/test.controller";
+import UserController from "../controllers/user.controller";
+import LoginController from "../controllers/login.controller";
 
 /**
  * Router service
@@ -22,5 +23,6 @@ export default class RouterCore {
 		new PersonController().routes(app);
 		new FamilyController().routes(app);
 		new AuditLogController().routes(app);
+        new LoginController().routes(app);
 	}
 }

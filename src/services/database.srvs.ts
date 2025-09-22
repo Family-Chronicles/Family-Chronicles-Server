@@ -7,10 +7,10 @@ import {
 	MongoClientOptions,
 } from "mongodb";
 import { IModel } from "../interfaces/model.interface.js";
-import AuditLogModel from "../models/auditLog.model.js";
-import User from "../models/user.model.js";
+import AuditLogModel from "../models/auditLog.model";
+import User from "../models/user.model";
 import { Config } from "../types/config.type.js";
-import ConfigService from "./config.srvs.js";
+import ConfigService from "./config.srvs";
 
 /**
  * Database service
@@ -283,7 +283,7 @@ export default class DatabaseService {
 			this.#config.database.databasename
 		);
 		const collection = db.collection("users");
-		const user = await collection.findOne<User>({ username });
+	const user = await collection.findOne<User>({ Name: username });
 		return user;
 	}
 
