@@ -1,6 +1,6 @@
-import { IModel } from "./../interfaces/model.interface.js";
-import { Role } from "../types/role.type.js";
 import crypto from "crypto";
+import { Role } from "../types/role.type.js";
+import { IModel } from "./../interfaces/model.interface.js";
 
 /**
  * User model
@@ -42,7 +42,8 @@ export default class User implements IModel {
 	public CreatedAt: Date;
 	public UpdatedAt: Date;
 	public Role: Role;
-	public SessoionID?: string;
+	public SessionID?: string;
+	public SessionCreatedAt?: Date;
 	public Locked: boolean;
 
 	// Constructor
@@ -55,7 +56,8 @@ export default class User implements IModel {
 		updatedAt: Date,
 		role: Role,
 		locked: boolean,
-		sessionID?: string
+		sessionID?: string,
+		sessionCreatedAt?: Date
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.Id = crypto.randomUUID();
@@ -69,6 +71,7 @@ export default class User implements IModel {
 		this.UpdatedAt = updatedAt;
 		this.Role = role;
 		this.Locked = locked;
-		this.SessoionID = sessionID || undefined;
+		this.SessionID = sessionID || undefined;
+		this.SessionCreatedAt = sessionCreatedAt || undefined;
 	}
 }

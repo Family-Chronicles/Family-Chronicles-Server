@@ -140,11 +140,37 @@ export default class DatabaseService {
 					(document as any).Id || (document as any)._id || "unknown",
 				timestamp: new Date(),
 				userId,
-				newValue: document,
+				newValue: this.sanitizeForAuditLog(document),
 			});
 			await db.collection("auditlogs").insertOne(auditLog);
 		}
 		return result.acknowledged;
+	}
+
+	/**
+	 * Entfernt sensible Daten aus Objekten für Audit-Logs
+	 */
+	private sanitizeForAuditLog<T>(obj: T): Partial<T> {
+		if (!obj || typeof obj !== "object") return obj;
+
+		const sensitiveFields = [
+			"Password",
+			"password",
+			"SessionID",
+			"sessionID",
+			"sessionId",
+			"SessionCreatedAt",
+			"sessionCreatedAt",
+		];
+		const sanitized = { ...obj } as any;
+
+		for (const field of sensitiveFields) {
+			if (field in sanitized) {
+				sanitized[field] = "[REDACTED]";
+			}
+		}
+
+		return sanitized as Partial<T>;
 	}
 
 	public async findDocument<T extends IModel>(
@@ -187,8 +213,8 @@ export default class DatabaseService {
 				documentId: oldDoc.Id || oldDoc._id || "unknown",
 				timestamp: new Date(),
 				userId,
-				oldValue: oldDoc,
-				newValue: { ...oldDoc, ...update },
+				oldValue: this.sanitizeForAuditLog(oldDoc),
+				newValue: this.sanitizeForAuditLog({ ...oldDoc, ...update }),
 			});
 			await db.collection("auditlogs").insertOne(auditLog);
 		}
@@ -221,7 +247,7 @@ export default class DatabaseService {
 					documentId: oldDoc.Id || oldDoc._id || "unknown",
 					timestamp: new Date(),
 					userId,
-					oldValue: oldDoc,
+					oldValue: this.sanitizeForAuditLog(oldDoc),
 				});
 				await db.collection("auditlogs").insertOne(auditLog);
 			}
@@ -283,7 +309,7 @@ export default class DatabaseService {
 			this.#config.database.databasename
 		);
 		const collection = db.collection("users");
-	const user = await collection.findOne<User>({ Name: username });
+		const user = await collection.findOne<User>({ Name: username });
 		return user;
 	}
 

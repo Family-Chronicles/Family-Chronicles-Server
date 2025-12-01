@@ -3,6 +3,7 @@ import escapeHtml from "escape-html";
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
 import Paginator from "../classes/paginator";
+import SecurityHelper from "../classes/securityHelper";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { RelationshipTypeEnum } from "../enums/relationship.enum";
 import { IController } from "../interfaces/controller.interface.js";
@@ -70,9 +71,14 @@ export default class PersonController implements IController {
 		 * }
 		 */
 		app.get("/persons", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -126,11 +132,33 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/persons/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
-		});
+		app.get(
+			"/persons/:pageSize/:page",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+					),
+				param("page")
+					.isInt({ min: 1 })
+					.withMessage("page muss eine positive Zahl sein."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /persons/pageCount/:pageSize
@@ -170,10 +198,26 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/persons/pageCount/:pageSize",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+					),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.getPageCount(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -228,15 +272,24 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/person/:id",
-			[param("id").isString().withMessage("ID muss angegeben werden.")],
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.show(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -293,9 +346,14 @@ export default class PersonController implements IController {
 		app.get(
 			"/person/name?firstName&lastName",
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByName(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showByName(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -344,9 +402,14 @@ export default class PersonController implements IController {
 			"/person/dateOfBirth",
 			bodyParser.json(),
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByDateOfBirth(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showByDateOfBirth(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -393,10 +456,37 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/person/relatedData/:relatedDataIds",
+			[
+				param("relatedDataIds")
+					.isString()
+					.withMessage("relatedDataIds muss angegeben werden.")
+					.custom((value: string) => {
+						const ids = value.split(",");
+						const uuidRegex =
+							/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+						for (const id of ids) {
+							if (!uuidRegex.test(id.trim())) {
+								throw new Error(
+									`Ungültige UUID: ${id}. Alle IDs müssen gültige UUIDs sein.`
+								);
+							}
+						}
+						return true;
+					}),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByRelatedDataIds(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showByRelatedDataIds(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -456,10 +546,22 @@ export default class PersonController implements IController {
 			[
 				body("FirstName")
 					.isArray()
-					.withMessage("FirstName muss ein Array sein."),
+					.notEmpty()
+					.withMessage("FirstName muss ein nicht-leeres Array sein."),
 				body("LastName")
 					.isArray()
-					.withMessage("LastName muss ein Array sein."),
+					.notEmpty()
+					.withMessage("LastName muss ein nicht-leeres Array sein."),
+				body("Sex")
+					.optional()
+					.isIn(["Male", "Female", "Intersex", "Other"])
+					.withMessage(
+						"Sex muss Male, Female, Intersex oder Other sein."
+					),
+				body("Gender")
+					.optional()
+					.isString()
+					.withMessage("Gender muss ein String sein."),
 				body("DateOfBirth")
 					.optional()
 					.isISO8601()
@@ -468,9 +570,10 @@ export default class PersonController implements IController {
 					.optional()
 					.isISO8601()
 					.withMessage("DateOfDeath muss ein gültiges Datum sein."),
-				body("PlaceOfBirth").optional().isString(),
-				body("PlaceOfDeath").optional().isString(),
-				body("Notes").optional().isString(),
+				body("PlaceOfBirth").optional().isString().trim().escape(),
+				body("PlaceOfDeath").optional().isString().trim().escape(),
+				body("Notes").optional().isString().trim().escape(),
+				body("ReasonOfDeath").optional().isString().trim().escape(),
 				body("FamilyIds").optional().isArray(),
 				body("RelationshipIds").optional().isArray(),
 				body("RelatedDataIds").optional().isArray(),
@@ -480,9 +583,14 @@ export default class PersonController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -539,7 +647,9 @@ export default class PersonController implements IController {
 			"/person/:id",
 			bodyParser.json(),
 			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
 				body("FirstName").optional().isArray(),
 				body("LastName").optional().isArray(),
 				body("DateOfBirth").optional().isISO8601(),
@@ -556,9 +666,14 @@ export default class PersonController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -599,15 +714,24 @@ export default class PersonController implements IController {
 		 */
 		app.delete(
 			"/person/:id",
-			[param("id").isString().withMessage("ID muss angegeben werden.")],
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.delete(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -652,11 +776,28 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/person/:id/relationships", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.showRelationships(req, res);
-			});
-		});
+		app.get(
+			"/person/:id/relationships",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showRelationships(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /person/:id/relationships/:relationshipId
@@ -675,10 +816,27 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/person/:id/relationships/:relationshipId",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+				param("relationshipId")
+					.isUUID()
+					.withMessage("relationshipId muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showRelationship(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showRelationship(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -705,11 +863,29 @@ export default class PersonController implements IController {
 		 *   "EndDate": null
 		 * }
 		 */
-		app.post("/person/:id/relationship", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.addRelationship(req, res);
-			});
-		});
+		app.post(
+			"/person/:id/relationship",
+			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.addRelationship(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 
 		/**
 		 * PUT /person/:id/relationships/:relationshipId
@@ -730,16 +906,28 @@ export default class PersonController implements IController {
 		 * 	 status: 200
 		 * }
 		 */
-		app.post("/person/:id/uploadMedia", (req: Request, res: Response) => {
-			this._authorization.requireRole(
-				req,
-				res,
-				() => {
-					this.uploadMedia(req, res);
-				},
-				["Admin", "Editor"]
-			);
-		});
+		app.post(
+			"/person/:id/uploadMedia",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.uploadMedia(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 
 		/**
 		 * POST /person/:id/tagMedia
@@ -752,7 +940,16 @@ export default class PersonController implements IController {
 		app.post(
 			"/person/:id/tagMedia",
 			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
 				this._authorization.requireRole(
 					req,
 					res,
@@ -862,10 +1059,18 @@ export default class PersonController implements IController {
 	private updateRelationship(req: Request, res: Response) {
 		const id = req.params.id;
 		const relationshipId = req.params.relationshipId;
-		const rel =
-			typeof req.body.relationship === "string"
-				? JSON.parse(req.body.relationship)
-				: req.body.relationship;
+		let rel;
+		try {
+			rel =
+				typeof req.body.relationship === "string"
+					? JSON.parse(req.body.relationship)
+					: req.body.relationship;
+		} catch (err) {
+			res.status(400).send(
+				new ErrorResult(400, "Invalid relationship JSON format")
+			);
+			return;
+		}
 
 		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
 		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
@@ -955,10 +1160,18 @@ export default class PersonController implements IController {
 
 	private addRelationship(req: Request, res: Response) {
 		const id = req.params.id;
-		const rel =
-			typeof req.body.relationship === "string"
-				? JSON.parse(req.body.relationship)
-				: req.body.relationship;
+		let rel;
+		try {
+			rel =
+				typeof req.body.relationship === "string"
+					? JSON.parse(req.body.relationship)
+					: req.body.relationship;
+		} catch (err) {
+			res.status(400).send(
+				new ErrorResult(400, "Invalid relationship JSON format")
+			);
+			return;
+		}
 
 		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
 		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
@@ -1138,10 +1351,7 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1171,10 +1381,7 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1201,10 +1408,7 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1223,12 +1427,7 @@ export default class PersonController implements IController {
 					persons = [];
 				}
 
-				persons.forEach((person) => {
-					//@ts-ignore
-					delete person._id;
-				});
-
-				res.send(persons);
+				res.send(SecurityHelper.removeMongoIds(persons));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1247,15 +1446,15 @@ export default class PersonController implements IController {
 					persons = [];
 				}
 
-				persons.forEach((person) => {
-					//@ts-ignore
-					delete person._id;
-				});
-
+				const sanitizedPersons = SecurityHelper.removeMongoIds(persons);
 				const page = parseInt(req.params.page);
 				const pageSize = parseInt(req.params.pageSize);
 
-				const result = Paginator.paginate(persons, page, pageSize);
+				const result = Paginator.paginate(
+					sanitizedPersons,
+					page,
+					pageSize
+				);
 
 				res.send(result);
 			})
@@ -1276,11 +1475,6 @@ export default class PersonController implements IController {
 					persons = [];
 				}
 
-				persons.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
 				const pageSize = parseInt(req.params.pageSize);
 
 				const result = Paginator.getPageCount<Person>(
@@ -1297,8 +1491,6 @@ export default class PersonController implements IController {
 	}
 
 	private create(req: Request, res: Response): void {
-		console.log(req.body);
-
 		let firstName = req.body.FirstName;
 		let lastName = req.body.LastName;
 		let relatedDataIds = req.body.RelatedDataIds;
@@ -1365,9 +1557,7 @@ export default class PersonController implements IController {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
-				//@ts-ignore
-				delete person!._id;
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);

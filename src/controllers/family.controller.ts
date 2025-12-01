@@ -1,7 +1,9 @@
 import bodyParser from "body-parser";
+import escapeHtml from "escape-html";
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
 import Paginator from "../classes/paginator";
+import SecurityHelper from "../classes/securityHelper";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { IController } from "../interfaces/controller.interface.js";
 import ErrorResult from "../models/actionResults/error.result";
@@ -120,11 +122,33 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/familys/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
-		});
+		app.get(
+			"/familys/:pageSize/:page",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+					),
+				param("page")
+					.isInt({ min: 1 })
+					.withMessage("page muss eine positive Zahl sein."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /familys/pageCount/:pageSize
@@ -164,10 +188,26 @@ export default class FamilyController implements IController {
 		 */
 		app.get(
 			"/familys/pageCount/:pageSize",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+					),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.getPageCount(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -221,9 +261,14 @@ export default class FamilyController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.show(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -341,7 +386,9 @@ export default class FamilyController implements IController {
 			"/family/:id",
 			bodyParser.json(),
 			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
 				body("Name").optional().isString(),
 				body("Description").optional().isString(),
 				body("Notes").optional().isString(),
@@ -400,7 +447,11 @@ export default class FamilyController implements IController {
 		 */
 		app.delete(
 			"/family/:id",
-			[param("id").isString().withMessage("ID muss angegeben werden.")],
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -467,16 +518,28 @@ export default class FamilyController implements IController {
 		 * @param {string} id.path.required - die ID der Familie
 		 * @return {object} 200 - success response - application/json
 		 */
-		app.get("/family/:id/lastnames", (req: Request, res: Response) => {
-			this._authorization.requireRole(
-				req,
-				res,
-				() => {
-					this.getLastNames(req, res);
-				},
-				["Admin", "Editor", "Viewer"]
-			);
-		});
+		app.get(
+			"/family/:id/lastnames",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getLastNames(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 	}
 
 	private index(req: Request, res: Response): void {
@@ -490,12 +553,7 @@ export default class FamilyController implements IController {
 					familys = [];
 				}
 
-				familys.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
-				res.send(familys);
+				res.send(SecurityHelper.removeMongoIds(familys));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -514,16 +572,12 @@ export default class FamilyController implements IController {
 					familys = [];
 				}
 
-				familys.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
+				const sanitizedFamilys = SecurityHelper.removeMongoIds(familys);
 				const pageSize = parseInt(req.params.pageSize);
 				const page = parseInt(req.params.page);
 
 				const result = Paginator.paginate<Family>(
-					familys,
+					sanitizedFamilys,
 					pageSize,
 					page
 				);
@@ -547,11 +601,6 @@ export default class FamilyController implements IController {
 					familys = [];
 				}
 
-				familys.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
 				const pageSize = parseInt(req.params.pageSize);
 
 				const result = Paginator.getPageCount<Family>(
@@ -568,7 +617,6 @@ export default class FamilyController implements IController {
 	}
 
 	private create(req: Request, res: Response): void {
-		console.log(req.body);
 		const family = new Family(
 			null,
 			req.body.Name,
@@ -600,9 +648,7 @@ export default class FamilyController implements IController {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
-				//@ts-ignore
-				delete family!._id;
-				res.send(family);
+				res.send(SecurityHelper.removeMongoId(family));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -824,19 +870,4 @@ export default class FamilyController implements IController {
 				res.status(500).send({ status: 500, message: error.message })
 			);
 	}
-}
-
-// Utility function to escape HTML
-function escapeHtml(input: string): string {
-	return input.replace(/[&<>'"/]/g, (char) => {
-		const escapeChars: { [key: string]: string } = {
-			"&": "&amp;",
-			"<": "&lt;",
-			">": "&gt;",
-			"'": "&#39;",
-			'"': "&quot;",
-			"/": "&#x2F;",
-		};
-		return escapeChars[char] || char;
-	});
 }

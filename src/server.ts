@@ -53,17 +53,30 @@ class Server {
 		this.app.use(helmet());
 		this.app.use(morgan("combined"));
 		this.app.use(limiter);
+
+		// CORS-Konfiguration: Erlaubte Origins aus Umgebungsvariable laden
+		const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
+			"http://localhost:3000",
+		];
 		this.app.use((req, res, next) => {
-			res.header("Access-Control-Allow-Origin", "*");
+			const origin = req.headers.origin;
+			if (origin && allowedOrigins.includes(origin)) {
+				res.header("Access-Control-Allow-Origin", origin);
+			}
 			res.header(
 				"Access-Control-Allow-Headers",
 				"Origin, X-Requested-With, Content-Type, Accept, Authorization"
 			);
 			res.header(
 				"Access-Control-Allow-Methods",
-				"GET, POST, PUT, PATCH, DELETE"
+				"GET, POST, PUT, PATCH, DELETE, OPTIONS"
 			);
 			res.header("Access-Control-Allow-Credentials", "true");
+
+			// Preflight-Requests beantworten
+			if (req.method === "OPTIONS") {
+				return res.status(204).end();
+			}
 			next();
 		});
 

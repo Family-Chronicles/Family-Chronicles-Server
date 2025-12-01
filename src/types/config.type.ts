@@ -28,5 +28,6 @@ export type Config = {
 		privateKey: string;
 		publicKey: string;
 		tokenExpiration: string;
+		sessionTimeout?: string;
 	};
 };

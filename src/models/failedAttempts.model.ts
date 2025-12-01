@@ -42,7 +42,7 @@ export default class FailedAttemptModel implements IModel {
 		failedIPs: string[]
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.Id = userId;
+			this.Id = crypto.randomUUID();
 		} else {
 			this.Id = id;
 		}

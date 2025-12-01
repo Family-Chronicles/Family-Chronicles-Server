@@ -1,14 +1,15 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
+import { Express, Request, Response } from "express";
+import { body, param, validationResult } from "express-validator";
+import Paginator from "../classes/paginator.js";
+import SecurityHelper from "../classes/securityHelper.js";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
+import { IController } from "../interfaces/controller.interface.js";
 import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
 import RelatedData from "../models/data.model.js";
-import { body, param, validationResult } from "express-validator";
+import AuthorizationService from "../services/auth.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
 
 export default class RelatedDataController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -57,9 +58,14 @@ export default class RelatedDataController implements IController {
 		 * }
 		 */
 		app.get("/relatedData", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -107,9 +113,14 @@ export default class RelatedDataController implements IController {
 		app.get(
 			"/relatedData/:pageSize/:page",
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.indexPaged(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -152,9 +163,14 @@ export default class RelatedDataController implements IController {
 		app.get(
 			"/relatedData/pageCount/:pageSize",
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.getPageCount(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -199,15 +215,24 @@ export default class RelatedDataController implements IController {
 		 */
 		app.get(
 			"/relatedData/:id",
-			[param("id").isString().withMessage("ID muss angegeben werden.")],
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.show(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -265,9 +290,14 @@ export default class RelatedDataController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -313,7 +343,9 @@ export default class RelatedDataController implements IController {
 			"/relatedData/:id",
 			bodyParser.json(),
 			[
-				param("id").isString().withMessage("ID muss angegeben werden."),
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
 				body("RelatedData").optional().isString(),
 				body("Notes").optional().isString(),
 				body("TaggedPersonsIds").optional().isArray(),
@@ -323,9 +355,14 @@ export default class RelatedDataController implements IController {
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -366,15 +403,24 @@ export default class RelatedDataController implements IController {
 		 */
 		app.delete(
 			"/relatedData/:id",
-			[param("id").isString().withMessage("ID muss angegeben werden.")],
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
 					return res.status(400).json({ errors: errors.array() });
 				}
-				this._authorization.authorize(req, res, () => {
-					this.delete(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 	}
@@ -390,12 +436,7 @@ export default class RelatedDataController implements IController {
 					dataArray = [];
 				}
 
-				dataArray.forEach((data) => {
-					//@ts-ignore
-					delete data._id;
-				});
-
-				res.send(dataArray);
+				res.send(SecurityHelper.removeMongoIds(dataArray));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -414,15 +455,15 @@ export default class RelatedDataController implements IController {
 					dataArray = [];
 				}
 
-				dataArray.forEach((data) => {
-					//@ts-ignore
-					delete data._id;
-				});
-
+				const sanitizedData = SecurityHelper.removeMongoIds(dataArray);
 				const page = parseInt(req.params.page);
 				const pageSize = parseInt(req.params.pageSize);
 
-				const result = Paginator.paginate(dataArray, page, pageSize);
+				const result = Paginator.paginate(
+					sanitizedData,
+					page,
+					pageSize
+				);
 
 				res.send(result);
 			})
@@ -442,11 +483,6 @@ export default class RelatedDataController implements IController {
 				if (dataArray === null) {
 					dataArray = [];
 				}
-
-				dataArray.forEach((data) => {
-					//@ts-ignore
-					delete data._id;
-				});
 
 				const pageSize = parseInt(req.params.pageSize);
 
@@ -511,9 +547,7 @@ export default class RelatedDataController implements IController {
 				if (data === null) {
 					res.status(404).send(new ErrorResult(404));
 				} else {
-					//@ts-ignore
-					delete data._id;
-					res.send(data);
+					res.send(SecurityHelper.removeMongoId(data));
 				}
 			})
 			.catch((error) => {

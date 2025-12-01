@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { Request, Response } from "express";
-import jwt, { JwtPayload, Secret } from "jsonwebtoken";
+import jwt, { Secret } from "jsonwebtoken";
+import { getClientIP, SecurityConstants } from "../config/security.constants";
 import { RoleEnum } from "../enums/role.enum";
 import ErrorResult from "../models/actionResults/error.result";
 import FailedAttemptModel from "../models/failedAttempts.model";
@@ -24,7 +25,8 @@ export default class AuthorizationService {
 	 */
 	public async createSession(user: User): Promise<string> {
 		const sessionID = crypto.randomUUID();
-		user.SessoionID = sessionID;
+		user.SessionID = sessionID;
+		user.SessionCreatedAt = new Date();
 		await this._database.updateDocument<User>(
 			"users",
 			{ Id: user.Id },
@@ -37,7 +39,8 @@ export default class AuthorizationService {
 	 * Löscht die SessionID eines Users (Logout)
 	 */
 	public async destroySession(user: User): Promise<void> {
-		user.SessoionID = undefined;
+		user.SessionID = undefined;
+		user.SessionCreatedAt = undefined;
 		await this._database.updateDocument<User>(
 			"users",
 			{ Id: user.Id },
@@ -46,15 +49,54 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Prüft, ob die Session gültig ist (optional: Timeout)
+	 * Prüft, ob die Session gültig ist inkl. Timeout
 	 */
 	public async isSessionValid(
 		user: User,
 		sessionID: string
 	): Promise<boolean> {
-		if (!user.SessoionID || user.SessoionID !== sessionID) return false;
-		// Optional: Timeout-Logik ergänzen
+		if (!user.SessionID || user.SessionID !== sessionID) return false;
+
+		// Session-Timeout Prüfung
+		if (user.SessionCreatedAt) {
+			const sessionAge =
+				Date.now() - new Date(user.SessionCreatedAt).getTime();
+			const sessionTimeout = this._config.auth.sessionTimeout
+				? this.parseTimeoutString(this._config.auth.sessionTimeout)
+				: SecurityConstants.SESSION_TIMEOUT_MS;
+
+			if (sessionAge > sessionTimeout) {
+				// Session ist abgelaufen, automatisch zerstören
+				await this.destroySession(user);
+				return false;
+			}
+		}
+
 		return true;
+	}
+
+	/**
+	 * Parst einen Timeout-String (z.B. "1d", "2h") in Millisekunden
+	 */
+	private parseTimeoutString(timeout: string): number {
+		const match = timeout.match(/^(\d+)([dhms])$/);
+		if (!match) return SecurityConstants.SESSION_TIMEOUT_MS;
+
+		const value = parseInt(match[1], 10);
+		const unit = match[2];
+
+		switch (unit) {
+			case "d":
+				return value * 24 * 60 * 60 * 1000;
+			case "h":
+				return value * 60 * 60 * 1000;
+			case "m":
+				return value * 60 * 1000;
+			case "s":
+				return value * 1000;
+			default:
+				return SecurityConstants.SESSION_TIMEOUT_MS;
+		}
 	}
 
 	/**
@@ -103,28 +145,41 @@ export default class AuthorizationService {
 		const decoded = this.decodeToken<User>(token as string) as User | null;
 		if (!decoded) {
 			return res
-				.status(500)
-				.send(new ErrorResult(500, "Failed to authenticate token."));
+				.status(401)
+				.send(new ErrorResult(401, "Failed to authenticate token."));
 		}
 
+		const clientIP = getClientIP(req);
 		const user = await this._database.getUserByUsername(decoded.Name);
 		if (!user) {
-			await this.addFailedAttempt(decoded.Id, req.ip!);
+			await this.addFailedAttempt(decoded.Id, clientIP);
+			// Verzögerung gegen Timing-Attacken
+			await SecurityConstants.delay();
 			return res.status(404).send(new ErrorResult(404, "No user found."));
 		}
 
-		if (user.Password !== decoded.Password) {
-			await this.addFailedAttempt(decoded.Id, req.ip!);
+		// Prüfe ob User gesperrt ist
+		if (user.Locked) {
 			return res
 				.status(401)
-				.send(new ErrorResult(401, "Invalid password."));
+				.send(
+					new ErrorResult(
+						401,
+						"Account is locked. Please contact support."
+					)
+				);
 		}
 
-		if (user.SessoionID !== decoded.SessoionID) {
-			await this.addFailedAttempt(decoded.Id, req.ip!);
+		// Session-Validierung inkl. Timeout-Prüfung
+		const isValidSession = await this.isSessionValid(
+			user,
+			decoded.SessionID || ""
+		);
+		if (!isValidSession) {
+			await this.addFailedAttempt(decoded.Id, clientIP);
 			return res
 				.status(401)
-				.send(new ErrorResult(401, "Invalid session."));
+				.send(new ErrorResult(401, "Invalid or expired session."));
 		}
 
 		if (user.Role === RoleEnum.UNAUTHORIZED) {
@@ -134,34 +189,74 @@ export default class AuthorizationService {
 		next();
 	}
 
-	public decodeToken<T>(token: string): string | JwtPayload | null | T {
-		let secret = this._config.auth.privateKey;
-		if (!secret || secret === "") {
-			secret = process.env.SECRET as string;
+	public decodeToken<T>(token: string): T | null {
+		try {
+			let secret = this._config.auth.privateKey;
+			if (!secret || secret === "" || secret === "changeme") {
+				secret = process.env.JWT_PRIVATE_KEY as string;
+				if (!secret) {
+					console.error("KRITISCH: Kein JWT-Secret konfiguriert!");
+					return null;
+				}
+			}
+
+			// Token ohne Bearer-Prefix
+			const tokenValue = token.startsWith("Bearer ")
+				? token.slice(7)
+				: token;
+
+			const decoded = jwt.verify(tokenValue, secret as Secret, {
+				algorithms: ["HS256"],
+			}) as T;
+
+			return decoded;
+		} catch (err) {
+			console.error("Token-Verifikation fehlgeschlagen:", err);
+			return null;
 		}
-		return jwt.verify(token, secret as Secret) as T;
 	}
 
-	public generateToken(payload: string | object | Buffer): string {
+	public generateToken(payload: User): string {
 		let secret = this._config.auth.privateKey;
-		if (!secret || secret === "") {
-			secret = process.env.SECRET as string;
+		if (!secret || secret === "" || secret === "changeme") {
+			secret = process.env.JWT_PRIVATE_KEY as string;
+			if (!secret) {
+				throw new Error("KRITISCH: Kein JWT-Secret konfiguriert!");
+			}
 		}
-		// @ts-ignore: Typdefinitionen von jsonwebtoken stimmen nicht mit der Praxis überein
-		return jwt.sign(payload, secret, {
-			expiresIn: this._config.auth.tokenExpiration,
+
+		// Sensible Daten aus dem Token-Payload entfernen
+		const sanitizedPayload = {
+			Id: payload.Id,
+			Name: payload.Name,
+			Email: payload.Email,
+			Role: payload.Role,
+			SessionID: payload.SessionID,
+		};
+
+		return jwt.sign(sanitizedPayload, secret, {
+			expiresIn: this._config.auth.tokenExpiration || "1h",
 			algorithm: "HS256",
-		});
+		} as jwt.SignOptions);
 	}
 
 	public async addFailedAttempt(userId: string, ip: string): Promise<void> {
+		// Sync vom lokalen Cache mit DB um Race Conditions zu vermeiden
+		await this.syncFailedAttempts();
+
 		const failedAttempt = this._failedAttempts.find(
 			(fa) => fa.UserId === userId
 		);
 		if (failedAttempt) {
 			failedAttempt.Attempts++;
 			failedAttempt.LastAttempt = new Date();
-			failedAttempt.FailedIPs.push(ip);
+			// Limitiere IP-Liste um Speicherleck zu vermeiden
+			if (
+				failedAttempt.FailedIPs.length <
+				SecurityConstants.MAX_FAILED_IPS
+			) {
+				failedAttempt.FailedIPs.push(ip);
+			}
 			await this._database.updateDocument<FailedAttemptModel>(
 				"failedAttempts",
 				{ Id: failedAttempt.Id },
@@ -175,6 +270,8 @@ export default class AuthorizationService {
 				new Date(),
 				[ip]
 			);
+			// Neuen Eintrag zum lokalen Cache hinzufügen
+			this._failedAttempts.push(newFailedAttempt);
 			await this._database.createDocument<FailedAttemptModel>(
 				"failedAttempts",
 				newFailedAttempt
@@ -215,6 +312,57 @@ export default class AuthorizationService {
 				user
 			);
 		}
+	}
+
+	/**
+	 * Prüft, ob ein Account temporär gesperrt ist (basierend auf Fehlversuchen)
+	 */
+	public async isAccountTemporarilyLocked(
+		userId: string,
+		maxAttempts: number,
+		lockoutDuration: number
+	): Promise<boolean> {
+		await this.syncFailedAttempts();
+		const failedAttempt = this._failedAttempts.find(
+			(fa) => fa.UserId === userId
+		);
+
+		if (!failedAttempt) return false;
+
+		if (failedAttempt.Attempts >= maxAttempts) {
+			const timeSinceLastAttempt =
+				Date.now() - new Date(failedAttempt.LastAttempt).getTime();
+
+			// Wenn Lockout-Zeit noch nicht abgelaufen
+			if (timeSinceLastAttempt < lockoutDuration) {
+				return true;
+			}
+
+			// Lockout abgelaufen, Versuche zurücksetzen
+			await this.resetFailedAttempts(userId);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Prüft, ob ein Account nach dem aktuellen Versuch gesperrt werden sollte
+	 */
+	public async shouldLockAccount(
+		userId: string,
+		maxAttempts: number
+	): Promise<boolean> {
+		await this.syncFailedAttempts();
+		const failedAttempt = this._failedAttempts.find(
+			(fa) => fa.UserId === userId
+		);
+
+		if (!failedAttempt) return false;
+
+		// Bei zu vielen Versuchen Account dauerhaft sperren
+		const permanentLockThreshold =
+			maxAttempts * SecurityConstants.PERMANENT_LOCK_MULTIPLIER;
+		return failedAttempt.Attempts >= permanentLockThreshold;
 	}
 
 	/**
