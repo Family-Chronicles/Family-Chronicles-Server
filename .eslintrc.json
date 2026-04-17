@@ -2,7 +2,8 @@
 	"root": true, // if you want to prevent ESLint from searching for the configuration file all the way up to the root directory of the filesystem
 	"env": {
 		"node": true, // for ESLint to be aware of Node.js global variables and scoping
-		"es6": true // for ESLint to be aware of ES6 global variables (this automatically enables ES6 syntax)
+		"es6": true, // for ESLint to be aware of ES6 global variables (this automatically enables ES6 syntax)
+		"jest": true
 	},
 	"parser": "@typescript-eslint/parser",
 	"parserOptions": {
@@ -14,7 +15,8 @@
 	],
 	"rules": {
 		"prettier/prettier": 0, // always
-		"linebreak-style": ["error", "windows"] // always
+		"linebreak-style": ["error", "windows"], // always
+		"no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
 	},
 	"plugins": [
 		"prettier" // always

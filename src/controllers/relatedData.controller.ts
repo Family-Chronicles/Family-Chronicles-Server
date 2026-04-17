@@ -1,7 +1,6 @@
 import bodyParser from "body-parser";
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
-import Paginator from "../classes/paginator.js";
 import SecurityHelper from "../classes/securityHelper.js";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
 import { IController } from "../interfaces/controller.interface.js";
@@ -444,96 +443,76 @@ export default class RelatedDataController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const dataDocuments = this._database.listAllDocuments<RelatedData>(
-			this._collectionName
-		);
-
-		dataDocuments
-			.then((dataArray) => {
-				if (dataArray === null) {
-					dataArray = [];
-				}
-
-				const sanitizedData = SecurityHelper.removeMongoIds(dataArray);
-				const page = parseInt(req.params.page);
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.paginate(
-					sanitizedData,
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const page = parseInt(req.params.page);
+			const pageSize = parseInt(req.params.pageSize);
+			const dataArray =
+				await this._database.listDocumentsPage<RelatedData>(
+					this._collectionName,
 					page,
 					pageSize
 				);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			res.send(SecurityHelper.removeMongoIds(dataArray));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const dataDocuments = this._database.listAllDocuments<RelatedData>(
-			this._collectionName
-		);
-
-		dataDocuments
-			.then((dataArray) => {
-				if (dataArray === null) {
-					dataArray = [];
-				}
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<RelatedData>(
-					dataArray,
-					pageSize
-				);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		let relatedData:
-			| string
-			| import("buffer").Blob
-			| import("buffer").File = req.body.relatedData;
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			let relatedData:
+				| string
+				| import("buffer").Blob
+				| import("buffer").File =
+				req.body.RelatedData ?? req.body.relatedData;
 
-		let notes: string = req.body.notes || "";
-		let taggedPersonsIds: string[] = req.body.taggedPersonsIds || [];
+			let notes: string = req.body.Notes ?? req.body.notes ?? "";
+			let taggedPersonsIds: string[] =
+				req.body.TaggedPersonsIds ?? req.body.taggedPersonsIds ?? [];
 
-		if (typeof relatedData === "string") {
-			relatedData = relatedData.trim();
+			if (typeof relatedData === "string") {
+				relatedData = relatedData.trim();
+			}
+
+			if (typeof notes === "string") {
+				notes = notes.trim();
+			}
+
+			if (typeof taggedPersonsIds === "string") {
+				taggedPersonsIds = [taggedPersonsIds];
+			}
+
+			const newRelatedData = new RelatedData(
+				relatedData,
+				notes,
+				taggedPersonsIds
+			);
+
+			await this._database.createDocument<RelatedData>(
+				this._collectionName,
+				newRelatedData
+			);
+
+			res.send(SecurityHelper.removeMongoId(newRelatedData));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
 		}
-
-		if (typeof notes === "string") {
-			notes = notes.trim();
-		}
-
-		if (typeof taggedPersonsIds === "string") {
-			taggedPersonsIds = [taggedPersonsIds];
-		}
-
-		const newRelatedData = new RelatedData(
-			relatedData,
-			notes,
-			taggedPersonsIds
-		);
-
-		this._database
-			.createDocument<RelatedData>(this._collectionName, newRelatedData)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
-
-		res.send(newRelatedData);
 	}
 
 	private show(req: Request, res: Response): void {
@@ -556,92 +535,82 @@ export default class RelatedDataController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const dataDocument = this._database.findDocument<RelatedData>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const data = await this._database.findDocument<RelatedData>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!data) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		dataDocument
-			.then((data) => {
-				if (data === null || data === undefined) {
-					res.status(404).send(new ErrorResult(404));
-				} else {
-					let relatedData:
-						| string
-						| import("buffer").Blob
-						| import("buffer").File = req.body.relatedData;
+			let relatedData:
+				| string
+				| import("buffer").Blob
+				| import("buffer").File =
+				req.body.RelatedData ??
+				req.body.relatedData ??
+				data.RelatedData;
 
-					let notes: string = req.body.notes || "";
-					let taggedPersonsIds: string[] =
-						req.body.taggedPersonsIds || [];
+			let notes: string = req.body.Notes ?? req.body.notes ?? data.Notes;
+			let taggedPersonsIds: string[] =
+				req.body.TaggedPersonsIds ??
+				req.body.taggedPersonsIds ??
+				data.TaggedPersonsIds;
 
-					if (typeof relatedData === "string") {
-						relatedData = relatedData.trim();
-					}
+			if (typeof relatedData === "string") {
+				relatedData = relatedData.trim();
+			}
 
-					if (typeof notes === "string") {
-						notes = notes.trim();
-					}
+			if (typeof notes === "string") {
+				notes = notes.trim();
+			}
 
-					if (typeof taggedPersonsIds === "string") {
-						taggedPersonsIds = [taggedPersonsIds];
-					}
+			if (typeof taggedPersonsIds === "string") {
+				taggedPersonsIds = [taggedPersonsIds];
+			}
 
-					const updatedData = new RelatedData(
-						relatedData,
-						notes,
-						taggedPersonsIds
-					);
+			const updatedData = {
+				...data,
+				RelatedData: relatedData,
+				Notes: notes,
+				TaggedPersonsIds: taggedPersonsIds,
+			};
 
-					this._database
-						.updateDocument<RelatedData>(
-							this._collectionName,
-							dataDocument,
-							updatedData
-						)
-						.catch(() => {
-							res.status(500).send(new ErrorResult(500));
-						});
+			await this._database.updateDocument<RelatedData>(
+				this._collectionName,
+				{ Id: data.Id },
+				updatedData
+			);
 
-					res.send(data);
-				}
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			res.send(SecurityHelper.removeMongoId(updatedData));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private delete(req: Request, res: Response): void {
-		const dataDocument = this._database.findDocument<RelatedData>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		dataDocument
-			.then((data) => {
-				if (data === null || data === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				this._database
-					.deleteDocument(this._collectionName, data)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`Related Data with id ${data.Id} deleted successfully`
-							)
-						);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
+	private async delete(req: Request, res: Response): Promise<void> {
+		try {
+			const data = await this._database.findDocument<RelatedData>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!data) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+			await this._database.deleteDocument(this._collectionName, {
+				Id: data.Id,
 			});
+			res.status(200).send(
+				new Ok(`Related Data with id ${data.Id} deleted successfully`)
+			);
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 }

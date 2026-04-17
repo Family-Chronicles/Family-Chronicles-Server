@@ -21,13 +21,10 @@ export default class SecurityHelper {
 	 * @returns Ein sicheres User-Objekt ohne Passwort, SessionID und SessionCreatedAt
 	 */
 	public static sanitizeUser(user: User): Partial<User> {
-		// eslint-disable-next-line no-unused-vars
-		const {
-			Password: _pwd,
-			SessionID: _sid,
-			SessionCreatedAt: _sca,
-			...safeUser
-		} = user as any;
+		const safeUser = { ...(user as any) };
+		delete safeUser.Password;
+		delete safeUser.SessionID;
+		delete safeUser.SessionCreatedAt;
 		return safeUser;
 	}
 

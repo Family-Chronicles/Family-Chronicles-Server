@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { IModel } from "../interfaces/model.interface";
 
 /**

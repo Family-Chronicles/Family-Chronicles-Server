@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 import { Request, Response } from "express";
 import jwt, { Secret } from "jsonwebtoken";
 import { getClientIP, SecurityConstants } from "../config/security.constants";
@@ -108,15 +109,8 @@ export default class AuthorizationService {
 	private static _instance: AuthorizationService;
 	private _config = ConfigService.getInstance().config;
 	private _database = DatabaseService.getInstance();
-	private _failedAttempts: FailedAttemptModel[] = [];
 
-	private constructor() {
-		this._database
-			.listAllDocuments<FailedAttemptModel>("failedAttempts")
-			.then((failedAttempts) => {
-				this._failedAttempts = failedAttempts;
-			});
-	}
+	private constructor() {}
 
 	public static getInstance() {
 		if (!this._instance) {
@@ -158,6 +152,14 @@ export default class AuthorizationService {
 			return res.status(404).send(new ErrorResult(404, "No user found."));
 		}
 
+		if (decoded.Role && decoded.Role !== user.Role) {
+			return res
+				.status(401)
+				.send(
+					new ErrorResult(401, "Token claims are no longer valid.")
+				);
+		}
+
 		// Prüfe ob User gesperrt ist
 		if (user.Locked) {
 			return res
@@ -191,23 +193,18 @@ export default class AuthorizationService {
 
 	public decodeToken<T>(token: string): T | null {
 		try {
-			let secret = this._config.auth.privateKey;
-			if (!secret || secret === "" || secret === "changeme") {
-				secret = process.env.JWT_PRIVATE_KEY as string;
-				if (!secret) {
-					console.error("KRITISCH: Kein JWT-Secret konfiguriert!");
-					return null;
-				}
-			}
-
 			// Token ohne Bearer-Prefix
 			const tokenValue = token.startsWith("Bearer ")
 				? token.slice(7)
 				: token;
 
-			const decoded = jwt.verify(tokenValue, secret as Secret, {
-				algorithms: ["HS256"],
-			}) as T;
+			const decoded = jwt.verify(
+				tokenValue,
+				this._config.auth.jwtSecret as Secret,
+				{
+					algorithms: ["HS256"],
+				}
+			) as T;
 
 			return decoded;
 		} catch (err) {
@@ -217,14 +214,6 @@ export default class AuthorizationService {
 	}
 
 	public generateToken(payload: User): string {
-		let secret = this._config.auth.privateKey;
-		if (!secret || secret === "" || secret === "changeme") {
-			secret = process.env.JWT_PRIVATE_KEY as string;
-			if (!secret) {
-				throw new Error("KRITISCH: Kein JWT-Secret konfiguriert!");
-			}
-		}
-
 		// Sensible Daten aus dem Token-Payload entfernen
 		const sanitizedPayload = {
 			Id: payload.Id,
@@ -234,72 +223,51 @@ export default class AuthorizationService {
 			SessionID: payload.SessionID,
 		};
 
-		return jwt.sign(sanitizedPayload, secret, {
+		return jwt.sign(sanitizedPayload, this._config.auth.jwtSecret, {
 			expiresIn: this._config.auth.tokenExpiration || "1h",
 			algorithm: "HS256",
 		} as jwt.SignOptions);
 	}
 
 	public async addFailedAttempt(userId: string, ip: string): Promise<void> {
-		// Sync vom lokalen Cache mit DB um Race Conditions zu vermeiden
-		await this.syncFailedAttempts();
-
-		const failedAttempt = this._failedAttempts.find(
-			(fa) => fa.UserId === userId
+		const now = new Date();
+		await this._database.updateDocumentWithOperators(
+			"failedAttempts",
+			{ UserId: userId },
+			{
+				$setOnInsert: {
+					Id: crypto.randomUUID(),
+					UserId: userId,
+				},
+				$inc: { Attempts: 1 },
+				$set: { LastAttempt: now },
+				$push: {
+					FailedIPs: {
+						$each: [ip],
+						$slice: -SecurityConstants.MAX_FAILED_IPS,
+					},
+				},
+			} as any,
+			{ upsert: true }
 		);
-		if (failedAttempt) {
-			failedAttempt.Attempts++;
-			failedAttempt.LastAttempt = new Date();
-			// Limitiere IP-Liste um Speicherleck zu vermeiden
-			if (
-				failedAttempt.FailedIPs.length <
-				SecurityConstants.MAX_FAILED_IPS
-			) {
-				failedAttempt.FailedIPs.push(ip);
-			}
-			await this._database.updateDocument<FailedAttemptModel>(
-				"failedAttempts",
-				{ Id: failedAttempt.Id },
-				failedAttempt
-			);
-		} else {
-			const newFailedAttempt = new FailedAttemptModel(
-				null,
-				userId,
-				1,
-				new Date(),
-				[ip]
-			);
-			// Neuen Eintrag zum lokalen Cache hinzufügen
-			this._failedAttempts.push(newFailedAttempt);
-			await this._database.createDocument<FailedAttemptModel>(
-				"failedAttempts",
-				newFailedAttempt
-			);
-		}
 	}
 
 	public async syncFailedAttempts(): Promise<void> {
-		this._failedAttempts =
-			await this._database.listAllDocuments<FailedAttemptModel>(
-				"failedAttempts"
-			);
+		return;
 	}
 
 	public async resetFailedAttempts(userId: string): Promise<void> {
-		const failedAttempt = this._failedAttempts.find(
-			(fa) => fa.UserId === userId
+		await this._database.updateDocumentWithOperators(
+			"failedAttempts",
+			{ UserId: userId },
+			{
+				$set: {
+					Attempts: 0,
+					LastAttempt: new Date(),
+					FailedIPs: [],
+				},
+			}
 		);
-		if (failedAttempt) {
-			failedAttempt.Attempts = 0;
-			failedAttempt.LastAttempt = new Date();
-			failedAttempt.FailedIPs = [];
-			await this._database.updateDocument<FailedAttemptModel>(
-				"failedAttempts",
-				{ Id: failedAttempt.Id },
-				failedAttempt
-			);
-		}
 	}
 
 	public async lockUser(userId: string): Promise<void> {
@@ -322,10 +290,7 @@ export default class AuthorizationService {
 		maxAttempts: number,
 		lockoutDuration: number
 	): Promise<boolean> {
-		await this.syncFailedAttempts();
-		const failedAttempt = this._failedAttempts.find(
-			(fa) => fa.UserId === userId
-		);
+		const failedAttempt = await this.getFailedAttempt(userId);
 
 		if (!failedAttempt) return false;
 
@@ -352,10 +317,7 @@ export default class AuthorizationService {
 		userId: string,
 		maxAttempts: number
 	): Promise<boolean> {
-		await this.syncFailedAttempts();
-		const failedAttempt = this._failedAttempts.find(
-			(fa) => fa.UserId === userId
-		);
+		const failedAttempt = await this.getFailedAttempt(userId);
 
 		if (!failedAttempt) return false;
 
@@ -363,6 +325,15 @@ export default class AuthorizationService {
 		const permanentLockThreshold =
 			maxAttempts * SecurityConstants.PERMANENT_LOCK_MULTIPLIER;
 		return failedAttempt.Attempts >= permanentLockThreshold;
+	}
+
+	private async getFailedAttempt(
+		userId: string
+	): Promise<FailedAttemptModel | null> {
+		return this._database.findOneByQuery<FailedAttemptModel>(
+			"failedAttempts",
+			{ UserId: userId }
+		);
 	}
 
 	/**

@@ -2,7 +2,6 @@ import bodyParser from "body-parser";
 import escapeHtml from "escape-html";
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
-import Paginator from "../classes/paginator";
 import SecurityHelper from "../classes/securityHelper";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { IController } from "../interfaces/controller.interface.js";
@@ -255,7 +254,11 @@ export default class FamilyController implements IController {
 		 */
 		app.get(
 			"/family/:id",
-			[param("id").isString().withMessage("ID muss angegeben werden.")],
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID muss eine gültige UUID sein."),
+			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
 				if (!errors.isEmpty()) {
@@ -561,79 +564,57 @@ export default class FamilyController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const familyDocuments = this._database.listAllDocuments<Family>(
-			this._collectionName
-		);
-
-		familyDocuments
-			.then((familys) => {
-				if (familys === null) {
-					familys = [];
-				}
-
-				const sanitizedFamilys = SecurityHelper.removeMongoIds(familys);
-				const pageSize = parseInt(req.params.pageSize);
-				const page = parseInt(req.params.page);
-
-				const result = Paginator.paginate<Family>(
-					sanitizedFamilys,
-					pageSize,
-					page
-				);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const page = parseInt(req.params.page);
+			const familys = await this._database.listDocumentsPage<Family>(
+				this._collectionName,
+				page,
+				pageSize
+			);
+			res.send(SecurityHelper.removeMongoIds(familys));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const familyDocuments = this._database.listAllDocuments<Family>(
-			this._collectionName
-		);
-
-		familyDocuments
-			.then((familys) => {
-				if (familys === null) {
-					familys = [];
-				}
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<Family>(
-					familys,
-					pageSize
-				);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		const family = new Family(
-			null,
-			req.body.Name,
-			req.body.Description,
-			req.body.Notes,
-			req.body.HistoricalNames,
-			req.body.MemberIds ?? []
-		);
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			const family = new Family(
+				null,
+				escapeHtml(req.body.Name),
+				escapeHtml(req.body.Description ?? ""),
+				escapeHtml(req.body.Notes ?? ""),
+				(req.body.HistoricalNames ?? []).map((value: string) =>
+					escapeHtml(value)
+				),
+				req.body.MemberIds ?? []
+			);
 
-		this._database
-			.createDocument<Family>(this._collectionName, family)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
-
-		res.send(family);
+			await this._database.createDocument<Family>(
+				this._collectionName,
+				family
+			);
+			res.send(SecurityHelper.removeMongoId(family));
+		} catch (error: any) {
+			console.error(error);
+			res.status(500).send({ status: 500, message: error.message });
+		}
 	}
 
 	private show(req: Request, res: Response): void {
@@ -656,87 +637,62 @@ export default class FamilyController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const familyDocument = this._database.findDocument<Family>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const family = await this._database.findDocument<Family>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!family) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		familyDocument
-			.then((family) => {
-				if (family === null || family === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				const updatedFamily = new Family(
-					family.Id,
-					req.body.Name ?? family.Name,
-					req.body.Description ?? family.Description,
-					req.body.Notes ?? family.Notes,
-					req.body.HistoricalNames ?? family.HistoricalNames,
-					req.body.MemberIds ?? family.MemberIds
-				);
+			const updatedFamily = new Family(
+				family.Id,
+				escapeHtml(req.body.Name ?? family.Name),
+				escapeHtml(req.body.Description ?? family.Description),
+				escapeHtml(req.body.Notes ?? family.Notes),
+				(req.body.HistoricalNames ?? family.HistoricalNames).map(
+					(value: string) => escapeHtml(value)
+				),
+				req.body.MemberIds ?? family.MemberIds
+			);
 
-				// Sanitize the updatedFamily object
-				const sanitizedFamily = {
-					Id: updatedFamily.Id,
-					Name: escapeHtml(updatedFamily.Name),
-					Description: escapeHtml(updatedFamily.Description),
-					Notes: escapeHtml(updatedFamily.Notes),
-					HistoricalNames:
-						updatedFamily.HistoricalNames.map(escapeHtml),
-				};
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						familyDocument,
-						updatedFamily
-					)
-					.then(() => {
-						res.status(200).send(sanitizedFamily);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			await this._database.updateDocument(
+				this._collectionName,
+				{ Id: updatedFamily.Id },
+				updatedFamily
+			);
+			res.status(200).send(SecurityHelper.removeMongoId(updatedFamily));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private delete(req: Request, res: Response): void {
-		const familyDocument = this._database.findDocument<Family>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		familyDocument
-			.then((family) => {
-				if (family === null || family === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				this._database
-					.deleteDocument(this._collectionName, family)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`Family ${family.Name} with id ${family.Id} deleted successfully`
-							)
-						);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
+	private async delete(req: Request, res: Response): Promise<void> {
+		try {
+			const family = await this._database.findDocument<Family>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!family) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+			await this._database.deleteDocument(this._collectionName, {
+				Id: family.Id,
 			});
+			res.status(200).send(
+				new Ok(
+					`Family ${family.Name} with id ${family.Id} deleted successfully`
+				)
+			);
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
 	/**

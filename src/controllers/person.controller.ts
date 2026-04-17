@@ -2,7 +2,6 @@ import bodyParser from "body-parser";
 import escapeHtml from "escape-html";
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
-import Paginator from "../classes/paginator";
 import SecurityHelper from "../classes/securityHelper";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { RelationshipTypeEnum } from "../enums/relationship.enum";
@@ -980,6 +979,10 @@ export default class PersonController implements IController {
 			}
 
 			const person = persons[0];
+			person.RelationshipIds = (person.RelationshipIds ?? []).filter(
+				(existingRelationshipId) =>
+					existingRelationshipId !== relationshipId
+			);
 
 			const relationship =
 				this._database.getDocumentByQuery<Relationship>(
@@ -1256,14 +1259,14 @@ export default class PersonController implements IController {
 		);
 
 		personDocument.then((person) => {
-			if (person === null) {
+			if (!person || person.length === 0) {
 				res.status(404).send(new ErrorResult(404));
 				return;
 			}
 
-			const relationshipIds = person[0].RelationshipIds;
+			const relationshipIds = person[0].RelationshipIds ?? [];
 
-			if (relationshipIds === undefined || relationshipIds === null) {
+			if (relationshipIds.length === 0) {
 				res.status(404).send(new ErrorResult(404));
 				return;
 			}
@@ -1282,7 +1285,7 @@ export default class PersonController implements IController {
 				);
 
 			relationshipDocument.then((relationship) => {
-				if (relationship === null) {
+				if (!relationship || relationship.length === 0) {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
@@ -1303,12 +1306,16 @@ export default class PersonController implements IController {
 		);
 
 		personDocument.then((person) => {
-			if (person === null) {
+			if (!person || person.length === 0) {
 				res.status(404).send(new ErrorResult(404));
 				return;
 			}
 
-			const relationshipIds = person[0].RelationshipIds;
+			const relationshipIds = person[0].RelationshipIds ?? [];
+			if (relationshipIds.length === 0) {
+				res.status(200).send([]);
+				return;
+			}
 
 			const relationshipDocuments =
 				this._database.getDocumentByQuery<Relationship>(
@@ -1435,114 +1442,93 @@ export default class PersonController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const personDocuments = this._database.listAllDocuments<Person>(
-			this._collectionName
-		);
-
-		personDocuments
-			.then((persons) => {
-				if (persons === null) {
-					persons = [];
-				}
-
-				const sanitizedPersons = SecurityHelper.removeMongoIds(persons);
-				const page = parseInt(req.params.page);
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.paginate(
-					sanitizedPersons,
-					page,
-					pageSize
-				);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const page = parseInt(req.params.page);
+			const pageSize = parseInt(req.params.pageSize);
+			const persons = await this._database.listDocumentsPage<Person>(
+				this._collectionName,
+				page,
+				pageSize
+			);
+			res.send(SecurityHelper.removeMongoIds(persons));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const personDocuments = this._database.listAllDocuments<Person>(
-			this._collectionName
-		);
-
-		personDocuments
-			.then((persons) => {
-				if (persons === null) {
-					persons = [];
-				}
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<Person>(
-					persons,
-					pageSize
-				);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		let firstName = req.body.FirstName;
-		let lastName = req.body.LastName;
-		let relatedDataIds = req.body.RelatedDataIds;
-		let familyIds = req.body.FamilyIds;
-		let relationshipIds = req.body.RelationshipIds;
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			let firstName = req.body.FirstName;
+			let lastName = req.body.LastName;
+			let relatedDataIds = req.body.RelatedDataIds;
+			let familyIds = req.body.FamilyIds;
+			let relationshipIds = req.body.RelationshipIds;
+			const sex = req.body.Sex ?? req.body.sex;
+			const gender = req.body.Gender ?? req.body.gender;
+			const events = req.body.Events ?? req.body.events ?? [];
 
-		if (typeof firstName === "string") {
-			firstName = firstName.split(" ");
+			if (typeof firstName === "string") {
+				firstName = firstName.split(" ");
+			}
+
+			if (typeof lastName === "string") {
+				lastName = lastName.split(" ");
+			}
+
+			if (typeof relatedDataIds === "string") {
+				relatedDataIds = [relatedDataIds];
+			}
+
+			if (typeof familyIds === "string") {
+				familyIds = [familyIds];
+			}
+
+			if (typeof relationshipIds === "string") {
+				relationshipIds = [relationshipIds];
+			}
+
+			const person = new Person(
+				null,
+				firstName,
+				lastName,
+				sex,
+				gender,
+				req.body.DateOfBirth,
+				req.body.DateOfDeath ?? null,
+				req.body.PlaceOfBirth,
+				req.body.PlaceOfDeath ?? null,
+				relationshipIds,
+				req.body.Notes,
+				familyIds,
+				relatedDataIds,
+				events,
+				req.body.ReasonOfDeath ?? null // NEU
+			);
+
+			await this._database.createDocument<Person>(
+				this._collectionName,
+				person
+			);
+			res.send(SecurityHelper.removeMongoId(person));
+		} catch (error: any) {
+			console.error(error);
+			res.status(500).send({ status: 500, message: error.message });
 		}
-
-		if (typeof lastName === "string") {
-			lastName = lastName.split(" ");
-		}
-
-		if (typeof relatedDataIds === "string") {
-			relatedDataIds = [relatedDataIds];
-		}
-
-		if (typeof familyIds === "string") {
-			familyIds = [familyIds];
-		}
-
-		if (typeof relationshipIds === "string") {
-			relationshipIds = [relationshipIds];
-		}
-
-		const person = new Person(
-			null,
-			firstName,
-			lastName,
-			req.body.sex,
-			req.body.gender,
-			req.body.DateOfBirth,
-			req.body.DateOfDeath ?? null,
-			req.body.PlaceOfBirth,
-			req.body.PlaceOfDeath ?? null,
-			relatedDataIds,
-			req.body.Notes,
-			familyIds,
-			relationshipIds,
-			req.body.events ?? [],
-			req.body.ReasonOfDeath ?? null // NEU
-		);
-
-		this._database
-			.createDocument<Person>(this._collectionName, person)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
-
-		res.send(person);
 	}
 
 	private show(req: Request, res: Response): void {
@@ -1565,85 +1551,81 @@ export default class PersonController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const personDocument = this._database.findDocument<Person>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const person = await this._database.findDocument<Person>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!person) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		personDocument
-			.then((person) => {
-				if (person === null || person === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				let firstName = req.body.FirstName ?? person.FirstName;
-				let lastName = req.body.LastName ?? person.LastName;
-				let relatedDataIds =
-					req.body.RelatedDataIds ?? person.RelatedDataIds;
-				let familyIds = req.body.FamilyIds ?? person.FamilyIds;
-				let relationshipIds =
-					req.body.RelationshipIds ?? person.RelationshipIds;
+			let firstName = req.body.FirstName ?? person.FirstName;
+			let lastName = req.body.LastName ?? person.LastName;
+			let relatedDataIds =
+				req.body.RelatedDataIds ?? person.RelatedDataIds;
+			let familyIds = req.body.FamilyIds ?? person.FamilyIds;
+			let relationshipIds =
+				req.body.RelationshipIds ?? person.RelationshipIds;
+			const sex = req.body.Sex ?? req.body.sex ?? person.Sex;
+			const gender = req.body.Gender ?? req.body.gender ?? person.Gender;
+			const events =
+				req.body.Events ?? req.body.events ?? person.Events ?? [];
 
-				if (typeof firstName === "string") {
-					firstName = firstName.split(" ");
-				}
+			if (typeof firstName === "string") {
+				firstName = firstName.split(" ");
+			}
 
-				if (typeof lastName === "string") {
-					lastName = lastName.split(" ");
-				}
+			if (typeof lastName === "string") {
+				lastName = lastName.split(" ");
+			}
 
-				if (typeof relatedDataIds === "string") {
-					relatedDataIds = [relatedDataIds];
-				}
+			if (typeof relatedDataIds === "string") {
+				relatedDataIds = [relatedDataIds];
+			}
 
-				if (typeof familyIds === "string") {
-					familyIds = [familyIds];
-				}
+			if (typeof familyIds === "string") {
+				familyIds = [familyIds];
+			}
 
-				if (typeof relationshipIds === "string") {
-					relationshipIds = [relationshipIds];
-				}
+			if (typeof relationshipIds === "string") {
+				relationshipIds = [relationshipIds];
+			}
 
-				const updatedPerson = new Person(
-					person.Id,
-					firstName,
-					lastName,
-					req.body.sex,
-					req.body.gender,
-					req.body.DateOfBirth ?? person.DateOfBirth,
-					req.body.DateOfDeath ?? person.DateOfDeath,
-					req.body.PlaceOfBirth ?? person.PlaceOfBirth,
-					req.body.PlaceOfDeath ?? person.PlaceOfDeath,
-					relationshipIds,
-					req.body.Notes ?? person.Notes,
-					familyIds,
-					relatedDataIds,
-					req.body.events ?? person.Events ?? [],
-					req.body.ReasonOfDeath ?? person.ReasonOfDeath // NEU
-				);
+			const updatedPerson = new Person(
+				person.Id,
+				firstName,
+				lastName,
+				sex,
+				gender,
+				req.body.DateOfBirth ?? person.DateOfBirth,
+				req.body.DateOfDeath ?? person.DateOfDeath,
+				escapeHtml(req.body.PlaceOfBirth ?? person.PlaceOfBirth),
+				req.body.PlaceOfDeath
+					? escapeHtml(req.body.PlaceOfDeath)
+					: person.PlaceOfDeath,
+				relationshipIds,
+				escapeHtml(req.body.Notes ?? person.Notes),
+				familyIds,
+				relatedDataIds,
+				events,
+				req.body.ReasonOfDeath
+					? escapeHtml(req.body.ReasonOfDeath)
+					: person.ReasonOfDeath
+			);
 
-				const result = JSON.stringify(updatedPerson);
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						personDocument,
-						updatedPerson
-					)
-					.then(() => {
-						const sanitizedResult = escapeHtml(result);
-						res.status(200).send(sanitizedResult);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			await this._database.updateDocument(
+				this._collectionName,
+				{ Id: updatedPerson.Id },
+				updatedPerson
+			);
+			res.status(200).send(SecurityHelper.removeMongoId(updatedPerson));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
 	private delete(req: Request, res: Response): void {

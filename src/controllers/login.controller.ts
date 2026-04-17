@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { Express, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { getClientIP, SecurityConstants } from "../config/security.constants";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { RoleEnum } from "../enums/role.enum";
@@ -31,6 +32,16 @@ export default class LoginController implements IController {
 	private _authorization = AuthorizationService.getInstance();
 	private _collectionName = DatabaseCollectionEnum.USERS;
 	private _config = ConfigService.getInstance();
+	private _registerLimiter = rateLimit({
+		windowMs: 60 * 60 * 1000,
+		max: 5,
+		standardHeaders: true,
+		legacyHeaders: false,
+		message: new ErrorResult(
+			429,
+			"Too many registration attempts. Please try again later."
+		),
+	});
 
 	public routes(app: Express): void {
 		/**
@@ -55,9 +66,13 @@ export default class LoginController implements IController {
 		 *  "message": "User created successfully",
 		 * }
 		 */
-		app.post("/user/register", (req: Request, res: Response) => {
-			this.register(req, res);
-		});
+		app.post(
+			"/user/register",
+			this._registerLimiter,
+			(req: Request, res: Response) => {
+				this.register(req, res);
+			}
+		);
 
 		/**
 		 * PUT /user/update
@@ -110,11 +125,9 @@ export default class LoginController implements IController {
 
 			// Prüfe ob User gesperrt ist
 			if (user.Locked) {
+				await SecurityConstants.delay();
 				res.status(401).send(
-					new ErrorResult(
-						401,
-						"Account is locked. Please contact support."
-					)
+					new ErrorResult(401, "Invalid credentials")
 				);
 				return;
 			}
@@ -128,6 +141,7 @@ export default class LoginController implements IController {
 				);
 
 			if (isLocked) {
+				await SecurityConstants.delay();
 				res.status(429).send(
 					new ErrorResult(
 						429,
@@ -143,6 +157,7 @@ export default class LoginController implements IController {
 				this._config.config.auth.privateKey
 			);
 			if (!decryptResult.success) {
+				await SecurityConstants.delay();
 				res.status(decryptResult.error!.code).send(
 					new ErrorResult(
 						decryptResult.error!.code,
@@ -171,6 +186,8 @@ export default class LoginController implements IController {
 					await this._authorization.lockUser(user.Id);
 				}
 
+				await SecurityConstants.delay();
+
 				res.status(401).send(
 					new ErrorResult(401, "Invalid credentials")
 				);
@@ -183,14 +200,14 @@ export default class LoginController implements IController {
 			// Session generieren und speichern
 			await this._authorization.createSession(user);
 			const token = this._authorization.generateToken(user);
-			res.send(new Ok(token));
+			res.send({ token });
 		} catch (err: any) {
 			console.error("Login error:", err);
 			res.status(500).send(new ErrorResult(500, "Internal server error"));
 		}
 	}
 
-	private register(req: Request, res: Response): void {
+	private async register(req: Request, res: Response): Promise<void> {
 		const body: User = req.body;
 		if (!body.Name || !body.Password) {
 			res.status(400).send(
@@ -198,6 +215,8 @@ export default class LoginController implements IController {
 			);
 			return;
 		}
+
+		const normalizedEmail = body.Email?.trim().toLowerCase();
 
 		// Username-Validierung: Nur alphanumerische Zeichen und Unterstriche, 3-50 Zeichen
 		const usernameRegex = /^[a-zA-Z0-9_]{3,50}$/;
@@ -214,7 +233,7 @@ export default class LoginController implements IController {
 		// E-Mail-Validierung (optional aber empfohlen)
 		if (body.Email) {
 			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-			if (!emailRegex.test(body.Email)) {
+			if (!emailRegex.test(normalizedEmail ?? "")) {
 				res.status(400).send(
 					new ErrorResult(400, "Invalid email format")
 				);
@@ -238,41 +257,48 @@ export default class LoginController implements IController {
 		}
 		const decryptedPassword = decryptResult.password!;
 
-		// eslint-disable-next-line no-unused-vars
-		this._database
-			.getUserByUsername(body.Name)
-			.then((user: User | null) => {
-				if (user) {
+		try {
+			const existingUser = await this._database.getUserByUsername(
+				body.Name
+			);
+			if (existingUser) {
+				res.status(400).send(
+					new ErrorResult(400, "User already exists")
+				);
+				return;
+			}
+
+			if (normalizedEmail) {
+				const existingEmailUser = await this._database.getUserByEmail(
+					normalizedEmail
+				);
+				if (existingEmailUser) {
 					res.status(400).send(
-						new ErrorResult(400, "User already exists")
+						new ErrorResult(400, "Email address already in use")
 					);
 					return;
 				}
-				const hashedPassword =
-					this._authorization.hashPassword(decryptedPassword);
-				const newUser = new User(
-					null,
-					body.Name,
-					body.Email,
-					hashedPassword,
-					new Date(),
-					new Date(),
-					RoleEnum.UNAUTHORIZED,
-					false,
-					undefined
-				);
-				this._database
-					.addUser(newUser)
-					.then(() => {
-						res.send(new Ok("User created successfully"));
-					})
-					.catch((err) => {
-						res.status(500).send(new ErrorResult(500, err.message));
-					});
-			})
-			.catch((err) => {
-				res.status(500).send(new ErrorResult(500, err.message));
-			});
+			}
+
+			const hashedPassword =
+				this._authorization.hashPassword(decryptedPassword);
+			const newUser = new User(
+				null,
+				body.Name,
+				normalizedEmail ?? body.Email,
+				hashedPassword,
+				new Date(),
+				new Date(),
+				RoleEnum.UNAUTHORIZED,
+				false,
+				undefined
+			);
+
+			await this._database.addUser(newUser);
+			res.send(new Ok("User created successfully"));
+		} catch (err: any) {
+			res.status(500).send(new ErrorResult(500, err.message));
+		}
 	}
 
 	private async updateAccount(req: Request, res: Response): Promise<void> {
@@ -305,7 +331,7 @@ export default class LoginController implements IController {
 
 		this._database
 			.getUserByUsername(body.Name)
-			.then((user: User | null) => {
+			.then(async (user: User | null) => {
 				if (!user) {
 					res.status(400).send(
 						new ErrorResult(400, "User not found")
@@ -328,7 +354,21 @@ export default class LoginController implements IController {
 				}
 
 				// Passwort nur aktualisieren wenn es im Body enthalten ist
+				const normalizedEmail = body.Email?.trim().toLowerCase();
+				if (normalizedEmail && normalizedEmail !== user.Email) {
+					const existingEmailUser =
+						await this._database.getUserByEmail(normalizedEmail);
+					if (existingEmailUser && existingEmailUser.Id !== user.Id) {
+						res.status(400).send(
+							new ErrorResult(400, "Email address already in use")
+						);
+						return;
+					}
+				}
+
+				// Passwort nur aktualisieren wenn es im Body enthalten ist
 				let hashedPassword = user.Password;
+				const passwordChanged = Boolean(body.Password);
 				if (body.Password) {
 					// Passwort entschlüsseln und validieren
 					const decryptResult = decryptAndValidatePassword(
@@ -353,14 +393,14 @@ export default class LoginController implements IController {
 				const updatedUser = new User(
 					user.Id,
 					body.Name || user.Name,
-					body.Email || user.Email,
+					normalizedEmail || user.Email,
 					hashedPassword,
 					user.CreatedAt,
 					new Date(),
 					user.Role,
 					user.Locked,
-					user.SessionID,
-					user.SessionCreatedAt
+					passwordChanged ? undefined : user.SessionID,
+					passwordChanged ? undefined : user.SessionCreatedAt
 				);
 
 				// Rolle und Lock-Status nur durch Admin änderbar - prüfe authentifizierten User!
@@ -397,7 +437,13 @@ export default class LoginController implements IController {
 						updatedUser
 					)
 					.then(() => {
-						res.send(new Ok("User updated successfully"));
+						res.send(
+							new Ok(
+								passwordChanged
+									? "Password updated successfully. Please log in again."
+									: "User updated successfully"
+							)
+						);
 					})
 					.catch((err) => {
 						res.status(500).send(new ErrorResult(500, err.message));
@@ -428,8 +474,8 @@ export default class LoginController implements IController {
 		) as User | null;
 
 		if (!decoded || decoded === null) {
-			res.status(500).send(
-				new ErrorResult(500, "Failed to authenticate token.")
+			res.status(401).send(
+				new ErrorResult(401, "Failed to authenticate token.")
 			);
 			return;
 		}

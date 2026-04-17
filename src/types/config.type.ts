@@ -25,6 +25,7 @@ export type Config = {
 		collections: string[];
 	};
 	auth: {
+		jwtSecret: string;
 		privateKey: string;
 		publicKey: string;
 		tokenExpiration: string;

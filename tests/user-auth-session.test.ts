@@ -1,11 +1,13 @@
 import request from "supertest";
+import { RoleEnum } from "../src/enums/role.enum";
+import User from "../src/models/user.model";
 import app from "../src/server";
 import DatabaseService from "../src/services/database.srvs";
-import User from "../src/models/user.model";
-import { RoleEnum } from "../src/enums/role.enum";
 
 import NodeRSA from "node-rsa";
 import ConfigService from "../src/services/config.srvs";
+
+jest.setTimeout(30000);
 
 const testUser = new User(
 	null,
@@ -19,11 +21,19 @@ const testUser = new User(
 	undefined
 );
 
+function getEncryptedPassword(password: string): string {
+	const config = ConfigService.getInstance().config;
+	const publicKey = new NodeRSA(config.auth.publicKey);
+	return publicKey.encrypt(password, "base64");
+}
+
 beforeAll(async () => {
 	// Testdatenbank: User anlegen
 	try {
 		await DatabaseService.getInstance().dropCollection("users");
-	} catch (e) {}
+	} catch (e) {
+		// Collection may not exist yet.
+	}
 	// Passwort einfach als Hash von 'admin' speichern
 	const AuthService = require("../src/services/auth.srvs").default;
 	const hashedPassword = AuthService.getInstance().hashPassword("admin");
@@ -45,14 +55,15 @@ afterAll(async () => {
 	// Testdatenbank: User entfernen
 	try {
 		await DatabaseService.getInstance().dropCollection("users");
-	} catch (e) {}
+	} catch (e) {
+		// Collection may already be gone.
+	}
+	await DatabaseService.getInstance().closeConnection();
 });
 
 describe("User Auth & Session", () => {
 	it("should login and return a JWT token", async () => {
-		const config = ConfigService.getInstance().config;
-		const publicKey = new NodeRSA(config.auth.publicKey);
-		const encryptedPassword = publicKey.encrypt("admin", "base64");
+		const encryptedPassword = getEncryptedPassword("admin");
 		const res = await request(app)
 			.post("/user/login")
 			.send({ username: "admin", password: encryptedPassword });
@@ -60,11 +71,22 @@ describe("User Auth & Session", () => {
 		expect(res.body.token).toBeDefined();
 	});
 
+	it("should reject registration with a duplicate email address", async () => {
+		const res = await request(app)
+			.post("/user/register")
+			.send({
+				Name: "admin_duplicate",
+				Email: "ADMIN@example.com",
+				Password: getEncryptedPassword("ComplexP@ssword123"),
+			});
+
+		expect(res.statusCode).toBe(400);
+		expect(res.body.message).toBe("Email address already in use");
+	});
+
 	it("should logout and invalidate session", async () => {
 		// Login first
-		const config = ConfigService.getInstance().config;
-		const publicKey = new NodeRSA(config.auth.publicKey);
-		const encryptedPassword = publicKey.encrypt("admin", "base64");
+		const encryptedPassword = getEncryptedPassword("admin");
 		const loginRes = await request(app)
 			.post("/user/login")
 			.send({ username: "admin", password: encryptedPassword });
@@ -74,5 +96,34 @@ describe("User Auth & Session", () => {
 			.delete("/user/logout")
 			.set("Authorization", token);
 		expect(logoutRes.statusCode).toBe(200);
+	});
+
+	it("should invalidate the existing session after a password change", async () => {
+		const loginRes = await request(app)
+			.post("/user/login")
+			.send({
+				username: "admin",
+				password: getEncryptedPassword("admin"),
+			});
+		const token = loginRes.body.token;
+
+		const updateRes = await request(app)
+			.put("/user/update")
+			.set("Authorization", token)
+			.send({
+				Name: "admin",
+				Password: getEncryptedPassword("NewComplexP@ssword123"),
+			});
+
+		expect(updateRes.statusCode).toBe(200);
+		expect(updateRes.body.message).toBe(
+			"Password updated successfully. Please log in again."
+		);
+
+		const logoutRes = await request(app)
+			.delete("/user/logout")
+			.set("Authorization", token);
+
+		expect(logoutRes.statusCode).toBe(401);
 	});
 });

@@ -12,5 +12,5 @@ import { Express } from "express";
  * }
  */
 export interface IController {
-	routes(app: Express): void;
+	routes(_app: Express): void;
 }

@@ -4,6 +4,7 @@ import express, { Express } from "express";
 import expressJSDocSwagger from "express-jsdoc-swagger";
 import rateLimiter from "express-rate-limit";
 import helmet from "helmet";
+import { Server as HttpServer } from "http";
 import morgan from "morgan";
 import GlobalErrorHandler from "./core/error.core";
 import RouterCore from "./core/router.core";
@@ -26,6 +27,7 @@ import { Config } from "./types/config.type.js";
 class Server {
 	private app: Express = express();
 	private port = 8080;
+	private httpServer?: HttpServer;
 	private __filename = typeof __filename !== "undefined" ? __filename : "";
 	private __dirname = typeof __dirname !== "undefined" ? __dirname : "";
 	// private testDataCount = 0;
@@ -33,7 +35,9 @@ class Server {
 	constructor() {
 		dotenv.config();
 		ConfigService.getInstance(), DatabaseService.getInstance();
-		new GlobalErrorHandler();
+		if (process.env.NODE_ENV !== "test") {
+			new GlobalErrorHandler();
+		}
 
 		const limiter = rateLimiter({
 			max: 20,
@@ -93,12 +97,14 @@ class Server {
 
 		RouterCore.buildUpRoutes(this.app);
 
-		this.app.listen(this.port, () => {
-			console.log(
-				`⚡️[server]: Server is running at http://localhost:${this.port}`
-			);
-			// Testdaten-Initialisierung entfernt für Testkontext
-		});
+		if (process.env.NODE_ENV !== "test") {
+			this.httpServer = this.app.listen(this.port, () => {
+				console.log(
+					`⚡️[server]: Server is running at http://localhost:${this.port}`
+				);
+				// Testdaten-Initialisierung entfernt für Testkontext
+			});
+		}
 	}
 
 	private swagger(app: Express): object {

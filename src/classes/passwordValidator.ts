@@ -24,9 +24,7 @@ export default class PasswordValidator {
 		requireSpecialChars: true,
 	};
 
-	// eslint-disable-next-line no-useless-escape
-	private static readonly SPECIAL_CHARS =
-		/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+	private static readonly SPECIAL_CHARS = /[^A-Za-z0-9\s]/;
 
 	/**
 	 * Validiert ein Passwort gegen die definierten Anforderungen

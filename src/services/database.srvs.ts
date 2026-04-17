@@ -5,6 +5,8 @@ import {
 	Filter,
 	MongoClient,
 	MongoClientOptions,
+	UpdateFilter,
+	UpdateOptions,
 } from "mongodb";
 import { IModel } from "../interfaces/model.interface.js";
 import AuditLogModel from "../models/auditLog.model";
@@ -29,92 +31,202 @@ export default class DatabaseService {
 	static #instance: DatabaseService;
 	#config: Config = ConfigService.getInstance().config;
 	#client: MongoClient | undefined;
+	#db: Db | undefined;
+	#connectionPromise: Promise<Db> | undefined;
+	#initializationPromise: Promise<void> | undefined;
+	#listenersBound = false;
 
-	private constructor() {}
+	private constructor() {
+		this.#initializationPromise = this.intializeDatabase();
+	}
 
 	public static getInstance(): DatabaseService {
 		if (!DatabaseService.#instance) {
 			DatabaseService.#instance = new DatabaseService();
-			DatabaseService.#instance.intializeDatabase();
 		}
 
 		return DatabaseService.#instance;
 	}
 
 	private async intializeDatabase(): Promise<void> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.connect();
 		const collections = await db.listCollections().toArray();
 		const collectionNames = collections.map(
 			(collection) => collection.name
 		);
-		const configCollections = this.#config.database.collections;
+		const configCollections = [...this.#config.database.collections];
 		if (!configCollections.includes("auditlogs")) {
 			configCollections.push("auditlogs");
 		}
-		configCollections.forEach(async (collection) => {
-			if (!collectionNames.includes(collection)) {
-				await db.createCollection(collection);
+		await Promise.all(
+			configCollections.map(async (collection) => {
+				if (!collectionNames.includes(collection)) {
+					await db.createCollection(collection);
+				}
+			})
+		);
+		await this.ensureIndexes(db);
+	}
+
+	private async connect(): Promise<Db> {
+		if (this.#db) {
+			return this.#db;
+		}
+
+		if (!this.#connectionPromise) {
+			this.#connectionPromise = this.createConnection();
+		}
+
+		return this.#connectionPromise;
+	}
+
+	private async createConnection(): Promise<Db> {
+		try {
+			const clientOptions: MongoClientOptions = {
+				appName: this.#config.meta.name,
+				maxPoolSize: 10,
+				minPoolSize: 1,
+				maxIdleTimeMS: 60_000,
+				retryWrites: true,
+			};
+
+			if (
+				this.#config.database.username &&
+				this.#config.database.password
+			) {
+				clientOptions.auth = {
+					username: this.#config.database.username,
+					password: this.#config.database.password,
+				};
+				clientOptions.authSource =
+					process.env.MONGO_AUTH_SOURCE ?? "admin";
 			}
-		});
-		this.setListener();
+
+			const client = new MongoClient(
+				this.#config.database.host,
+				clientOptions
+			);
+			await client.connect();
+
+			this.#client = client;
+			this.#db = client.db(this.#config.database.databasename);
+			this.setListener(client);
+
+			return this.#db;
+		} catch (error) {
+			this.#client = undefined;
+			this.#db = undefined;
+			throw error;
+		} finally {
+			this.#connectionPromise = undefined;
+		}
 	}
 
-	private async connect(uri: string, dbName: string): Promise<Db> {
-		this.#client = await MongoClient.connect(uri, <MongoClientOptions>{
-			useUnifiedTopology: true,
-			auth: {
-				username: this.#config.database.username,
-				password: this.#config.database.password,
-			},
-			appName: this.#config.meta.name,
+	private setListener(client: MongoClient): void {
+		if (this.#listenersBound) {
+			return;
+		}
+
+		client.on("close", () => {
+			console.warn("MongoDB connection closed.");
+			this.resetConnectionState();
 		});
-		return this.#client.db(dbName);
+		client.on("error", (error) => {
+			console.error("MongoDB connection error:", error);
+		});
+
+		this.#listenersBound = true;
 	}
 
-	private async setListener(): Promise<void> {
-		this.#client!.on("close", async () => {
-			console.log("MongoDB connection closed.");
-			await this.connect(
-				this.#config.database.host,
-				this.#config.database.databasename
+	private resetConnectionState(): void {
+		this.#client = undefined;
+		this.#db = undefined;
+		this.#connectionPromise = undefined;
+		this.#initializationPromise = undefined;
+		this.#listenersBound = false;
+	}
+
+	private async ensureInitialized(): Promise<void> {
+		if (!this.#initializationPromise) {
+			this.#initializationPromise = this.intializeDatabase();
+		}
+
+		try {
+			await this.#initializationPromise;
+		} catch (error) {
+			this.#initializationPromise = undefined;
+			throw error;
+		}
+	}
+
+	private async getDb(): Promise<Db> {
+		await this.ensureInitialized();
+		if (this.#db) {
+			return this.#db;
+		}
+
+		return this.connect();
+	}
+
+	private async ensureIndexes(db: Db): Promise<void> {
+		await Promise.all([
+			this.tryCreateIndex(
+				db.collection("users"),
+				{ Id: 1 },
+				{ name: "users_id_idx" }
+			),
+			this.tryCreateIndex(
+				db.collection("users"),
+				{ Name: 1 },
+				{ name: "users_name_idx" }
+			),
+			this.tryCreateIndex(
+				db.collection("users"),
+				{ Email: 1 },
+				{ name: "users_email_idx" }
+			),
+			this.tryCreateIndex(
+				db.collection("failedAttempts"),
+				{ UserId: 1 },
+				{ name: "failed_attempts_user_id_idx", unique: true }
+			),
+			this.tryCreateIndex(
+				db.collection("auditlogs"),
+				{ timestamp: -1 },
+				{ name: "auditlogs_timestamp_idx" }
+			),
+		]);
+	}
+
+	private async tryCreateIndex(
+		collection: Collection,
+		index: Document,
+		options?: Document
+	): Promise<void> {
+		try {
+			await collection.createIndex(index as any, options as any);
+		} catch (error) {
+			console.warn(
+				`Unable to create index on collection ${collection.collectionName}.`,
+				error
 			);
-		});
-		this.#client!.on("reconnect", async () => {
-			console.log("MongoDB connection reconnected.");
-		});
-		this.#client!.on("timeout", async () => {
-			console.log("MongoDB connection timeout.");
-			await this.connect(
-				this.#config.database.host,
-				this.#config.database.databasename
-			);
-		});
-		this.#client!.on("error", async (error) => {
-			console.log("MongoDB connection error: " + error);
-			await this.connect(
-				this.#config.database.host,
-				this.#config.database.databasename
-			);
-		});
+		}
 	}
 
 	public async createCollection(collectionName: string): Promise<Collection> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = await db.createCollection(collectionName);
 		return collection;
 	}
 
 	public async dropCollection(collectionName: string): Promise<boolean> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
+		const exists = await db
+			.listCollections({ name: collectionName })
+			.hasNext();
+		if (!exists) {
+			return false;
+		}
 		const result = await db.dropCollection(collectionName);
 		return result;
 	}
@@ -124,10 +236,7 @@ export default class DatabaseService {
 		document: T,
 		userId?: string // optional: für Audit-Log
 	): Promise<boolean> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection(collectionName);
 		const result = await collection.insertOne(document!);
 
@@ -174,15 +283,22 @@ export default class DatabaseService {
 	}
 
 	public async findDocument<T extends IModel>(
-		_collectionName: string,
+		collectionName: string,
 		id: string
 	): Promise<T | undefined> {
-		const document = await this.listAllDocuments<T>(_collectionName).then(
-			(documents) => {
-				return documents.find((document) => document.Id === id);
-			}
-		);
-		return document;
+		const document = await this.findOneByQuery<T>(collectionName, {
+			Id: id,
+		});
+		return document ?? undefined;
+	}
+
+	public async findOneByQuery<T>(
+		collectionName: string,
+		filter: Filter<Document>
+	): Promise<T | null> {
+		const db = await this.getDb();
+		const collection = db.collection(collectionName);
+		return (await collection.findOne(filter)) as T | null;
 	}
 
 	public async updateDocument<T>(
@@ -197,10 +313,7 @@ export default class DatabaseService {
 				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
 			);
 		}
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection(collectionName);
 		const oldDoc = await collection.findOne(filter);
 		const result = await collection.updateOne(filter, {
@@ -233,10 +346,7 @@ export default class DatabaseService {
 			);
 		}
 		try {
-			const db = await this.connect(
-				this.#config.database.host,
-				this.#config.database.databasename
-			);
+			const db = await this.getDb();
 			const collection = db.collection(collectionName);
 			const oldDoc = await collection.findOne(filter);
 			const result = await collection.deleteOne(filter);
@@ -262,74 +372,112 @@ export default class DatabaseService {
 		}
 	}
 
+	public async updateDocumentWithOperators(
+		collectionName: string,
+		filter: Filter<Document>,
+		update: UpdateFilter<Document>,
+		options?: UpdateOptions
+	): Promise<boolean> {
+		if (collectionName === "auditlogs") {
+			throw new Error(
+				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
+			);
+		}
+
+		const db = await this.getDb();
+		const collection = db.collection(collectionName);
+		const result = await collection.updateOne(filter, update, options);
+		return result.acknowledged;
+	}
+
 	public async listAllCollections(): Promise<string[]> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collections = await db.listCollections().toArray();
 		return collections.map((collection) => collection.name);
 	}
 
 	public async listAllDatabases(): Promise<string[]> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const databases = await db.admin().listDatabases();
 		return databases.databases.map((database) => database.name);
 	}
 
 	public async listAllDocuments<T>(collectionName: string): Promise<T[]> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection(collectionName);
 		const documents = await collection.find().toArray();
 		return documents as T[];
+	}
+
+	public async listDocumentsPage<T>(
+		collectionName: string,
+		page: number,
+		pageSize: number,
+		filter: Filter<Document> = {}
+	): Promise<T[]> {
+		const db = await this.getDb();
+		const collection = db.collection(collectionName);
+		const normalizedPage = page > 0 ? page : 1;
+		const normalizedPageSize = pageSize > 0 ? pageSize : 10;
+
+		return (await collection
+			.find(filter)
+			.skip((normalizedPage - 1) * normalizedPageSize)
+			.limit(normalizedPageSize)
+			.toArray()) as T[];
+	}
+
+	public async countDocuments(
+		collectionName: string,
+		filter: Filter<Document> = {}
+	): Promise<number> {
+		const db = await this.getDb();
+		const collection = db.collection(collectionName);
+		return collection.countDocuments(filter);
 	}
 
 	public async getDocumentByQuery<T>(
 		_collectionName: string,
 		arg1: { [key: string]: any }
 	) {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection(_collectionName);
 		const documents = await collection.find(arg1).toArray();
 		return documents as T[];
 	}
 
 	public async getUserByUsername(username: string): Promise<User | null> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection("users");
 		const user = await collection.findOne<User>({ Name: username });
 		return user;
 	}
 
 	public async getUserById(id: string): Promise<User | null> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection("users");
 		const user = await collection.findOne<User>({ Id: id });
 		return user;
 	}
 
+	public async getUserByEmail(email: string): Promise<User | null> {
+		const db = await this.getDb();
+		const collection = db.collection("users");
+		const user = await collection.findOne<User>({ Email: email });
+		return user;
+	}
+
 	public async addUser(user: User): Promise<boolean> {
-		const db = await this.connect(
-			this.#config.database.host,
-			this.#config.database.databasename
-		);
+		const db = await this.getDb();
 		const collection = db.collection("users");
 		const result = await collection.insertOne(user);
 		return result.acknowledged;
+	}
+
+	public async closeConnection(): Promise<void> {
+		if (this.#client) {
+			await this.#client.close();
+		}
+		this.resetConnectionState();
 	}
 }

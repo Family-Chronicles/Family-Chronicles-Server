@@ -1,6 +1,5 @@
 import { Express, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
-import Paginator from "../classes/paginator";
 import SecurityHelper from "../classes/securityHelper";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { IController } from "../interfaces/controller.interface.js";
@@ -527,115 +526,87 @@ export default class UserController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
-			this._collectionName
-		);
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const page = parseInt(req.params.page);
+			const users = await this._database.listDocumentsPage<User>(
+				this._collectionName,
+				page,
+				pageSize
+			);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
-				}
-
-				// Sensible Daten entfernen
-				const sanitizedUsers = SecurityHelper.sanitizeUsersFull(users);
-
-				const pageSize = parseInt(req.params.pageSize);
-				const page = parseInt(req.params.page);
-
-				const result = Paginator.paginate(
-					sanitizedUsers,
-					pageSize,
-					page
-				);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			res.send(SecurityHelper.sanitizeUsersFull(users));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
-			this._collectionName
-		);
-
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
-				}
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<User>(users, pageSize);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
 	private async create(req: Request, res: Response): Promise<void> {
-		const config = ConfigService.getInstance().config;
-
-		// Prüfen ob Benutzer bereits existiert (verwende großgeschriebene Body-Felder wie in Validierung)
-		const existingUser = await this._database.getUserByUsername(
-			req.body.Name
-		);
-		if (existingUser) {
-			res.status(400).send(new ErrorResult(400, "User already exists"));
-			return;
-		}
-
-		// Passwort RSA-entschlüsseln und validieren
-		const decryptResult = decryptAndValidatePassword(
-			req.body.Password,
-			config.auth.privateKey
-		);
-		if (!decryptResult.success) {
-			res.status(decryptResult.error!.code).send(
-				new ErrorResult(
-					decryptResult.error!.code,
-					decryptResult.error!.message
-				)
+		try {
+			const config = ConfigService.getInstance().config;
+			const existingUser = await this._database.getUserByUsername(
+				req.body.Name
 			);
-			return;
+			if (existingUser) {
+				res.status(400).send(
+					new ErrorResult(400, "User already exists")
+				);
+				return;
+			}
+
+			const decryptResult = decryptAndValidatePassword(
+				req.body.Password,
+				config.auth.privateKey
+			);
+			if (!decryptResult.success) {
+				res.status(decryptResult.error!.code).send(
+					new ErrorResult(
+						decryptResult.error!.code,
+						decryptResult.error!.message
+					)
+				);
+				return;
+			}
+
+			const hashedPassword = this._authorization.hashPassword(
+				decryptResult.password!
+			);
+			const user = new User(
+				null,
+				req.body.Name,
+				req.body.Email,
+				hashedPassword,
+				new Date(),
+				new Date(),
+				req.body.Role,
+				false,
+				undefined
+			);
+
+			await this._database.createDocument<User>(
+				this._collectionName,
+				user
+			);
+			res.send(SecurityHelper.sanitizeUserFull(user));
+		} catch (error: any) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500, error.message));
 		}
-
-		// Passwort hashen vor Speicherung
-		const hashedPassword = this._authorization.hashPassword(
-			decryptResult.password!
-		);
-
-		const user = new User(
-			null,
-			req.body.Name,
-			req.body.Email,
-			hashedPassword,
-			new Date(),
-			new Date(),
-			req.body.Role,
-			false,
-			undefined
-		);
-
-		this._database
-			.createDocument<User>(this._collectionName, user)
-			.then(() => {
-				// Sensible Daten entfernen
-				const sanitizedUser = SecurityHelper.sanitizeUserFull(user);
-				res.send(sanitizedUser);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
 	}
 
 	private show(req: Request, res: Response): void {
@@ -661,107 +632,85 @@ export default class UserController implements IController {
 	}
 
 	private async update(req: Request, res: Response): Promise<void> {
-		const config = ConfigService.getInstance().config;
+		try {
+			const config = ConfigService.getInstance().config;
+			const user = await this._database.findDocument<User>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!user) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.params.id
-		);
-
-		userDocument
-			.then(async (user) => {
-				if (user === null || user === undefined) {
-					res.status(404).send(new ErrorResult(404));
+			let hashedPassword = user.Password;
+			if (req.body.Password) {
+				const decryptResult = decryptAndValidatePassword(
+					req.body.Password,
+					config.auth.privateKey
+				);
+				if (!decryptResult.success) {
+					res.status(decryptResult.error!.code).send(
+						new ErrorResult(
+							decryptResult.error!.code,
+							decryptResult.error!.message
+						)
+					);
 					return;
 				}
 
-				// Passwort muss RSA-entschlüsselt und gehasht werden, wenn es aktualisiert wird!
-				let hashedPassword = user.Password;
-				if (req.body.Password) {
-					const decryptResult = decryptAndValidatePassword(
-						req.body.Password,
-						config.auth.privateKey
-					);
-					if (!decryptResult.success) {
-						res.status(decryptResult.error!.code).send(
-							new ErrorResult(
-								decryptResult.error!.code,
-								decryptResult.error!.message
-							)
-						);
-						return;
-					}
-
-					hashedPassword = this._authorization.hashPassword(
-						decryptResult.password!
-					);
-				}
-
-				const updatedUser = new User(
-					user.Id,
-					req.body.Name ?? user.Name,
-					req.body.Email ?? user.Email,
-					hashedPassword,
-					user.CreatedAt,
-					new Date(),
-					req.body.Role ?? user.Role,
-					req.body.Locked ?? user.Locked,
-					user.SessionID,
-					user.SessionCreatedAt
+				hashedPassword = this._authorization.hashPassword(
+					decryptResult.password!
 				);
+			}
 
-				const sanitizedUser =
-					SecurityHelper.sanitizeUserFull(updatedUser);
+			const updatedUser = new User(
+				user.Id,
+				req.body.Name ?? user.Name,
+				req.body.Email ?? user.Email,
+				hashedPassword,
+				user.CreatedAt,
+				new Date(),
+				req.body.Role ?? user.Role,
+				req.body.Locked ?? user.Locked,
+				user.SessionID,
+				user.SessionCreatedAt
+			);
 
-				this._database
-					.updateDocument(
-						this._collectionName,
-						{ Id: updatedUser.Id },
-						updatedUser
-					)
-					.then(() => {
-						res.status(200).send(sanitizedUser);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			await this._database.updateDocument(
+				this._collectionName,
+				{ Id: updatedUser.Id },
+				updatedUser
+			);
+			res.status(200).send(SecurityHelper.sanitizeUserFull(updatedUser));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private delete(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
+	private async delete(req: Request, res: Response): Promise<void> {
+		try {
+			const user = await this._database.findDocument<User>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!user) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				this._database
-					.deleteDocument(this._collectionName, user)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`User ${user.Name} with id ${user.Id} deleted successfully`
-							)
-						);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
+			await this._database.deleteDocument(this._collectionName, {
+				Id: user.Id,
 			});
+			res.status(200).send(
+				new Ok(
+					`User ${user.Name} with id ${user.Id} deleted successfully`
+				)
+			);
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 }

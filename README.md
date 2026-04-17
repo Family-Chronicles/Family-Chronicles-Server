@@ -11,14 +11,19 @@ The Family Chronicles project is an attempt to develop a family tree management 
 
 ## Wichtiger Hinweis zur Authentifizierung
 
-In der Datei `src/config/default.config.json` müssen die Felder `privateKey` und `publicKey` im Abschnitt `auth` mit sicheren Werten belegt werden, damit die Authentifizierung (JWT) funktioniert. Beispiel:
+Sicherheitsrelevante Werte dürfen **nicht** in `src/config/default.config.json` oder anderen eingecheckten Dateien hinterlegt werden.
 
-```
-"auth": {
-  "privateKey": "<dein-geheimer-schlüssel>",
-  "publicKey": "<dein-public-key>",
-  "tokenExpiration": "1d"
-}
-```
+Die Anwendung erwartet Auth-/Kryptografie-Werte über Environment-Variablen:
 
-Ersetze die Platzhalter durch eigene, sichere Werte!
+- `JWT_SECRET` – Secret für das Signieren und Prüfen von JWTs
+- `PASSWORD_PRIVATE_KEY` oder `PASSWORD_PRIVATE_KEY_BASE64` – privater RSA-Schlüssel zur Entschlüsselung von Passwörtern
+- `PASSWORD_PUBLIC_KEY` oder `PASSWORD_PUBLIC_KEY_BASE64` – öffentlicher RSA-Schlüssel für Clients zum Verschlüsseln von Passwörtern
+
+Zusätzlich können MongoDB-Zugangsdaten per Environment gesetzt werden:
+
+- `MONGO_URI`
+- `MONGO_DATABASE`
+- `MONGO_USERNAME`
+- `MONGO_PASSWORD`
+
+Nutze als Startpunkt die Datei `.env.example` und lege deine tatsächlichen Werte lokal in einer **nicht versionierten** `.env` ab.

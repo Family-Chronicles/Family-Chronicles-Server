@@ -20,11 +20,11 @@ export default class RouterCore {
 	public static buildUpRoutes(app: Express): void {
 		new IndexController().routes(app);
 		new TestController().routes(app);
+		new LoginController().routes(app);
 		new UserController().routes(app);
 		new PersonController().routes(app);
 		new FamilyController().routes(app);
 		new RelatedDataController().routes(app);
 		new AuditLogController().routes(app);
-		new LoginController().routes(app);
 	}
 }
