@@ -1,16 +1,18 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import Person from "../models/person.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import Relationship from "../models/relationship.model.js";
-import ErrorResult from "../models/actionResults/error.result.js";
-import Ok from "../models/actionResults/ok.result.js";
-import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
-import escapeHtml from 'escape-html';
+import escapeHtml from "escape-html";
+import { Express, Request, Response } from "express";
+import { body, param, validationResult } from "express-validator";
+import SecurityHelper from "../classes/securityHelper";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
+import { RelationshipTypeEnum } from "../enums/relationship.enum";
+import { IController } from "../interfaces/controller.interface.js";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import RelatedData from "../models/data.model";
+import Person from "../models/person.model";
+import Relationship from "../models/relationship.model";
+import AuthorizationService from "../services/auth.srvs";
+import DatabaseService from "../services/database.srvs";
 
 export default class PersonController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -39,6 +41,7 @@ export default class PersonController implements IController {
 		 * 		"Notes": "",
 		 * 		"FamilyIds": [],
 		 * 		"RelatedDataIds": [],
+		 * 		 "ReasonOfDeath": null,
 		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
@@ -67,9 +70,14 @@ export default class PersonController implements IController {
 		 * }
 		 */
 		app.get("/persons", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -95,6 +103,7 @@ export default class PersonController implements IController {
 		 * 		"Notes": "",
 		 * 		"FamilyIds": [],
 		 * 		"RelatedDataIds": [],
+		 * 		 "ReasonOfDeath": null,
 		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * 	}
 		 * @example response - 400 - bad request response example
@@ -122,11 +131,33 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/persons/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
-		});
+		app.get(
+			"/persons/:pageSize/:page",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize must be a number between 1 and 100."
+					),
+				param("page")
+					.isInt({ min: 1 })
+					.withMessage("page must be a positive number."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /persons/pageCount/:pageSize
@@ -166,10 +197,26 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/persons/pageCount/:pageSize",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize must be a number between 1 and 100."
+					),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.getPageCount(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -194,6 +241,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -221,11 +269,28 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/person/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/person/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /person/name?firstName&lastName
@@ -249,6 +314,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -279,9 +345,14 @@ export default class PersonController implements IController {
 		app.get(
 			"/person/name?firstName&lastName",
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByName(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showByName(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -306,6 +377,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * },
 		 * {
@@ -321,14 +393,24 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
 		 * }]
 		 */
-		app.post("/person/dateOfBirth", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.showByDateOfBirth(req, res);
-			});
-		});
+		app.post(
+			"/person/dateOfBirth",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showByDateOfBirth(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /person/relatedData/:relatedDataIds
@@ -351,6 +433,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * },
 		 * {
@@ -366,15 +449,43 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
 		 * }]
 		 */
 		app.get(
 			"/person/relatedData/:relatedDataIds",
+			[
+				param("relatedDataIds")
+					.isString()
+					.withMessage("relatedDataIds must be provided.")
+					.custom((value: string) => {
+						const ids = value.split(",");
+						const uuidRegex =
+							/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+						for (const id of ids) {
+							if (!uuidRegex.test(id.trim())) {
+								throw new Error(
+									`Invalid UUID: ${id}. All IDs must be valid UUIDs.`
+								);
+							}
+						}
+						return true;
+					}),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByRelatedDataIds(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showByRelatedDataIds(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -384,6 +495,7 @@ export default class PersonController implements IController {
 		 * @summary This a new person and saves it to the database
 		 * @security BearerAuth
 		 * @param {object} - the new person - application/json
+		 * @param {string | null} ReasonOfDeath.body.optional - the reason of death of the person
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
@@ -399,6 +511,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -429,10 +542,54 @@ export default class PersonController implements IController {
 		app.post(
 			"/person",
 			bodyParser.json(),
+			[
+				body("FirstName")
+					.isArray()
+					.notEmpty()
+					.withMessage("FirstName must be a non-empty array."),
+				body("LastName")
+					.isArray()
+					.notEmpty()
+					.withMessage("LastName must be a non-empty array."),
+				body("Sex")
+					.optional()
+					.isIn(["Male", "Female", "Intersex", "Other"])
+					.withMessage(
+						"Sex must be Male, Female, Intersex or Other."
+					),
+				body("Gender")
+					.optional()
+					.isString()
+					.withMessage("Gender must be a string."),
+				body("DateOfBirth")
+					.optional()
+					.isISO8601()
+					.withMessage("DateOfBirth must be a valid date."),
+				body("DateOfDeath")
+					.optional()
+					.isISO8601()
+					.withMessage("DateOfDeath must be a valid date."),
+				body("PlaceOfBirth").optional().isString().trim().escape(),
+				body("PlaceOfDeath").optional().isString().trim().escape(),
+				body("Notes").optional().isString().trim().escape(),
+				body("ReasonOfDeath").optional().isString().trim().escape(),
+				body("FamilyIds").optional().isArray(),
+				body("RelationshipIds").optional().isArray(),
+				body("RelatedDataIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -441,6 +598,7 @@ export default class PersonController implements IController {
 		 * @tags persons
 		 * @summary This updates a person by id
 		 * @security BearerAuth
+		 * @param {string | null} ReasonOfDeath.body.optional - the reason of death of the person
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
@@ -456,6 +614,7 @@ export default class PersonController implements IController {
 		 * 	"Notes": "",
 		 * 	"FamilyIds": [],
 		 * 	"RelatedDataIds": [],
+		 * 	 "ReasonOfDeath": null,
 		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
 		 * }
 		 * @example response - 400 - bad request response example
@@ -486,10 +645,34 @@ export default class PersonController implements IController {
 		app.put(
 			"/person/:id",
 			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+				body("FirstName").optional().isArray(),
+				body("LastName").optional().isArray(),
+				body("DateOfBirth").optional().isISO8601(),
+				body("DateOfDeath").optional().isISO8601(),
+				body("PlaceOfBirth").optional().isString(),
+				body("PlaceOfDeath").optional().isString(),
+				body("Notes").optional().isString(),
+				body("FamilyIds").optional().isArray(),
+				body("RelationshipIds").optional().isArray(),
+				body("RelatedDataIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -528,11 +711,28 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/person/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/person/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 
 		/**
 		 * GET /person/:id/relationships
@@ -575,11 +775,28 @@ export default class PersonController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/person/:id/relationships", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.showRelationships(req, res);
-			});
-		});
+		app.get(
+			"/person/:id/relationships",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showRelationships(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /person/:id/relationships/:relationshipId
@@ -598,10 +815,27 @@ export default class PersonController implements IController {
 		 */
 		app.get(
 			"/person/:id/relationships/:relationshipId",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+				param("relationshipId")
+					.isUUID()
+					.withMessage("relationshipId must be a valid UUID."),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showRelationship(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.showRelationship(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -615,21 +849,42 @@ export default class PersonController implements IController {
 		 * @param {string} request.body.relationPartnerTwoId.required - the id of the second person in the relationship
 		 * @param {string} request.body.relationType.required - the type of relationship
 		 * @param {string} request.body.notes - notes about the relationship
+		 * @param {string} request.body.role - role of the person in the relationship
+		 * @param {string} request.body.startDate - start date of the relationship (ISO string)
+		 * @param {string} request.body.endDate - end date of the relationship (ISO string)
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
-		 * 	"RelationPartnerOneId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
-		 * 	"RelationPartnerTwoId": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a",
-		 * 	"RelationType": "Married",
-		 * 	"Notes": "",
+		 *   "Id": "...",
+		 *   ...
+		 *   "Role": "Mutter",
+		 *   "StartDate": "2020-01-01T00:00:00.000Z",
+		 *   "EndDate": null
 		 * }
 		 */
-		app.post("/person/:id/relationship", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.addRelationship(req, res);
-			});
-		});
+		app.post(
+			"/person/:id/relationship",
+			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.addRelationship(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 
 		/**
 		 * PUT /person/:id/relationships/:relationshipId
@@ -641,38 +896,67 @@ export default class PersonController implements IController {
 		 * @param {string} request.body.relationPartnerTwoId.required - the id of the second person in the relationship
 		 * @param {string} request.body.relationType.required - the type of relationship
 		 * @param {string} request.body.notes - notes about the relationship
+		 * @param {string} request.body.role - role of the person in the relationship
+		 * @param {string} request.body.startDate - start date of the relationship (ISO string)
+		 * @param {string} request.body.endDate - end date of the relationship (ISO string)
 		 * @return {object} 200 - success response - application/json
 		 * @example response - 200 - success response example
 		 * {
 		 * 	 status: 200
 		 * }
 		 */
-		app.put(
-			"/person/:id/relationships/:relationshipId",
+		app.post(
+			"/person/:id/uploadMedia",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.updateRelationship(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.uploadMedia(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
 		/**
-		 * DELETE /person/:id/relationships/:relationshipId
-		 * @tags persons
-		 * @summary This deletes a relationship of a person by id
-		 * @security BearerAuth
+		 * POST /person/:id/tagMedia
+		 * @summary Verknüpft ein Medium mit einer Person und taggt weitere Personen
+		 * @param {string} id.path.required - die ID der Person
+		 * @param {string} mediaId.body.required - die ID des Mediums
+		 * @param {string[]} taggedPersonIds.body.required - die zu taggenden Personen
 		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	 status: 200
-		 * }
 		 */
-		app.delete(
-			"/person/:id/relationships/:relationshipId",
+		app.post(
+			"/person/:id/tagMedia",
+			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.deleteRelationship(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.tagMedia(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 	}
@@ -695,6 +979,10 @@ export default class PersonController implements IController {
 			}
 
 			const person = persons[0];
+			person.RelationshipIds = (person.RelationshipIds ?? []).filter(
+				(existingRelationshipId) =>
+					existingRelationshipId !== relationshipId
+			);
 
 			const relationship =
 				this._database.getDocumentByQuery<Relationship>(
@@ -774,15 +1062,32 @@ export default class PersonController implements IController {
 	private updateRelationship(req: Request, res: Response) {
 		const id = req.params.id;
 		const relationshipId = req.params.relationshipId;
+		let rel;
+		try {
+			rel =
+				typeof req.body.relationship === "string"
+					? JSON.parse(req.body.relationship)
+					: req.body.relationship;
+		} catch (err) {
+			res.status(400).send(
+				new ErrorResult(400, "Invalid relationship JSON format")
+			);
+			return;
+		}
 
-		const realtionship = JSON.parse(req.body.relationship) as Relationship;
+		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
+		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
+		const role = rel.Role ?? null;
 
 		const resultRelation = new Relationship(
 			relationshipId,
 			id,
-			realtionship.RelationPartnerTwoId ?? "",
-			realtionship.RelationshipType ?? RelationshipTypeEnum.Unknown,
-			realtionship.Notes ?? ""
+			rel.RelationPartnerTwoId ?? "",
+			rel.RelationshipType ?? RelationshipTypeEnum.Unknown,
+			rel.Notes ?? "",
+			startDate,
+			endDate,
+			role
 		);
 
 		if (resultRelation.RelationPartnerTwoId === "") {
@@ -807,7 +1112,7 @@ export default class PersonController implements IController {
 
 			const relationshipDocument =
 				this._database.getDocumentByQuery<Relationship>(
-					this._collectionName,
+					DatabaseCollectionEnum.RELATIONS,
 					{
 						Id: relationshipId,
 					}
@@ -835,7 +1140,7 @@ export default class PersonController implements IController {
 
 				this._database
 					.updateDocument<Relationship>(
-						this._collectionName,
+						DatabaseCollectionEnum.RELATIONS,
 						relationshipFromDb,
 						resultRelation
 					)
@@ -858,14 +1163,32 @@ export default class PersonController implements IController {
 
 	private addRelationship(req: Request, res: Response) {
 		const id = req.params.id;
-		const realtionship = JSON.parse(req.body.relationship) as Relationship;
+		let rel;
+		try {
+			rel =
+				typeof req.body.relationship === "string"
+					? JSON.parse(req.body.relationship)
+					: req.body.relationship;
+		} catch (err) {
+			res.status(400).send(
+				new ErrorResult(400, "Invalid relationship JSON format")
+			);
+			return;
+		}
+
+		const startDate = rel.StartDate ? new Date(rel.StartDate) : null;
+		const endDate = rel.EndDate ? new Date(rel.EndDate) : null;
+		const role = rel.Role ?? null;
 
 		const resultRelation = new Relationship(
 			null,
 			id,
-			realtionship.RelationPartnerTwoId ?? "",
-			realtionship.RelationshipType ?? RelationshipTypeEnum.Unknown,
-			realtionship.Notes ?? ""
+			rel.RelationPartnerTwoId ?? "",
+			rel.RelationshipType ?? RelationshipTypeEnum.Unknown,
+			rel.Notes ?? "",
+			startDate,
+			endDate,
+			role
 		);
 
 		if (resultRelation.RelationPartnerTwoId === "") {
@@ -890,10 +1213,7 @@ export default class PersonController implements IController {
 
 			const person = persons[0];
 
-			if (
-				person.RelationshipIds === undefined ||
-				person.RelationshipIds === null
-			) {
+			if (!person.RelationshipIds) {
 				person.RelationshipIds = [];
 			}
 
@@ -939,14 +1259,14 @@ export default class PersonController implements IController {
 		);
 
 		personDocument.then((person) => {
-			if (person === null) {
+			if (!person || person.length === 0) {
 				res.status(404).send(new ErrorResult(404));
 				return;
 			}
 
-			const relationshipIds = person[0].RelationshipIds;
+			const relationshipIds = person[0].RelationshipIds ?? [];
 
-			if (relationshipIds === undefined || relationshipIds === null) {
+			if (relationshipIds.length === 0) {
 				res.status(404).send(new ErrorResult(404));
 				return;
 			}
@@ -965,7 +1285,7 @@ export default class PersonController implements IController {
 				);
 
 			relationshipDocument.then((relationship) => {
-				if (relationship === null) {
+				if (!relationship || relationship.length === 0) {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
@@ -986,12 +1306,16 @@ export default class PersonController implements IController {
 		);
 
 		personDocument.then((person) => {
-			if (person === null) {
+			if (!person || person.length === 0) {
 				res.status(404).send(new ErrorResult(404));
 				return;
 			}
 
-			const relationshipIds = person[0].RelationshipIds;
+			const relationshipIds = person[0].RelationshipIds ?? [];
+			if (relationshipIds.length === 0) {
+				res.status(200).send([]);
+				return;
+			}
 
 			const relationshipDocuments =
 				this._database.getDocumentByQuery<Relationship>(
@@ -1034,10 +1358,7 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1067,10 +1388,7 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1097,10 +1415,7 @@ export default class PersonController implements IController {
 					return;
 				}
 
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1119,12 +1434,7 @@ export default class PersonController implements IController {
 					persons = [];
 				}
 
-				persons.forEach((person) => {
-					//@ts-ignore
-					delete person._id;
-				});
-
-				res.send(persons);
+				res.send(SecurityHelper.removeMongoIds(persons));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1132,120 +1442,93 @@ export default class PersonController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const personDocuments = this._database.listAllDocuments<Person>(
-			this._collectionName
-		);
-
-		personDocuments
-			.then((persons) => {
-				if (persons === null) {
-					persons = [];
-				}
-
-				persons.forEach((person) => {
-					//@ts-ignore
-					delete person._id;
-				});
-
-				const page = parseInt(req.params.page);
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.paginate(persons, page, pageSize);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const page = parseInt(req.params.page);
+			const pageSize = parseInt(req.params.pageSize);
+			const persons = await this._database.listDocumentsPage<Person>(
+				this._collectionName,
+				page,
+				pageSize
+			);
+			res.send(SecurityHelper.removeMongoIds(persons));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const personDocuments = this._database.listAllDocuments<Person>(
-			this._collectionName
-		);
-
-		personDocuments
-			.then((persons) => {
-				if (persons === null) {
-					persons = [];
-				}
-
-				persons.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<Person>(
-					persons,
-					pageSize
-				);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		console.log(req.body);
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			let firstName = req.body.FirstName;
+			let lastName = req.body.LastName;
+			let relatedDataIds = req.body.RelatedDataIds;
+			let familyIds = req.body.FamilyIds;
+			let relationshipIds = req.body.RelationshipIds;
+			const sex = req.body.Sex ?? req.body.sex;
+			const gender = req.body.Gender ?? req.body.gender;
+			const events = req.body.Events ?? req.body.events ?? [];
 
-		let firstName = req.body.FirstName;
-		let lastName = req.body.LastName;
-		let relatedDataIds = req.body.RelatedDataIds;
-		let familyIds = req.body.FamilyIds;
-		let relationshipIds = req.body.RelationshipIds;
+			if (typeof firstName === "string") {
+				firstName = firstName.split(" ");
+			}
 
-		if (typeof firstName === "string") {
-			firstName = firstName.split(" ");
+			if (typeof lastName === "string") {
+				lastName = lastName.split(" ");
+			}
+
+			if (typeof relatedDataIds === "string") {
+				relatedDataIds = [relatedDataIds];
+			}
+
+			if (typeof familyIds === "string") {
+				familyIds = [familyIds];
+			}
+
+			if (typeof relationshipIds === "string") {
+				relationshipIds = [relationshipIds];
+			}
+
+			const person = new Person(
+				null,
+				firstName,
+				lastName,
+				sex,
+				gender,
+				req.body.DateOfBirth,
+				req.body.DateOfDeath ?? null,
+				req.body.PlaceOfBirth,
+				req.body.PlaceOfDeath ?? null,
+				relationshipIds,
+				req.body.Notes,
+				familyIds,
+				relatedDataIds,
+				events,
+				req.body.ReasonOfDeath ?? null // NEU
+			);
+
+			await this._database.createDocument<Person>(
+				this._collectionName,
+				person
+			);
+			res.send(SecurityHelper.removeMongoId(person));
+		} catch (error: any) {
+			console.error(error);
+			res.status(500).send({ status: 500, message: error.message });
 		}
-
-		if (typeof lastName === "string") {
-			lastName = lastName.split(" ");
-		}
-
-		if (typeof relatedDataIds === "string") {
-			relatedDataIds = [relatedDataIds];
-		}
-
-		if (typeof familyIds === "string") {
-			familyIds = [familyIds];
-		}
-
-		if (typeof relationshipIds === "string") {
-			relationshipIds = [relationshipIds];
-		}
-
-		const person = new Person(
-			null,
-			firstName,
-			lastName,
-			req.body.sex,
-			req.body.gender,
-			req.body.DateOfBirth,
-			req.body.DateOfDeath ?? null,
-			req.body.PlaceOfBirth,
-			req.body.PlaceOfDeath ?? null,
-			relatedDataIds,
-			req.body.Notes,
-			familyIds,
-			relationshipIds,
-			req.body.events ?? []
-		);
-
-		this._database
-			.createDocument<Person>(this._collectionName, person)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
-
-		res.send(person);
 	}
 
 	private show(req: Request, res: Response): void {
@@ -1260,9 +1543,7 @@ export default class PersonController implements IController {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
-				//@ts-ignore
-				delete person!._id;
-				res.send(person);
+				res.send(SecurityHelper.removeMongoId(person));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -1270,108 +1551,111 @@ export default class PersonController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const personDocument = this._database.findDocument<Person>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const person = await this._database.findDocument<Person>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!person) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		personDocument
-			.then((person) => {
-				if (person === null || person === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				let firstName = req.body.FirstName ?? person.FirstName;
-				let lastName = req.body.LastName ?? person.LastName;
-				let relatedDataIds =
-					req.body.RelatedDataIds ?? person.RelatedDataIds;
-				let familyIds = req.body.FamilyIds ?? person.FamilyIds;
-				let relationshipIds =
-					req.body.RelationshipIds ?? person.RelationshipIds;
+			let firstName = req.body.FirstName ?? person.FirstName;
+			let lastName = req.body.LastName ?? person.LastName;
+			let relatedDataIds =
+				req.body.RelatedDataIds ?? person.RelatedDataIds;
+			let familyIds = req.body.FamilyIds ?? person.FamilyIds;
+			let relationshipIds =
+				req.body.RelationshipIds ?? person.RelationshipIds;
+			const sex = req.body.Sex ?? req.body.sex ?? person.Sex;
+			const gender = req.body.Gender ?? req.body.gender ?? person.Gender;
+			const events =
+				req.body.Events ?? req.body.events ?? person.Events ?? [];
 
-				if (typeof firstName === "string") {
-					firstName = firstName.split(" ");
-				}
+			if (typeof firstName === "string") {
+				firstName = firstName.split(" ");
+			}
 
-				if (typeof lastName === "string") {
-					lastName = lastName.split(" ");
-				}
+			if (typeof lastName === "string") {
+				lastName = lastName.split(" ");
+			}
 
-				if (typeof relatedDataIds === "string") {
-					relatedDataIds = [relatedDataIds];
-				}
+			if (typeof relatedDataIds === "string") {
+				relatedDataIds = [relatedDataIds];
+			}
 
-				if (typeof familyIds === "string") {
-					familyIds = [familyIds];
-				}
+			if (typeof familyIds === "string") {
+				familyIds = [familyIds];
+			}
 
-				if (typeof relationshipIds === "string") {
-					relationshipIds = [relationshipIds];
-				}
+			if (typeof relationshipIds === "string") {
+				relationshipIds = [relationshipIds];
+			}
 
-				const updatedPerson = new Person(
-					person.Id,
-					firstName,
-					lastName,
-					req.body.sex,
-					req.body.gender,
-					req.body.DateOfBirth ?? person.DateOfBirth,
-					req.body.DateOfDeath ?? person.DateOfDeath,
-					req.body.PlaceOfBirth ?? person.PlaceOfBirth,
-					req.body.PlaceOfDeath ?? person.PlaceOfDeath,
-					relationshipIds,
-					req.body.Notes ?? person.Notes,
-					familyIds,
-					relatedDataIds,
-					req.body.events ?? person.Events ?? []
-				);
+			const updatedPerson = new Person(
+				person.Id,
+				firstName,
+				lastName,
+				sex,
+				gender,
+				req.body.DateOfBirth ?? person.DateOfBirth,
+				req.body.DateOfDeath ?? person.DateOfDeath,
+				escapeHtml(req.body.PlaceOfBirth ?? person.PlaceOfBirth),
+				req.body.PlaceOfDeath
+					? escapeHtml(req.body.PlaceOfDeath)
+					: person.PlaceOfDeath,
+				relationshipIds,
+				escapeHtml(req.body.Notes ?? person.Notes),
+				familyIds,
+				relatedDataIds,
+				events,
+				req.body.ReasonOfDeath
+					? escapeHtml(req.body.ReasonOfDeath)
+					: person.ReasonOfDeath
+			);
 
-				const result = JSON.stringify(updatedPerson);
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						personDocument,
-						updatedPerson
-					)
-					.then(() => {
-						const sanitizedResult = escapeHtml(result);
-						res.status(200).send(sanitizedResult);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			await this._database.updateDocument(
+				this._collectionName,
+				{ Id: updatedPerson.Id },
+				updatedPerson
+			);
+			res.status(200).send(SecurityHelper.removeMongoId(updatedPerson));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
 	private delete(req: Request, res: Response): void {
+		const id = req.params.id;
 		const personDocument = this._database.findDocument<Person>(
 			this._collectionName,
-			req.path.split("/")[2]
+			id
 		);
 
 		personDocument
 			.then((person) => {
 				if (person === null || person === undefined) {
-					res.status(404).send(new ErrorResult(404));
+					res.status(404).send(
+						new ErrorResult(404, "Person not found")
+					);
 					return;
 				}
 				this._database
 					.deleteDocument(this._collectionName, person)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`User ${
-									person.FirstName + " " + person.LastName
-								} with id ${person.Id} deleted successfully`
-							)
-						);
+					.then((result) => {
+						if (!result) {
+							res.status(500).send(
+								new ErrorResult(500, "Failed to delete person")
+							);
+							return;
+						}
+						res.status(200).send({
+							success: true,
+							message: `Person ${person.Id} deleted successfully`,
+						});
 					})
 					.catch((error) => {
 						console.error(error);
@@ -1382,5 +1666,90 @@ export default class PersonController implements IController {
 				console.error(error);
 				res.status(500).send(new ErrorResult(500));
 			});
+	}
+
+	/**
+	 * Lädt eine Mediendatei für eine Person hoch und verknüpft sie
+	 * Hinweis: Für File-Upload muss express-fileupload oder multer als Middleware im Server eingebunden sein!
+	 */
+	private async uploadMedia(req: Request, res: Response): Promise<void> {
+		const personId = req.params.id;
+		// @ts-ignore
+		const files = req.files as any;
+		if (!files || !files.file) {
+			res.status(400).send(
+				new ErrorResult(400, "No file uploaded.")
+			);
+			return;
+		}
+		const file = files.file;
+		const relatedData = new RelatedData(file.data, file.name, [personId]);
+		try {
+			await this._database.createDocument(
+				DatabaseCollectionEnum.DATA,
+				relatedData
+			);
+			const person = (await this._database.findDocument(
+				DatabaseCollectionEnum.PERSONS,
+				personId
+			)) as any;
+			if (person) {
+				person.RelatedDataIds = person.RelatedDataIds || [];
+				person.RelatedDataIds.push(relatedData.Id);
+				await this._database.updateDocument(
+					DatabaseCollectionEnum.PERSONS,
+					{ Id: personId },
+					person
+				);
+			}
+			res.status(200).send({ success: true, mediaId: relatedData.Id });
+		} catch (error: any) {
+			res.status(500).send(new ErrorResult(500, error.message));
+		}
+	}
+
+	/**
+	 * Taggt weitere Personen auf einem Medium (RelatedData)
+	 */
+	private async tagMedia(req: Request, res: Response): Promise<void> {
+		const personId = req.params.id;
+		const { mediaId, taggedPersonIds } = req.body;
+		if (!mediaId || !Array.isArray(taggedPersonIds)) {
+			res.status(400).send(
+				new ErrorResult(400, "mediaId or taggedPersonIds are missing.")
+			);
+			return;
+		}
+		try {
+			const media = (await this._database.findDocument(
+				DatabaseCollectionEnum.DATA,
+				mediaId
+			)) as any;
+			if (!media) {
+				res.status(404).send(
+					new ErrorResult(404, "Media not found.")
+				);
+				return;
+			}
+			media.TaggedPersonsIds = Array.from(
+				new Set([
+					...(media.TaggedPersonsIds || []),
+					personId,
+					...taggedPersonIds,
+				])
+			);
+			await this._database.updateDocument(
+				DatabaseCollectionEnum.DATA,
+				{ Id: mediaId },
+				media
+			);
+			res.status(200).send({
+				success: true,
+				mediaId,
+				taggedPersonIds: media.TaggedPersonsIds,
+			});
+		} catch (error: any) {
+			res.status(500).send(new ErrorResult(500, error.message));
+		}
 	}
 }

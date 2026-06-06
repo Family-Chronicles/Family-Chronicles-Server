@@ -1,7 +1,7 @@
 import { Express, Request, Response } from "express";
-import ConfigService from "../services/config.srvs.js";
-import DatabaseService from "../services/database.srvs.js";
 import { IController } from "../interfaces/controller.interface.js";
+import ConfigService from "../services/config.srvs";
+import DatabaseService from "../services/database.srvs";
 import { Config } from "../types/config.type.js";
 
 /**
@@ -32,9 +32,6 @@ export default class IndexController implements IController {
 			version: this._config.meta.version,
 			name: this._config.meta.name,
 		};
-		// eslint-disable-next-line no-unused-vars
-		this._database.listAllDatabases().then((dbs) => {
-			res.send(result);
-		});
+		res.send(result);
 	}
 }

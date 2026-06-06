@@ -1,14 +1,15 @@
 import { Express, Request, Response } from "express";
+import { body, param, validationResult } from "express-validator";
+import SecurityHelper from "../classes/securityHelper";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import User from "../models/user.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
-import bodyParser from "body-parser";
-import ErrorResult from "../models/actionResults/error.result.js";
-import Ok from "../models/actionResults/ok.result.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
-import escapeHtml from 'escape-html';
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import User from "../models/user.model";
+import AuthorizationService from "../services/auth.srvs";
+import ConfigService from "../services/config.srvs";
+import DatabaseService from "../services/database.srvs";
+import { decryptAndValidatePassword } from "../utils/password.utils";
 
 export default class UserController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -19,6 +20,56 @@ export default class UserController implements IController {
 	 * @param app
 	 */
 	public routes(app: Express): void {
+		/**
+		 * @swagger
+		 * components:
+		 *   securitySchemes:
+		 *     BearerAuth:
+		 *       type: http
+		 *       scheme: bearer
+		 *       bearerFormat: JWT
+		 *   schemas:
+		 *     User:
+		 *       type: object
+		 *       properties:
+		 *         Id:
+		 *           type: string
+		 *         Name:
+		 *           type: string
+		 *         Email:
+		 *           type: string
+		 *         Password:
+		 *           type: string
+		 *         CreatedAt:
+		 *           type: string
+		 *           format: date-time
+		 *         UpdatedAt:
+		 *           type: string
+		 *           format: date-time
+		 *         Role:
+		 *           type: string
+		 *           enum: [Admin, Editor, Viewer, Unauthorized]
+		 *         SessionID:
+		 *           type: string
+		 *         Locked:
+		 *           type: boolean
+		 *     AuthResponse:
+		 *       type: object
+		 *       properties:
+		 *         token:
+		 *           type: string
+		 *         user:
+		 *           $ref: '#/components/schemas/User'
+		 *     ErrorResult:
+		 *       type: object
+		 *       properties:
+		 *         status:
+		 *           type: integer
+		 *         message:
+		 *           type: string
+		 * security:
+		 *   - BearerAuth: []
+		 */
 		/**
 		 * GET /users
 		 * @tags users
@@ -70,9 +121,14 @@ export default class UserController implements IController {
 		 * }
 		 */
 		app.get("/users", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -127,17 +183,58 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/users/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
-		});
+		app.get(
+			"/users/:pageSize/:page",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize must be a number between 1 and 100."
+					),
+				param("page")
+					.isInt({ min: 1 })
+					.withMessage("page must be a positive number."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
-		app.get("/users/pageCount/:pageSize", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.getPageCount(req, res);
-			});
-		});
+		app.get(
+			"/users/pageCount/:pageSize",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize must be a number between 1 and 100."
+					),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /user/:id
@@ -180,11 +277,28 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/user/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/user/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * POST /user
@@ -225,11 +339,40 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.post("/user", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.create(req, res);
-			});
-		});
+		app.post(
+			"/user",
+			[
+				body("Name")
+					.isString()
+					.notEmpty()
+					.withMessage("Name is required."),
+				body("Password")
+					.isString()
+					.notEmpty()
+					.withMessage("Password is required."),
+				body("Email")
+					.isEmail()
+					.withMessage("A valid email is required."),
+				body("Role")
+					.isString()
+					.isIn(["Admin", "Editor", "Viewer", "Unauthorized"])
+					.withMessage("Invalid role."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin"]
+				);
+			}
+		);
 
 		/**
 		 * PUT /user/:id
@@ -273,11 +416,32 @@ export default class UserController implements IController {
 		 */
 		app.put(
 			"/user/:id",
-			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+				body("Name").optional().isString(),
+				body("Email").optional().isEmail(),
+				body("Password").optional().isString(),
+				body("Role")
+					.optional()
+					.isString()
+					.isIn(["Admin", "Editor", "Viewer", "Unauthorized"]),
+				body("Locked").optional().isBoolean(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -316,11 +480,28 @@ export default class UserController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/user/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/user/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin"]
+				);
+			}
+		);
 	}
 
 	private index(req: Request, res: Response): void {
@@ -334,12 +515,10 @@ export default class UserController implements IController {
 					users = [];
 				}
 
-				users.forEach((user) => {
-					//@ts-ignore
-					delete user._id;
-				});
+				// Sensible Daten entfernen
+				const sanitizedUsers = SecurityHelper.sanitizeUsersFull(users);
 
-				res.send(users);
+				res.send(sanitizedUsers);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -347,85 +526,87 @@ export default class UserController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
-			this._collectionName
-		);
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const page = parseInt(req.params.page);
+			const users = await this._database.listDocumentsPage<User>(
+				this._collectionName,
+				page,
+				pageSize
+			);
 
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
-				}
-
-				users.forEach((user) => {
-					//@ts-ignore
-					delete user._id;
-				});
-
-				const pageSize = parseInt(req.params.pageSize);
-				const page = parseInt(req.params.page);
-
-				const result = Paginator.paginate(users, pageSize, page);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			res.send(SecurityHelper.sanitizeUsersFull(users));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
-			this._collectionName
-		);
-
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
-				}
-
-				users.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<User>(users, pageSize);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		console.log(req.body);
-		const user = new User(
-			null,
-			req.body.name,
-			req.body.email,
-			req.body.password,
-			new Date(),
-			new Date(),
-			req.body.role,
-			false,
-			req.body.sessionID ?? undefined
-		);
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			const config = ConfigService.getInstance().config;
+			const existingUser = await this._database.getUserByUsername(
+				req.body.Name
+			);
+			if (existingUser) {
+				res.status(400).send(
+					new ErrorResult(400, "User already exists")
+				);
+				return;
+			}
 
-		this._database
-			.createDocument<User>(this._collectionName, user)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
+			const decryptResult = decryptAndValidatePassword(
+				req.body.Password,
+				config.auth.privateKey
+			);
+			if (!decryptResult.success) {
+				res.status(decryptResult.error!.code).send(
+					new ErrorResult(
+						decryptResult.error!.code,
+						decryptResult.error!.message
+					)
+				);
+				return;
+			}
 
-		res.send(user);
+			const hashedPassword = this._authorization.hashPassword(
+				decryptResult.password!
+			);
+			const user = new User(
+				null,
+				req.body.Name,
+				req.body.Email,
+				hashedPassword,
+				new Date(),
+				new Date(),
+				req.body.Role,
+				false,
+				undefined
+			);
+
+			await this._database.createDocument<User>(
+				this._collectionName,
+				user
+			);
+			res.send(SecurityHelper.sanitizeUserFull(user));
+		} catch (error: any) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500, error.message));
+		}
 	}
 
 	private show(req: Request, res: Response): void {
@@ -436,13 +617,13 @@ export default class UserController implements IController {
 
 		userDocument
 			.then((user) => {
-				if (user === null) {
+				if (user === null || user === undefined) {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
-				//@ts-ignore
-				delete user!._id;
-				res.send(user);
+				// Sensible Daten entfernen
+				const sanitizedUser = SecurityHelper.sanitizeUserFull(user);
+				res.send(sanitizedUser);
 			})
 			.catch((error) => {
 				console.error(error);
@@ -450,82 +631,86 @@ export default class UserController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const config = ConfigService.getInstance().config;
+			const user = await this._database.findDocument<User>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!user) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				const updatedUser = new User(
-					user.Id,
-					req.body.name ?? user.Name,
-					req.body.email ?? user.Email,
-					req.body.password ?? user.Password,
-					user.CreatedAt,
-					new Date(),
-					req.body.role ?? user.Role,
-					req.body.locked ?? user.Locked,
-					req.body.sessionID ?? user.SessoionID ?? undefined
+			let hashedPassword = user.Password;
+			if (req.body.Password) {
+				const decryptResult = decryptAndValidatePassword(
+					req.body.Password,
+					config.auth.privateKey
 				);
-
-				const result = JSON.stringify(updatedUser);
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						userDocument,
-						updatedUser
-					)
-					.then(() => {
-						const sanitizedResult = escapeHtml(result);
-						res.status(200).send(sanitizedResult);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
-	}
-
-	private delete(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
-					res.status(404).send(new ErrorResult(404));
+				if (!decryptResult.success) {
+					res.status(decryptResult.error!.code).send(
+						new ErrorResult(
+							decryptResult.error!.code,
+							decryptResult.error!.message
+						)
+					);
 					return;
 				}
-				this._database
-					.deleteDocument(this._collectionName, user)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`User ${user.Name} with id ${user.Id} deleted successfully`
-							)
-						);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
+
+				hashedPassword = this._authorization.hashPassword(
+					decryptResult.password!
+				);
+			}
+
+			const updatedUser = new User(
+				user.Id,
+				req.body.Name ?? user.Name,
+				req.body.Email ?? user.Email,
+				hashedPassword,
+				user.CreatedAt,
+				new Date(),
+				req.body.Role ?? user.Role,
+				req.body.Locked ?? user.Locked,
+				user.SessionID,
+				user.SessionCreatedAt
+			);
+
+			await this._database.updateDocument(
+				this._collectionName,
+				{ Id: updatedUser.Id },
+				updatedUser
+			);
+			res.status(200).send(SecurityHelper.sanitizeUserFull(updatedUser));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
+	}
+
+	private async delete(req: Request, res: Response): Promise<void> {
+		try {
+			const user = await this._database.findDocument<User>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!user) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+
+			await this._database.deleteDocument(this._collectionName, {
+				Id: user.Id,
 			});
+			res.status(200).send(
+				new Ok(
+					`User ${user.Name} with id ${user.Id} deleted successfully`
+				)
+			);
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 }

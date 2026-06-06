@@ -1,16 +1,16 @@
 import { H } from "friendly-helper";
-import { RelationshipTypeEnum } from "../enums/relationship.enum.js";
-import { RoleEnum } from "../enums/role.enum.js";
-import RelatedData from "../models/data.model.js";
-import Family from "../models/family.model.js";
-import Relationship from "../models/relationship.model.js";
-import TaggedPerson from "../models/taggedPerson.model.js";
-import User from "../models/user.model.js";
-import DatabaseService from "../services/database.srvs.js";
-import Person from "../models/person.model.js";
-import DatabaseModel from "../models/dataBase.model.js";
-import { Sex } from "../enums/sex.enum.js";
-import EventModel from "../models/event.model.js";
+import { RelationshipTypeEnum } from "../enums/relationship.enum";
+import { RoleEnum } from "../enums/role.enum";
+import { Sex } from "../enums/sex.enum";
+import RelatedData from "../models/data.model";
+import DatabaseModel from "../models/dataBase.model";
+import EventModel from "../models/event.model";
+import Family from "../models/family.model";
+import Person from "../models/person.model";
+import Relationship from "../models/relationship.model";
+import TaggedPerson from "../models/taggedPerson.model";
+import User from "../models/user.model";
+import DatabaseService from "../services/database.srvs";
 
 /**
  * Helper
@@ -97,7 +97,8 @@ export default class Helper {
 						"",
 						""
 					),
-				]
+				],
+				"Test Person Reason of Death " + index
 			);
 			const relationship = new Relationship(
 				null,
@@ -127,7 +128,9 @@ export default class Helper {
 				new Date(),
 				new Date(),
 				RoleEnum.ADMIN,
-				false
+				false,
+				undefined,
+				undefined
 			);
 
 			testData.familys.push(family);

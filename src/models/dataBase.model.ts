@@ -46,6 +46,11 @@ export default class DatabaseModel {
 	public failedAttempts: FailedAttemptModel[];
 
 	/**
+	 * Audit logs of the database
+	 */
+	public auditlogs?: any[]; // Optional, not part of the normal workflow but kept for completeness
+
+	/**
 	 * Creates an instance of database model.
 	 */
 	constructor() {
@@ -56,5 +61,6 @@ export default class DatabaseModel {
 		this.taggedPersons = [];
 		this.users = [];
 		this.failedAttempts = [];
+		this.auditlogs = [];
 	}
 }

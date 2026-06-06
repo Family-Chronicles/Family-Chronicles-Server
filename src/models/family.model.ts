@@ -10,20 +10,23 @@ import crypto from "crypto";
  * @property {string} Description - Family description
  * @property {string} Notes - Family notes
  * @property {string[]} HistoricalNames - Family historical names
+ * @property {string[]} MemberIds - IDs of the associated persons (members)
  * @constructor
  * @param {string | null | undefined} id - Family id
  * @param {string} Name - Family name
  * @param {string} Description - Family description
  * @param {string} Notes - Family notes
  * @param {string[]} HistoricalNames - Family historical names
+ * @param {string[]} MemberIds - IDs of the associated persons (members)
  * @returns {Family} - Family instance
  * @example
  * const family = new Family(
- * 	null,
- * 	"Smith",
- * 	"Smith family",
- * 	"Notes",
- * 	["Smiths", "Smythe"]
+ *   null,
+ *   "Smith",
+ *   "Smith family",
+ *   "Notes",
+ *   ["Smiths", "Smythe"],
+ *   ["personId1", "personId2"]
  * );
  */
 export default class Family implements IModel {
@@ -33,6 +36,7 @@ export default class Family implements IModel {
 	public Description: string;
 	public Notes: string;
 	public HistoricalNames: string[];
+	public MemberIds: string[];
 
 	// Constructor
 	constructor(
@@ -40,7 +44,8 @@ export default class Family implements IModel {
 		Name: string,
 		Description: string,
 		Notes: string,
-		HistoricalNames: string[]
+		HistoricalNames: string[],
+		MemberIds: string[] = []
 	) {
 		if (id === "" || id === null || id === undefined) {
 			this.Id = crypto.randomUUID();
@@ -51,5 +56,6 @@ export default class Family implements IModel {
 		this.Description = Description;
 		this.Notes = Notes;
 		this.HistoricalNames = HistoricalNames;
+		this.MemberIds = MemberIds;
 	}
 }

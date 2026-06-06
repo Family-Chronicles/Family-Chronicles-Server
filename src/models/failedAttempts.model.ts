@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { IModel } from "../interfaces/model.interface";
 
 /**
@@ -42,7 +43,7 @@ export default class FailedAttemptModel implements IModel {
 		failedIPs: string[]
 	) {
 		if (id === "" || id === null || id === undefined) {
-			this.Id = userId;
+			this.Id = crypto.randomUUID();
 		} else {
 			this.Id = id;
 		}

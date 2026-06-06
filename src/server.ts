@@ -1,15 +1,17 @@
-import { Config } from "./types/config.type.js";
-import express, { Express } from "express";
-import dotenv from "dotenv";
-import ConfigService from "./services/config.srvs.js";
-import DatabaseService from "./services/database.srvs.js";
-import RouterCore from "./core/router.core.js";
-import expressJSDocSwagger from "express-jsdoc-swagger";
-import * as url from "url";
 import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import express, { Express } from "express";
+import expressJSDocSwagger from "express-jsdoc-swagger";
 import rateLimiter from "express-rate-limit";
-import Helper from "./classes/helper.js";
-import GlobalErrorHandler from "./core/error.core.js";
+import helmet from "helmet";
+import { Server as HttpServer } from "http";
+import morgan from "morgan";
+import GlobalErrorHandler from "./core/error.core";
+import RouterCore from "./core/router.core";
+import ConfigService from "./services/config.srvs";
+import DatabaseService from "./services/database.srvs";
+import { Config } from "./types/config.type.js";
+
 /**
  * Server
  * @class
@@ -25,14 +27,17 @@ import GlobalErrorHandler from "./core/error.core.js";
 class Server {
 	private app: Express = express();
 	private port = 8080;
-	private __filename = url.fileURLToPath(import.meta.url);
-	private __dirname = url.fileURLToPath(new URL(".", import.meta.url));
-	private testDataCount = 0;
+	private httpServer?: HttpServer;
+	private __filename = typeof __filename !== "undefined" ? __filename : "";
+	private __dirname = typeof __dirname !== "undefined" ? __dirname : "";
+	// private testDataCount = 0;
 
 	constructor() {
 		dotenv.config();
 		ConfigService.getInstance(), DatabaseService.getInstance();
-		new GlobalErrorHandler();
+		if (process.env.NODE_ENV !== "test") {
+			new GlobalErrorHandler();
+		}
 
 		const limiter = rateLimiter({
 			max: 20,
@@ -49,18 +54,33 @@ class Server {
 		this.swagger(this.app);
 		this.app.use(bodyParser.json());
 		this.app.use(bodyParser.urlencoded({ extended: false }));
+		this.app.use(helmet());
+		this.app.use(morgan("combined"));
 		this.app.use(limiter);
+
+		// CORS configuration: load the allowed origins from an environment variable
+		const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
+			"http://localhost:3000",
+		];
 		this.app.use((req, res, next) => {
-			res.header("Access-Control-Allow-Origin", "*");
+			const origin = req.headers.origin;
+			if (origin && allowedOrigins.includes(origin)) {
+				res.header("Access-Control-Allow-Origin", origin);
+			}
 			res.header(
 				"Access-Control-Allow-Headers",
 				"Origin, X-Requested-With, Content-Type, Accept, Authorization"
 			);
 			res.header(
 				"Access-Control-Allow-Methods",
-				"GET, POST, PUT, PATCH, DELETE"
+				"GET, POST, PUT, PATCH, DELETE, OPTIONS"
 			);
 			res.header("Access-Control-Allow-Credentials", "true");
+
+			// Answer preflight requests
+			if (req.method === "OPTIONS") {
+				return res.status(204).end();
+			}
 			next();
 		});
 
@@ -77,16 +97,14 @@ class Server {
 
 		RouterCore.buildUpRoutes(this.app);
 
-		this.app.listen(this.port, () => {
-			console.log(
-				`⚡️[server]: Server is running at http://localhost:${this.port}`
-			);
-			const toggl = false;
-			if (toggl && this.testDataCount === 0) {
-				Helper.testData();
-				this.testDataCount++;
-			}
-		});
+		if (process.env.NODE_ENV !== "test") {
+			this.httpServer = this.app.listen(this.port, () => {
+				console.log(
+					`⚡️[server]: Server is running at http://localhost:${this.port}`
+				);
+				// Test-data initialization removed for the test context
+			});
+		}
 	}
 
 	private swagger(app: Express): object {
@@ -146,4 +164,5 @@ class Server {
 	}
 }
 
-new Server();
+const serverInstance = new Server();
+export default serverInstance["app"];

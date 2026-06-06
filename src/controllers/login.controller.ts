@@ -1,16 +1,20 @@
-import { IController } from "../interfaces/controller.interface";
-import DatabaseService from "../services/database.srvs";
-import { Express, Request, Response } from "express";
-import crypto from "crypto";
-import NodeRSA from "node-rsa";
-import ErrorResult from "../models/actionResults/error.result";
-import User from "../models/user.model";
-import Ok from "../models/actionResults/ok.result";
 import "dotenv/config";
-import AuthorizationService from "../services/auth.srvs";
+import { Express, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
+import { getClientIP, SecurityConstants } from "../config/security.constants";
 import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
 import { RoleEnum } from "../enums/role.enum";
+import { IController } from "../interfaces/controller.interface";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import User from "../models/user.model";
+import AuthorizationService from "../services/auth.srvs";
 import ConfigService from "../services/config.srvs";
+import DatabaseService from "../services/database.srvs";
+import {
+	decryptAndValidatePassword,
+	decryptPasswordOnly,
+} from "../utils/password.utils";
 
 /**
  * Login controller
@@ -28,6 +32,16 @@ export default class LoginController implements IController {
 	private _authorization = AuthorizationService.getInstance();
 	private _collectionName = DatabaseCollectionEnum.USERS;
 	private _config = ConfigService.getInstance();
+	private _registerLimiter = rateLimit({
+		windowMs: 60 * 60 * 1000,
+		max: 5,
+		standardHeaders: true,
+		legacyHeaders: false,
+		message: new ErrorResult(
+			429,
+			"Too many registration attempts. Please try again later."
+		),
+	});
 
 	public routes(app: Express): void {
 		/**
@@ -39,7 +53,7 @@ export default class LoginController implements IController {
 		 *  "token": "TOKEN",
 		 * }
 		 */
-		app.get("/user/login", (req: Request, res: Response) => {
+		app.post("/user/login", (req: Request, res: Response) => {
 			this.login(req, res);
 		});
 
@@ -52,9 +66,13 @@ export default class LoginController implements IController {
 		 *  "message": "User created successfully",
 		 * }
 		 */
-		app.post("/user/register", (req: Request, res: Response) => {
-			this.register(req, res);
-		});
+		app.post(
+			"/user/register",
+			this._registerLimiter,
+			(req: Request, res: Response) => {
+				this.register(req, res);
+			}
+		);
 
 		/**
 		 * PUT /user/update
@@ -65,64 +83,131 @@ export default class LoginController implements IController {
 		 *  "message": "User updated successfully",
 		 * }
 		 */
-		app.put("/user/update", this._authorization.authorize.bind(this._authorization), (req: Request, res: Response) => {
-			this.updateAccount(req, res);
-		});
+		app.put(
+			"/user/update",
+			this._authorization.authorize.bind(this._authorization),
+			(req: Request, res: Response) => {
+				this.updateAccount(req, res);
+			}
+		);
 
-		app.delete("/user/logout", this._authorization.authorize.bind(this._authorization), (req: Request, res: Response) => {
-			this.logout(req, res);
-		});
+		app.delete(
+			"/user/logout",
+			this._authorization.authorize.bind(this._authorization),
+			(req: Request, res: Response) => {
+				this.logout(req, res);
+			}
+		);
 	}
 
-	private login(req: Request, res: Response): void {
+	private async login(req: Request, res: Response): Promise<void> {
 		const { username, password } = req.body;
-		const key = new NodeRSA(this._config.config.auth.privateKey);
+		const clientIP = getClientIP(req);
 
 		if (!username || !password) {
-			res.status(400).send("Missing username or password");
+			res.status(400).send(
+				new ErrorResult(400, "Missing username or password")
+			);
 			return;
 		}
-		// eslint-disable-next-line no-unused-vars
-		this._database
-			.getUserByUsername(username)
-			.then((user: User | null) => {
-				if (!user) {
-					res.status(400).send(
-						new ErrorResult(400, "User not found")
-					);
-					return;
-				}
-				if (
-					!this._authorization.comparePassword(
-						key.decrypt(password, "utf8"),
-						user.Password
+
+		try {
+			const user = await this._database.getUserByUsername(username);
+
+			if (!user) {
+				// Verzögerung um Timing-Attacken zu erschweren
+				await SecurityConstants.delay();
+				res.status(400).send(
+					new ErrorResult(400, "Invalid credentials")
+				);
+				return;
+			}
+
+			// Prüfe ob User gesperrt ist
+			if (user.Locked) {
+				await SecurityConstants.delay();
+				res.status(401).send(
+					new ErrorResult(401, "Invalid credentials")
+				);
+				return;
+			}
+
+			// Prüfe fehlgeschlagene Versuche
+			const isLocked =
+				await this._authorization.isAccountTemporarilyLocked(
+					user.Id,
+					SecurityConstants.MAX_LOGIN_ATTEMPTS,
+					SecurityConstants.LOCKOUT_DURATION_MS
+				);
+
+			if (isLocked) {
+				await SecurityConstants.delay();
+				res.status(429).send(
+					new ErrorResult(
+						429,
+						"Too many failed attempts. Please try again later."
 					)
-				) {
-					res.status(400).send(
-						new ErrorResult(400, "Wrong password")
-					);
-					return;
+				);
+				return;
+			}
+
+			// Passwort entschlüsseln (ohne Stärke-Validierung beim Login)
+			const decryptResult = decryptPasswordOnly(
+				password,
+				this._config.config.auth.privateKey
+			);
+			if (!decryptResult.success) {
+				await SecurityConstants.delay();
+				res.status(decryptResult.error!.code).send(
+					new ErrorResult(
+						decryptResult.error!.code,
+						decryptResult.error!.message
+					)
+				);
+				return;
+			}
+			const decryptedPassword = decryptResult.password!;
+
+			const passwordMatch = this._authorization.comparePassword(
+				decryptedPassword,
+				user.Password
+			);
+
+			if (!passwordMatch) {
+				// Fehlgeschlagenen Versuch protokollieren
+				await this._authorization.addFailedAttempt(user.Id, clientIP);
+
+				// Prüfen ob nach diesem Versuch gesperrt werden sollte
+				const shouldLock = await this._authorization.shouldLockAccount(
+					user.Id,
+					SecurityConstants.MAX_LOGIN_ATTEMPTS
+				);
+				if (shouldLock) {
+					await this._authorization.lockUser(user.Id);
 				}
 
-				if (user.Locked) {
-					res.status(401).send(
-						new ErrorResult(401, "User is locked")
-					);
-					return;
-				}
+				await SecurityConstants.delay();
 
-				user.SessoionID = crypto.randomUUID();
+				res.status(401).send(
+					new ErrorResult(401, "Invalid credentials")
+				);
+				return;
+			}
 
-				const token = this._authorization.generateToken(user);
-				res.send(new Ok(token));
-			})
-			.catch((err) => {
-				res.status(500).send(new ErrorResult(500, err.message));
-			});
+			// Bei erfolgreichem Login: Fehlversuche zurücksetzen
+			await this._authorization.resetFailedAttempts(user.Id);
+
+			// Session generieren und speichern
+			await this._authorization.createSession(user);
+			const token = this._authorization.generateToken(user);
+			res.send({ token });
+		} catch (err: any) {
+			console.error("Login error:", err);
+			res.status(500).send(new ErrorResult(500, "Internal server error"));
+		}
 	}
 
-	private register(req: Request, res: Response): void {
-		const key = new NodeRSA(this._config.config.auth.privateKey);
+	private async register(req: Request, res: Response): Promise<void> {
 		const body: User = req.body;
 		if (!body.Name || !body.Password) {
 			res.status(400).send(
@@ -130,99 +215,235 @@ export default class LoginController implements IController {
 			);
 			return;
 		}
-		// eslint-disable-next-line no-unused-vars
-		this._database
-			.getUserByUsername(body.Name)
-			.then((user: User | null) => {
-				if (user) {
-					res.status(400).send(
-						new ErrorResult(400, "User already exists")
-					);
-					return;
-				}
-				const hashedPassword = this._authorization.hashPassword(
-					key.decrypt(body.Password, "utf8")
-				);
-				const newUser = new User(
-					null,
-					body.Name,
-					body.Email,
-					hashedPassword,
-					new Date(),
-					new Date(),
-					RoleEnum.UNAUTHORIZED,
-					false,
-					undefined
-				);
-				this._database
-					.addUser(newUser)
-					.then(() => {
-						res.send(new Ok("User created successfully"));
-					})
-					.catch((err) => {
-						res.status(500).send(new ErrorResult(500, err.message));
-					});
-			})
-			.catch((err) => {
-				res.status(500).send(new ErrorResult(500, err.message));
-			});
-	}
 
-	private updateAccount(req: Request, res: Response): void {
-		const key = new NodeRSA(this._config.config.auth.privateKey);
-		const body: User = req.body;
-		if (!body.Name || !body.Password) {
+		const normalizedEmail = body.Email?.trim().toLowerCase();
+
+		// Username-Validierung: Nur alphanumerische Zeichen und Unterstriche, 3-50 Zeichen
+		const usernameRegex = /^[a-zA-Z0-9_]{3,50}$/;
+		if (!usernameRegex.test(body.Name)) {
 			res.status(400).send(
-				new ErrorResult(400, "Missing username or password")
+				new ErrorResult(
+					400,
+					"Username must be 3-50 characters and contain only letters, numbers, and underscores"
+				)
 			);
 			return;
 		}
-		// eslint-disable-next-line no-unused-vars
+
+		// E-Mail-Validierung (optional aber empfohlen)
+		if (body.Email) {
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			if (!emailRegex.test(normalizedEmail ?? "")) {
+				res.status(400).send(
+					new ErrorResult(400, "Invalid email format")
+				);
+				return;
+			}
+		}
+
+		// Passwort entschlüsseln und validieren
+		const decryptResult = decryptAndValidatePassword(
+			body.Password,
+			this._config.config.auth.privateKey
+		);
+		if (!decryptResult.success) {
+			res.status(decryptResult.error!.code).send(
+				new ErrorResult(
+					decryptResult.error!.code,
+					decryptResult.error!.message
+				)
+			);
+			return;
+		}
+		const decryptedPassword = decryptResult.password!;
+
+		try {
+			const existingUser = await this._database.getUserByUsername(
+				body.Name
+			);
+			if (existingUser) {
+				res.status(400).send(
+					new ErrorResult(400, "User already exists")
+				);
+				return;
+			}
+
+			if (normalizedEmail) {
+				const existingEmailUser = await this._database.getUserByEmail(
+					normalizedEmail
+				);
+				if (existingEmailUser) {
+					res.status(400).send(
+						new ErrorResult(400, "Email address already in use")
+					);
+					return;
+				}
+			}
+
+			const hashedPassword =
+				this._authorization.hashPassword(decryptedPassword);
+			const newUser = new User(
+				null,
+				body.Name,
+				normalizedEmail ?? body.Email,
+				hashedPassword,
+				new Date(),
+				new Date(),
+				RoleEnum.UNAUTHORIZED,
+				false,
+				undefined
+			);
+
+			await this._database.addUser(newUser);
+			res.send(new Ok("User created successfully"));
+		} catch (err: any) {
+			res.status(500).send(new ErrorResult(500, err.message));
+		}
+	}
+
+	private async updateAccount(req: Request, res: Response): Promise<void> {
+		const body: User = req.body;
+		if (!body.Name) {
+			res.status(400).send(new ErrorResult(400, "Missing username"));
+			return;
+		}
+
+		// Authentifizierten Benutzer aus Token extrahieren
+		const token = req.headers["authorization"];
+		const requestingUser = this._authorization.decodeToken<User>(
+			token as string
+		);
+		if (!requestingUser) {
+			res.status(401).send(new ErrorResult(401, "Invalid token"));
+			return;
+		}
+
+		// Den authentifizierten Benutzer aus der DB holen für aktuelle Rolle
+		const authenticatedUser = await this._database.getUserByUsername(
+			requestingUser.Name
+		);
+		if (!authenticatedUser) {
+			res.status(401).send(
+				new ErrorResult(401, "Authenticated user not found")
+			);
+			return;
+		}
+
 		this._database
 			.getUserByUsername(body.Name)
-			.then((user: User | null) => {
+			.then(async (user: User | null) => {
 				if (!user) {
 					res.status(400).send(
 						new ErrorResult(400, "User not found")
 					);
 					return;
 				}
-				const hashedPassword = key.decrypt(
-					this._authorization.hashPassword(body.Password),
-					"utf8"
-				);
-				const newUser = new User(
-					body.Id || null,
+
+				// Benutzer darf nur sein eigenes Konto bearbeiten, außer Admin
+				if (
+					authenticatedUser.Name !== user.Name &&
+					authenticatedUser.Role !== RoleEnum.ADMIN
+				) {
+					res.status(403).send(
+						new ErrorResult(
+							403,
+							"You can only update your own account"
+						)
+					);
+					return;
+				}
+
+				// Passwort nur aktualisieren wenn es im Body enthalten ist
+				const normalizedEmail = body.Email?.trim().toLowerCase();
+				if (normalizedEmail && normalizedEmail !== user.Email) {
+					const existingEmailUser =
+						await this._database.getUserByEmail(normalizedEmail);
+					if (existingEmailUser && existingEmailUser.Id !== user.Id) {
+						res.status(400).send(
+							new ErrorResult(400, "Email address already in use")
+						);
+						return;
+					}
+				}
+
+				// Passwort nur aktualisieren wenn es im Body enthalten ist
+				let hashedPassword = user.Password;
+				const passwordChanged = Boolean(body.Password);
+				if (body.Password) {
+					// Passwort entschlüsseln und validieren
+					const decryptResult = decryptAndValidatePassword(
+						body.Password,
+						this._config.config.auth.privateKey
+					);
+					if (!decryptResult.success) {
+						res.status(decryptResult.error!.code).send(
+							new ErrorResult(
+								decryptResult.error!.code,
+								decryptResult.error!.message
+							)
+						);
+						return;
+					}
+
+					hashedPassword = this._authorization.hashPassword(
+						decryptResult.password!
+					);
+				}
+
+				const updatedUser = new User(
+					user.Id,
 					body.Name || user.Name,
-					body.Email || user.Email,
-					hashedPassword || user.Password,
+					normalizedEmail || user.Email,
+					hashedPassword,
 					user.CreatedAt,
 					new Date(),
 					user.Role,
 					user.Locked,
-					user.SessoionID
+					passwordChanged ? undefined : user.SessionID,
+					passwordChanged ? undefined : user.SessionCreatedAt
 				);
 
-				if (body.Role !== user.Role || body.Locked !== user.Locked) {
-					if (user.Role !== RoleEnum.ADMIN) {
-						res.status(401).send(
-							new ErrorResult(401, "Unauthorized")
+				// Rolle und Lock-Status nur durch Admin änderbar - prüfe authentifizierten User!
+				if (body.Role !== undefined && body.Role !== user.Role) {
+					if (authenticatedUser.Role !== RoleEnum.ADMIN) {
+						res.status(403).send(
+							new ErrorResult(
+								403,
+								"Insufficient permissions to change role"
+							)
 						);
 						return;
-					} else {
-						newUser.Role = body.Role;
-						newUser.Locked = body.Locked;
 					}
+					(updatedUser as any).Role = body.Role;
+				}
+
+				if (body.Locked !== undefined && body.Locked !== user.Locked) {
+					if (authenticatedUser.Role !== RoleEnum.ADMIN) {
+						res.status(403).send(
+							new ErrorResult(
+								403,
+								"Insufficient permissions to change lock status"
+							)
+						);
+						return;
+					}
+					(updatedUser as any).Locked = body.Locked;
 				}
 
 				this._database
 					.updateDocument<User>(
 						this._collectionName,
-						{ Id: newUser.Id },
-						newUser
+						{ Id: updatedUser.Id },
+						updatedUser
 					)
 					.then(() => {
-						res.send(new Ok("User updated successfully"));
+						res.send(
+							new Ok(
+								passwordChanged
+									? "Password updated successfully. Please log in again."
+									: "User updated successfully"
+							)
+						);
 					})
 					.catch((err) => {
 						res.status(500).send(new ErrorResult(500, err.message));
@@ -253,15 +474,15 @@ export default class LoginController implements IController {
 		) as User | null;
 
 		if (!decoded || decoded === null) {
-			res.status(500).send(
-				new ErrorResult(500, "Failed to authenticate token.")
+			res.status(401).send(
+				new ErrorResult(401, "Failed to authenticate token.")
 			);
 			return;
 		}
 
 		this._database
 			.getUserByUsername(decoded.Name)
-			.then((user: User | null) => {
+			.then(async (user: User | null) => {
 				if (!user) {
 					res.status(404).send(
 						new ErrorResult(404, "No user found.")
@@ -269,27 +490,17 @@ export default class LoginController implements IController {
 					return;
 				}
 
-				if (user.Password !== decoded.Password) {
+				// Validiere Session statt Password (Password ist nicht im Token)
+				if (!user.SessionID || user.SessionID !== decoded.SessionID) {
 					res.status(401).send(
-						new ErrorResult(401, "Invalid password.")
+						new ErrorResult(401, "Invalid session.")
 					);
 					return;
 				}
 
-				user.SessoionID = undefined;
-
-				this._database
-					.updateDocument<User>(
-						this._collectionName,
-						{ Id: user.Id },
-						user
-					)
-					.then(() => {
-						res.send(new Ok("User logged out successfully"));
-					})
-					.catch((err) => {
-						res.status(500).send(new ErrorResult(500, err.message));
-					});
+				// Session entfernen
+				await this._authorization.destroySession(user);
+				res.send(new Ok("User logged out successfully"));
 			})
 			.catch((err) => {
 				res.status(500).send(new ErrorResult(500, err.message));

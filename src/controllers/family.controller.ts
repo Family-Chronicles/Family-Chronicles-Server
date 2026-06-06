@@ -1,13 +1,15 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import Family from "../models/family.model.js";
-import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
-import ErrorResult from "../models/actionResults/error.result.js";
-import Ok from "../models/actionResults/ok.result.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
+import escapeHtml from "escape-html";
+import { Express, Request, Response } from "express";
+import { body, param, validationResult } from "express-validator";
+import SecurityHelper from "../classes/securityHelper";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum";
+import { IController } from "../interfaces/controller.interface.js";
+import ErrorResult from "../models/actionResults/error.result";
+import Ok from "../models/actionResults/ok.result";
+import Family from "../models/family.model";
+import AuthorizationService from "../services/auth.srvs";
+import DatabaseService from "../services/database.srvs";
 
 export default class FamilyController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -63,9 +65,14 @@ export default class FamilyController implements IController {
 		 * }
 		 */
 		app.get("/familys", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -114,11 +121,33 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/familys/:pageSize/:page", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.indexPaged(req, res);
-			});
-		});
+		app.get(
+			"/familys/:pageSize/:page",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize must be a number between 1 and 100."
+					),
+				param("page")
+					.isInt({ min: 1 })
+					.withMessage("page must be a positive number."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * GET /familys/pageCount/:pageSize
@@ -158,10 +187,26 @@ export default class FamilyController implements IController {
 		 */
 		app.get(
 			"/familys/pageCount/:pageSize",
+			[
+				param("pageSize")
+					.isInt({ min: 1, max: 100 })
+					.withMessage(
+						"pageSize must be a number between 1 and 100."
+					),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.getPageCount(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -207,11 +252,28 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/family/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/family/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * POST /family
@@ -258,10 +320,27 @@ export default class FamilyController implements IController {
 		app.post(
 			"/family",
 			bodyParser.json(),
+			[
+				body("Name")
+					.isString()
+					.withMessage("Name must be a string."),
+				body("Description").optional().isString(),
+				body("Notes").optional().isString(),
+				body("HistoricalNames").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -309,10 +388,28 @@ export default class FamilyController implements IController {
 		app.put(
 			"/family/:id",
 			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+				body("Name").optional().isString(),
+				body("Description").optional().isString(),
+				body("Notes").optional().isString(),
+				body("HistoricalNames").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -351,11 +448,101 @@ export default class FamilyController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/family/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/family/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin"]
+				);
+			}
+		);
+
+		/**
+		 * POST /family/:id/addMember
+		 * @summary Fügt eine Person (ID) zur Familie hinzu
+		 * @param {string} id.path.required - die ID der Familie
+		 * @param {string} personId.body.required - die ID der Person
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.post(
+			"/family/:id/addMember",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.addMember(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
+
+		/**
+		 * POST /family/:id/removeMember
+		 * @summary Entfernt eine Person (ID) aus der Familie
+		 * @param {string} id.path.required - die ID der Familie
+		 * @param {string} personId.body.required - die ID der Person
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.post(
+			"/family/:id/removeMember",
+			bodyParser.json(),
+			(req: Request, res: Response) => {
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.removeMember(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
+
+		/**
+		 * GET /family/:id/lastnames
+		 * @summary Gibt die Nachnamen aller Mitglieder der Familie zurück
+		 * @param {string} id.path.required - die ID der Familie
+		 * @return {object} 200 - success response - application/json
+		 */
+		app.get(
+			"/family/:id/lastnames",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getLastNames(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 	}
 
 	private index(req: Request, res: Response): void {
@@ -369,12 +556,7 @@ export default class FamilyController implements IController {
 					familys = [];
 				}
 
-				familys.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
-				res.send(familys);
+				res.send(SecurityHelper.removeMongoIds(familys));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -382,88 +564,57 @@ export default class FamilyController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const familyDocuments = this._database.listAllDocuments<Family>(
-			this._collectionName
-		);
-
-		familyDocuments
-			.then((familys) => {
-				if (familys === null) {
-					familys = [];
-				}
-
-				familys.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
-				const pageSize = parseInt(req.params.pageSize);
-				const page = parseInt(req.params.page);
-
-				const result = Paginator.paginate<Family>(
-					familys,
-					pageSize,
-					page
-				);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const page = parseInt(req.params.page);
+			const familys = await this._database.listDocumentsPage<Family>(
+				this._collectionName,
+				page,
+				pageSize
+			);
+			res.send(SecurityHelper.removeMongoIds(familys));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private getPageCount(req: Request, res: Response): void {
-		const familyDocuments = this._database.listAllDocuments<Family>(
-			this._collectionName
-		);
-
-		familyDocuments
-			.then((familys) => {
-				if (familys === null) {
-					familys = [];
-				}
-
-				familys.forEach((family) => {
-					//@ts-ignore
-					delete family._id;
-				});
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<Family>(
-					familys,
-					pageSize
-				);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		console.log(req.body);
-		const family = new Family(
-			null,
-			req.body.Name,
-			req.body.Description,
-			req.body.Notes,
-			req.body.HistoricalNames
-		);
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			const family = new Family(
+				null,
+				escapeHtml(req.body.Name),
+				escapeHtml(req.body.Description ?? ""),
+				escapeHtml(req.body.Notes ?? ""),
+				(req.body.HistoricalNames ?? []).map((value: string) =>
+					escapeHtml(value)
+				),
+				req.body.MemberIds ?? []
+			);
 
-		this._database
-			.createDocument<Family>(this._collectionName, family)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
-
-		res.send(family);
+			await this._database.createDocument<Family>(
+				this._collectionName,
+				family
+			);
+			res.send(SecurityHelper.removeMongoId(family));
+		} catch (error: any) {
+			console.error(error);
+			res.status(500).send({ status: 500, message: error.message });
+		}
 	}
 
 	private show(req: Request, res: Response): void {
@@ -478,9 +629,7 @@ export default class FamilyController implements IController {
 					res.status(404).send(new ErrorResult(404));
 					return;
 				}
-				//@ts-ignore
-				delete family!._id;
-				res.send(family);
+				res.send(SecurityHelper.removeMongoId(family));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -488,99 +637,193 @@ export default class FamilyController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const familyDocument = this._database.findDocument<Family>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const family = await this._database.findDocument<Family>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!family) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		familyDocument
+			const updatedFamily = new Family(
+				family.Id,
+				escapeHtml(req.body.Name ?? family.Name),
+				escapeHtml(req.body.Description ?? family.Description),
+				escapeHtml(req.body.Notes ?? family.Notes),
+				(req.body.HistoricalNames ?? family.HistoricalNames).map(
+					(value: string) => escapeHtml(value)
+				),
+				req.body.MemberIds ?? family.MemberIds
+			);
+
+			await this._database.updateDocument(
+				this._collectionName,
+				{ Id: updatedFamily.Id },
+				updatedFamily
+			);
+			res.status(200).send(SecurityHelper.removeMongoId(updatedFamily));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
+	}
+
+	private async delete(req: Request, res: Response): Promise<void> {
+		try {
+			const family = await this._database.findDocument<Family>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!family) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+			await this._database.deleteDocument(this._collectionName, {
+				Id: family.Id,
+			});
+			res.status(200).send(
+				new Ok(
+					`Family ${family.Name} with id ${family.Id} deleted successfully`
+				)
+			);
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
+	}
+
+	/**
+	 * Fügt eine Person (personId) zur Familie (id) hinzu
+	 */
+	private addMember(req: Request, res: Response): void {
+		const familyId = req.params.id;
+		const personId = req.body.personId;
+		if (!personId) {
+			res.status(400).send({ status: 400, message: "personId is missing" });
+			return;
+		}
+		this._database
+			.findDocument<Family>(this._collectionName, familyId)
 			.then((family) => {
-				if (family === null || family === undefined) {
-					res.status(404).send(new ErrorResult(404));
+				if (!family) {
+					res.status(404).send({
+						status: 404,
+						message: "Family not found",
+					});
 					return;
 				}
-				const updatedFamily = new Family(
-					family.Id,
-					req.body.Name ?? family.Name,
-					req.body.Description ?? family.Description,
-					req.body.Notes ?? family.Notes,
-					req.body.HistoricalNames ?? family.HistoricalNames
-				);
-
-				// Sanitize the updatedFamily object
-				const sanitizedFamily = {
-					Id: updatedFamily.Id,
-					Name: escapeHtml(updatedFamily.Name),
-					Description: escapeHtml(updatedFamily.Description),
-					Notes: escapeHtml(updatedFamily.Notes),
-					HistoricalNames: updatedFamily.HistoricalNames.map(escapeHtml),
-				};
-
+				if (!family.MemberIds.includes(personId)) {
+					family.MemberIds.push(personId);
+				}
 				this._database
 					.updateDocument(
 						this._collectionName,
-						familyDocument,
-						updatedFamily
+						{ Id: familyId },
+						family
 					)
-					.then(() => {
-						res.status(200).send(sanitizedFamily);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
+					.then(() =>
+						res.status(200).send({
+							success: true,
+							MemberIds: family.MemberIds,
+						})
+					)
+					.catch((error) =>
+						res
+							.status(500)
+							.send({ status: 500, message: error.message })
+					);
 			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			.catch((error) =>
+				res.status(500).send({ status: 500, message: error.message })
+			);
 	}
 
-	private delete(req: Request, res: Response): void {
-		const familyDocument = this._database.findDocument<Family>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		familyDocument
+	/**
+	 * Entfernt eine Person (personId) aus der Familie (id)
+	 */
+	private removeMember(req: Request, res: Response): void {
+		const familyId = req.params.id;
+		const personId = req.body.personId;
+		if (!personId) {
+			res.status(400).send({ status: 400, message: "personId is missing" });
+			return;
+		}
+		this._database
+			.findDocument<Family>(this._collectionName, familyId)
 			.then((family) => {
-				if (family === null || family === undefined) {
-					res.status(404).send(new ErrorResult(404));
+				if (!family) {
+					res.status(404).send({
+						status: 404,
+						message: "Family not found",
+					});
+					return;
+				}
+				family.MemberIds = family.MemberIds.filter(
+					(id) => id !== personId
+				);
+				this._database
+					.updateDocument(
+						this._collectionName,
+						{ Id: familyId },
+						family
+					)
+					.then(() =>
+						res.status(200).send({
+							success: true,
+							MemberIds: family.MemberIds,
+						})
+					)
+					.catch((error) =>
+						res
+							.status(500)
+							.send({ status: 500, message: error.message })
+					);
+			})
+			.catch((error) =>
+				res.status(500).send({ status: 500, message: error.message })
+			);
+	}
+
+	/**
+	 * Gibt die Nachnamen aller Mitglieder der Familie zurück
+	 */
+	private getLastNames(req: Request, res: Response): void {
+		const familyId = req.params.id;
+		this._database
+			.findDocument<Family>(this._collectionName, familyId)
+			.then((family) => {
+				if (!family) {
+					res.status(404).send({
+						status: 404,
+						message: "Family not found",
+					});
+					return;
+				}
+				if (!family.MemberIds || family.MemberIds.length === 0) {
+					res.status(200).send({ lastNames: [] });
 					return;
 				}
 				this._database
-					.deleteDocument(this._collectionName, family)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`Family ${family.Name} with id ${family.Id} deleted successfully`
-							)
-						);
+					.listAllDocuments<any>(DatabaseCollectionEnum.PERSONS)
+					.then((persons) => {
+						const lastNames = persons
+							.filter((p: any) => family.MemberIds.includes(p.Id))
+							.flatMap((p: any) => p.LastName || []);
+						res.status(200).send({
+							lastNames: Array.from(new Set(lastNames)),
+						});
 					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
+					.catch((error) =>
+						res
+							.status(500)
+							.send({ status: 500, message: error.message })
+					);
 			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			.catch((error) =>
+				res.status(500).send({ status: 500, message: error.message })
+			);
 	}
-}
-
-// Utility function to escape HTML
-function escapeHtml(input: string): string {
-	return input.replace(/[&<>'"/]/g, (char) => {
-		const escapeChars: { [key: string]: string } = {
-			'&': '&amp;',
-			'<': '&lt;',
-			'>': '&gt;',
-			"'": '&#39;',
-			'"': '&quot;',
-			'/': '&#x2F;',
-		};
-		return escapeChars[char] || char;
-	});
 }

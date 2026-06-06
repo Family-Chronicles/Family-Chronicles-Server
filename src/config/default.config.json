@@ -22,8 +22,8 @@
   "database": {
     "host": "mongodb://mongo:27017",
     "databasename": "family-chronicles",
-    "username": "admin",
-    "password": "admin",
+    "username": "",
+    "password": "",
     "collections": [
       "users",
       "data",
@@ -35,8 +35,10 @@
     ]
   },
   "auth": {
+    "jwtSecret": "",
     "privateKey": "",
     "publicKey": "",
-    "tokenExpiration": "1d"
+    "tokenExpiration": "1d",
+    "sessionTimeout": "1d"
   }
 }

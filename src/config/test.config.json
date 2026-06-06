@@ -1,0 +1,44 @@
+{
+	"meta": {
+		"name": "family-chronicles-server-test",
+		"version": "0.0.1-test",
+		"description": "Test-Konfiguration für Family Chronicles Server.",
+		"homepage_url": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+		"author": {
+			"name": "Jonas Pfalzgraf",
+			"email": "info@josunlp.de"
+		},
+		"contributors": [
+			{
+				"name": "Jonas Pfalzgraf",
+				"email": "info@josunlp.de"
+			}
+		],
+		"license": "MPL-2.0",
+		"repository": "git+https://github.com/Family-Chronicles/Family-Chronicles-Server.git",
+		"homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+		"bugs": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
+	},
+	"database": {
+		"host": "mongodb://localhost:27017",
+		"databasename": "family-chronicles-test",
+		"username": "",
+		"password": "",
+		"collections": [
+			"users",
+			"data",
+			"families",
+			"persons",
+			"relations",
+			"tags",
+			"failedAttempts"
+		]
+	},
+	"auth": {
+		"jwtSecret": "",
+		"privateKey": "",
+		"publicKey": "",
+		"tokenExpiration": "1d",
+		"sessionTimeout": "1d"
+	}
+}

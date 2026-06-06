@@ -1,12 +1,14 @@
-import { Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import ConfigService from "./config.srvs.js";
-import User from "../models/user.model.js";
-import ErrorResult from "../models/actionResults/error.result.js";
-import DatabaseService from "./database.srvs.js";
-import { RoleEnum } from "../enums/role.enum.js";
-import FailedAttemptModel from "../models/failedAttempts.model.js";
+import crypto from "crypto";
+import { Request, Response } from "express";
+import jwt, { Secret } from "jsonwebtoken";
+import { getClientIP, SecurityConstants } from "../config/security.constants";
+import { RoleEnum } from "../enums/role.enum";
+import ErrorResult from "../models/actionResults/error.result";
+import FailedAttemptModel from "../models/failedAttempts.model";
+import User from "../models/user.model";
+import ConfigService from "./config.srvs";
+import DatabaseService from "./database.srvs";
 
 /**
  * Authorization service
@@ -19,18 +21,96 @@ import FailedAttemptModel from "../models/failedAttempts.model.js";
  * });
  */
 export default class AuthorizationService {
+	/**
+	 * Creates and stores a new session ID for a user.
+	 */
+	public async createSession(user: User): Promise<string> {
+		const sessionID = crypto.randomUUID();
+		user.SessionID = sessionID;
+		user.SessionCreatedAt = new Date();
+		await this._database.updateDocument<User>(
+			"users",
+			{ Id: user.Id },
+			user
+		);
+		return sessionID;
+	}
+
+	/**
+	 * Clears a user's session ID (logout).
+	 */
+	public async destroySession(user: User): Promise<void> {
+		user.SessionID = undefined;
+		user.SessionCreatedAt = undefined;
+		await this._database.updateDocument<User>(
+			"users",
+			{ Id: user.Id },
+			user
+		);
+	}
+
+	/**
+	 * Checks whether the session is valid, including the timeout.
+	 */
+	public async isSessionValid(
+		user: User,
+		sessionID: string
+	): Promise<boolean> {
+		if (!user.SessionID || user.SessionID !== sessionID) return false;
+
+		// Session-Timeout Prüfung
+		if (user.SessionCreatedAt) {
+			const sessionAge =
+				Date.now() - new Date(user.SessionCreatedAt).getTime();
+			const sessionTimeout = this._config.auth.sessionTimeout
+				? this.parseTimeoutString(this._config.auth.sessionTimeout)
+				: SecurityConstants.SESSION_TIMEOUT_MS;
+
+			if (sessionAge > sessionTimeout) {
+				// Session has expired; destroy it automatically
+				await this.destroySession(user);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Parses a timeout string (e.g. "1d", "2h") into milliseconds.
+	 */
+	private parseTimeoutString(timeout: string): number {
+		const match = timeout.match(/^(\d+)([dhms])$/);
+		if (!match) return SecurityConstants.SESSION_TIMEOUT_MS;
+
+		const value = parseInt(match[1], 10);
+		const unit = match[2];
+
+		switch (unit) {
+			case "d":
+				return value * 24 * 60 * 60 * 1000;
+			case "h":
+				return value * 60 * 60 * 1000;
+			case "m":
+				return value * 60 * 1000;
+			case "s":
+				return value * 1000;
+			default:
+				return SecurityConstants.SESSION_TIMEOUT_MS;
+		}
+	}
+
+	/**
+	 * Resets the session (e.g. after a password change).
+	 */
+	public async resetSession(user: User): Promise<string> {
+		return await this.createSession(user);
+	}
 	private static _instance: AuthorizationService;
 	private _config = ConfigService.getInstance().config;
 	private _database = DatabaseService.getInstance();
-	private _failedAttempts: FailedAttemptModel[] = [];
 
-	private constructor() {
-		this._database
-			.listAllDocuments<FailedAttemptModel>("failedAttempts")
-			.then((failedAttempts) => {
-				this._failedAttempts = failedAttempts;
-			});
-	}
+	private constructor() {}
 
 	public static getInstance() {
 		if (!this._instance) {
@@ -50,177 +130,144 @@ export default class AuthorizationService {
 
 	public async authorize(req: Request, res: Response, next: () => void) {
 		const token = req.headers["authorization"];
-		if (
-			token === undefined ||
-			token === null ||
-			token === "" ||
-			token.length <= 0
-		) {
-			return res.status(401).send({
-				auth: false,
-				message: "No token provided.",
-			});
+		if (!token) {
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "No token provided."));
 		}
 
-		const decoded = this.decodeToken<User>(
-			token as unknown as string
-		) as User | null;
-
-		if (!decoded || decoded === null) {
-			return res.status(500).send(
-				new ErrorResult(
-					500,
-					JSON.stringify({
-						auth: false,
-						message: "Failed to authenticate token.",
-					})
-				)
-			);
+		const decoded = this.decodeToken<User>(token as string) as User | null;
+		if (!decoded) {
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "Failed to authenticate token."));
 		}
 
+		const clientIP = getClientIP(req);
 		const user = await this._database.getUserByUsername(decoded.Name);
-
 		if (!user) {
-			return res.status(404).send(
-				this.addFailedAttempt(decoded.Id, req.ip!)
-					.then(() => {
-						new ErrorResult(
-							404,
-							JSON.stringify({
-								auth: false,
-								message: "No user found.",
-							})
-						);
-					})
-					.catch((err) => {
-						new ErrorResult(500, err.message);
-					})
-			);
+			await this.addFailedAttempt(decoded.Id, clientIP);
+			// Delay to mitigate timing attacks
+			await SecurityConstants.delay();
+			return res.status(404).send(new ErrorResult(404, "No user found."));
 		}
 
-		if (user.Password !== decoded.Password) {
-			return res.status(401).send(
-				this.addFailedAttempt(decoded.Id, req.ip!)
-					.then(() => {
-						new ErrorResult(
-							401,
-							JSON.stringify({
-								auth: false,
-								message: "Invalid password.",
-							})
-						);
-					})
-					.catch((err) => {
-						new ErrorResult(500, err.message);
-					})
-			);
+		if (decoded.Role && decoded.Role !== user.Role) {
+			return res
+				.status(401)
+				.send(
+					new ErrorResult(401, "Token claims are no longer valid.")
+				);
 		}
 
-		if (user.SessoionID !== decoded.SessoionID) {
-			return res.status(401).send(
-				this.addFailedAttempt(decoded.Id, req.ip!)
-					.then(() => {
-						new ErrorResult(
-							401,
-							JSON.stringify({
-								auth: false,
-								message: "Invalid session.",
-							})
-						);
-					})
-					.catch((err) => {
-						new ErrorResult(500, err.message);
-					})
-			);
+		// Check whether the user is locked
+		if (user.Locked) {
+			return res
+				.status(401)
+				.send(
+					new ErrorResult(
+						401,
+						"Account is locked. Please contact support."
+					)
+				);
+		}
+
+		// Session validation including the timeout check
+		const isValidSession = await this.isSessionValid(
+			user,
+			decoded.SessionID || ""
+		);
+		if (!isValidSession) {
+			await this.addFailedAttempt(decoded.Id, clientIP);
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "Invalid or expired session."));
 		}
 
 		if (user.Role === RoleEnum.UNAUTHORIZED) {
-			return res.status(401).send(
-				new ErrorResult(
-					401,
-					JSON.stringify({
-						auth: false,
-						message: "Unauthorized.",
-					})
-				)
-			);
+			return res.status(401).send(new ErrorResult(401, "Unauthorized."));
 		}
 
 		next();
 	}
 
-	public decodeToken<T>(token: string): string | JwtPayload | null | T {
-		let secret = this._config.auth.privateKey;
+	public decodeToken<T>(token: string): T | null {
+		try {
+			// Token without the Bearer prefix
+			const tokenValue = token.startsWith("Bearer ")
+				? token.slice(7)
+				: token;
 
-		if (!secret || secret === "") {
-			secret = process.env.SECRET as string;
+			const decoded = jwt.verify(
+				tokenValue,
+				this._config.auth.jwtSecret as Secret,
+				{
+					algorithms: ["HS256"],
+				}
+			) as T;
+
+			return decoded;
+		} catch (err) {
+			console.error("Token verification failed:", err);
+			return null;
 		}
-
-		return jwt.verify(token, process.env.SECRET as string) as T;
 	}
 
-	public generateToken(payload: string | object | Buffer): string {
-		let secret = this._config.auth.privateKey;
+	public generateToken(payload: User): string {
+		// Remove sensitive data from the token payload
+		const sanitizedPayload = {
+			Id: payload.Id,
+			Name: payload.Name,
+			Email: payload.Email,
+			Role: payload.Role,
+			SessionID: payload.SessionID,
+		};
 
-		if (!secret || secret === "") {
-			secret = process.env.SECRET as string;
-		}
-
-		return jwt.sign(payload, secret, {
-			expiresIn: this._config.auth.tokenExpiration,
+		return jwt.sign(sanitizedPayload, this._config.auth.jwtSecret, {
+			expiresIn: this._config.auth.tokenExpiration || "1h",
 			algorithm: "HS256",
-		});
+		} as jwt.SignOptions);
 	}
 
 	public async addFailedAttempt(userId: string, ip: string): Promise<void> {
-		const failedAttempt = this._failedAttempts.find(
-			(fa) => fa.UserId === userId
+		const now = new Date();
+		await this._database.updateDocumentWithOperators(
+			"failedAttempts",
+			{ UserId: userId },
+			{
+				$setOnInsert: {
+					Id: crypto.randomUUID(),
+					UserId: userId,
+				},
+				$inc: { Attempts: 1 },
+				$set: { LastAttempt: now },
+				$push: {
+					FailedIPs: {
+						$each: [ip],
+						$slice: -SecurityConstants.MAX_FAILED_IPS,
+					},
+				},
+			} as any,
+			{ upsert: true }
 		);
-		if (failedAttempt) {
-			failedAttempt.Attempts++;
-			failedAttempt.LastAttempt = new Date();
-			failedAttempt.FailedIPs.push(ip);
-			await this._database.updateDocument<FailedAttemptModel>(
-				"failedAttempts",
-				{ Id: failedAttempt.Id },
-				failedAttempt
-			);
-		} else {
-			const newFailedAttempt = new FailedAttemptModel(
-				null,
-				userId,
-				1,
-				new Date(),
-				[ip]
-			);
-			await this._database.createDocument<FailedAttemptModel>(
-				"failedAttempts",
-				newFailedAttempt
-			);
-		}
 	}
 
 	public async syncFailedAttempts(): Promise<void> {
-		this._failedAttempts =
-			await this._database.listAllDocuments<FailedAttemptModel>(
-				"failedAttempts"
-			);
+		return;
 	}
 
 	public async resetFailedAttempts(userId: string): Promise<void> {
-		const failedAttempt = this._failedAttempts.find(
-			(fa) => fa.UserId === userId
+		await this._database.updateDocumentWithOperators(
+			"failedAttempts",
+			{ UserId: userId },
+			{
+				$set: {
+					Attempts: 0,
+					LastAttempt: new Date(),
+					FailedIPs: [],
+				},
+			}
 		);
-		if (failedAttempt) {
-			failedAttempt.Attempts = 0;
-			failedAttempt.LastAttempt = new Date();
-			failedAttempt.FailedIPs = [];
-			await this._database.updateDocument<FailedAttemptModel>(
-				"failedAttempts",
-				{ Id: failedAttempt.Id },
-				failedAttempt
-			);
-		}
 	}
 
 	public async lockUser(userId: string): Promise<void> {
@@ -233,5 +280,90 @@ export default class AuthorizationService {
 				user
 			);
 		}
+	}
+
+	/**
+	 * Checks whether an account is temporarily locked (based on failed attempts).
+	 */
+	public async isAccountTemporarilyLocked(
+		userId: string,
+		maxAttempts: number,
+		lockoutDuration: number
+	): Promise<boolean> {
+		const failedAttempt = await this.getFailedAttempt(userId);
+
+		if (!failedAttempt) return false;
+
+		if (failedAttempt.Attempts >= maxAttempts) {
+			const timeSinceLastAttempt =
+				Date.now() - new Date(failedAttempt.LastAttempt).getTime();
+
+			// Wenn Lockout-Zeit noch nicht abgelaufen
+			if (timeSinceLastAttempt < lockoutDuration) {
+				return true;
+			}
+
+			// Lockout has elapsed; reset the attempts
+			await this.resetFailedAttempts(userId);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Checks whether an account should be locked after the current attempt.
+	 */
+	public async shouldLockAccount(
+		userId: string,
+		maxAttempts: number
+	): Promise<boolean> {
+		const failedAttempt = await this.getFailedAttempt(userId);
+
+		if (!failedAttempt) return false;
+
+		// Bei zu vielen Versuchen Account dauerhaft sperren
+		const permanentLockThreshold =
+			maxAttempts * SecurityConstants.PERMANENT_LOCK_MULTIPLIER;
+		return failedAttempt.Attempts >= permanentLockThreshold;
+	}
+
+	private async getFailedAttempt(
+		userId: string
+	): Promise<FailedAttemptModel | null> {
+		return this._database.findOneByQuery<FailedAttemptModel>(
+			"failedAttempts",
+			{ UserId: userId }
+		);
+	}
+
+	/**
+	 * Checks whether the current user has the required role.
+	 */
+	public async requireRole(
+		req: Request,
+		res: Response,
+		next: () => void,
+		allowedRoles: string[]
+	) {
+		const token = req.headers["authorization"];
+		if (!token) {
+			return res
+				.status(401)
+				.send(new ErrorResult(401, "No token provided."));
+		}
+		const decoded = this.decodeToken<any>(token as string);
+		if (!decoded || !decoded.Name) {
+			return res.status(401).send(new ErrorResult(401, "Invalid token."));
+		}
+		const user = await this._database.getUserByUsername(decoded.Name);
+		if (!user) {
+			return res.status(404).send(new ErrorResult(404, "No user found."));
+		}
+		if (!allowedRoles.includes(user.Role)) {
+			return res
+				.status(403)
+				.send(new ErrorResult(403, "Insufficient permissions."));
+		}
+		next();
 	}
 }

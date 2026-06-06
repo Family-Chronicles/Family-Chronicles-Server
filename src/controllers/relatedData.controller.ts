@@ -1,13 +1,14 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import DatabaseService from "../services/database.srvs.js";
-import AuthorizationService from "../services/auth.srvs.js";
 import bodyParser from "body-parser";
+import { Express, Request, Response } from "express";
+import { body, param, validationResult } from "express-validator";
+import SecurityHelper from "../classes/securityHelper.js";
+import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
+import { IController } from "../interfaces/controller.interface.js";
 import ErrorResult from "../models/actionResults/error.result.js";
 import Ok from "../models/actionResults/ok.result.js";
-import { DatabaseCollectionEnum } from "../enums/databaseCollection.enum.js";
-import Paginator from "../classes/paginator.js";
 import RelatedData from "../models/data.model.js";
+import AuthorizationService from "../services/auth.srvs.js";
+import DatabaseService from "../services/database.srvs.js";
 
 export default class RelatedDataController implements IController {
 	private _database = DatabaseService.getInstance();
@@ -56,9 +57,14 @@ export default class RelatedDataController implements IController {
 		 * }
 		 */
 		app.get("/relatedData", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
+			this._authorization.requireRole(
+				req,
+				res,
+				() => {
+					this.index(req, res);
+				},
+				["Admin", "Editor", "Viewer"]
+			);
 		});
 
 		/**
@@ -106,9 +112,14 @@ export default class RelatedDataController implements IController {
 		app.get(
 			"/relatedData/:pageSize/:page",
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.indexPaged(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.indexPaged(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -151,9 +162,14 @@ export default class RelatedDataController implements IController {
 		app.get(
 			"/relatedData/pageCount/:pageSize",
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.getPageCount(req, res);
-				});
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.getPageCount(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
 			}
 		);
 
@@ -196,11 +212,28 @@ export default class RelatedDataController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.get("/relatedData/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+		app.get(
+			"/relatedData/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.show(req, res);
+					},
+					["Admin", "Editor", "Viewer"]
+				);
+			}
+		);
 
 		/**
 		 * POST /relatedData
@@ -244,10 +277,26 @@ export default class RelatedDataController implements IController {
 		app.post(
 			"/relatedData",
 			bodyParser.json(),
+			[
+				body("RelatedData")
+					.isString()
+					.withMessage("RelatedData must be a string."),
+				body("Notes").optional().isString(),
+				body("TaggedPersonsIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.create(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -292,10 +341,27 @@ export default class RelatedDataController implements IController {
 		app.put(
 			"/relatedData/:id",
 			bodyParser.json(),
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+				body("RelatedData").optional().isString(),
+				body("Notes").optional().isString(),
+				body("TaggedPersonsIds").optional().isArray(),
+			],
 			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.update(req, res);
+					},
+					["Admin", "Editor"]
+				);
 			}
 		);
 
@@ -334,11 +400,28 @@ export default class RelatedDataController implements IController {
 		 * 	"status": 503
 		 * }
 		 */
-		app.delete("/relatedData/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
+		app.delete(
+			"/relatedData/:id",
+			[
+				param("id")
+					.isUUID()
+					.withMessage("ID must be a valid UUID."),
+			],
+			(req: Request, res: Response) => {
+				const errors = validationResult(req);
+				if (!errors.isEmpty()) {
+					return res.status(400).json({ errors: errors.array() });
+				}
+				this._authorization.requireRole(
+					req,
+					res,
+					() => {
+						this.delete(req, res);
+					},
+					["Admin", "Editor"]
+				);
+			}
+		);
 	}
 
 	private index(req: Request, res: Response): void {
@@ -352,12 +435,7 @@ export default class RelatedDataController implements IController {
 					dataArray = [];
 				}
 
-				dataArray.forEach((data) => {
-					//@ts-ignore
-					delete data._id;
-				});
-
-				res.send(dataArray);
+				res.send(SecurityHelper.removeMongoIds(dataArray));
 			})
 			.catch((error) => {
 				console.error(error);
@@ -365,101 +443,76 @@ export default class RelatedDataController implements IController {
 			});
 	}
 
-	private indexPaged(req: Request, res: Response): void {
-		const dataDocuments = this._database.listAllDocuments<RelatedData>(
-			this._collectionName
-		);
-
-		dataDocuments
-			.then((dataArray) => {
-				if (dataArray === null) {
-					dataArray = [];
-				}
-
-				dataArray.forEach((data) => {
-					//@ts-ignore
-					delete data._id;
-				});
-
-				const page = parseInt(req.params.page);
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.paginate(dataArray, page, pageSize);
-
-				res.send(result);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
-	}
-
-	private getPageCount(req: Request, res: Response): void {
-		const dataDocuments = this._database.listAllDocuments<RelatedData>(
-			this._collectionName
-		);
-
-		dataDocuments
-			.then((dataArray) => {
-				if (dataArray === null) {
-					dataArray = [];
-				}
-
-				dataArray.forEach((data) => {
-					//@ts-ignore
-					delete data._id;
-				});
-
-				const pageSize = parseInt(req.params.pageSize);
-
-				const result = Paginator.getPageCount<RelatedData>(
-					dataArray,
+	private async indexPaged(req: Request, res: Response): Promise<void> {
+		try {
+			const page = parseInt(req.params.page);
+			const pageSize = parseInt(req.params.pageSize);
+			const dataArray =
+				await this._database.listDocumentsPage<RelatedData>(
+					this._collectionName,
+					page,
 					pageSize
 				);
-
-				res.send({ pageCount: result });
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			res.send(SecurityHelper.removeMongoIds(dataArray));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private create(req: Request, res: Response): void {
-		let relatedData:
-			| string
-			| import("buffer").Blob
-			| import("buffer").File = req.body.relatedData;
-
-		let notes: string = req.body.notes || "";
-		let taggedPersonsIds: string[] = req.body.taggedPersonsIds || [];
-
-		if (typeof relatedData === "string") {
-			relatedData = relatedData.trim();
+	private async getPageCount(req: Request, res: Response): Promise<void> {
+		try {
+			const pageSize = parseInt(req.params.pageSize);
+			const count = await this._database.countDocuments(
+				this._collectionName
+			);
+			res.send({ pageCount: Math.ceil(count / pageSize) });
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
 		}
+	}
 
-		if (typeof notes === "string") {
-			notes = notes.trim();
+	private async create(req: Request, res: Response): Promise<void> {
+		try {
+			let relatedData:
+				| string
+				| import("buffer").Blob
+				| import("buffer").File =
+				req.body.RelatedData ?? req.body.relatedData;
+
+			let notes: string = req.body.Notes ?? req.body.notes ?? "";
+			let taggedPersonsIds: string[] =
+				req.body.TaggedPersonsIds ?? req.body.taggedPersonsIds ?? [];
+
+			if (typeof relatedData === "string") {
+				relatedData = relatedData.trim();
+			}
+
+			if (typeof notes === "string") {
+				notes = notes.trim();
+			}
+
+			if (typeof taggedPersonsIds === "string") {
+				taggedPersonsIds = [taggedPersonsIds];
+			}
+
+			const newRelatedData = new RelatedData(
+				relatedData,
+				notes,
+				taggedPersonsIds
+			);
+
+			await this._database.createDocument<RelatedData>(
+				this._collectionName,
+				newRelatedData
+			);
+
+			res.send(SecurityHelper.removeMongoId(newRelatedData));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
 		}
-
-		if (typeof taggedPersonsIds === "string") {
-			taggedPersonsIds = [taggedPersonsIds];
-		}
-
-		const newRelatedData = new RelatedData(
-			relatedData,
-			notes,
-			taggedPersonsIds
-		);
-
-		this._database
-			.createDocument<RelatedData>(this._collectionName, newRelatedData)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
-
-		res.send(newRelatedData);
 	}
 
 	private show(req: Request, res: Response): void {
@@ -473,9 +526,7 @@ export default class RelatedDataController implements IController {
 				if (data === null) {
 					res.status(404).send(new ErrorResult(404));
 				} else {
-					//@ts-ignore
-					delete data._id;
-					res.send(data);
+					res.send(SecurityHelper.removeMongoId(data));
 				}
 			})
 			.catch((error) => {
@@ -484,92 +535,82 @@ export default class RelatedDataController implements IController {
 			});
 	}
 
-	private update(req: Request, res: Response): void {
-		const dataDocument = this._database.findDocument<RelatedData>(
-			this._collectionName,
-			req.params.id
-		);
+	private async update(req: Request, res: Response): Promise<void> {
+		try {
+			const data = await this._database.findDocument<RelatedData>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!data) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
 
-		dataDocument
-			.then((data) => {
-				if (data === null || data === undefined) {
-					res.status(404).send(new ErrorResult(404));
-				} else {
-					let relatedData:
-						| string
-						| import("buffer").Blob
-						| import("buffer").File = req.body.relatedData;
+			let relatedData:
+				| string
+				| import("buffer").Blob
+				| import("buffer").File =
+				req.body.RelatedData ??
+				req.body.relatedData ??
+				data.RelatedData;
 
-					let notes: string = req.body.notes || "";
-					let taggedPersonsIds: string[] =
-						req.body.taggedPersonsIds || [];
+			let notes: string = req.body.Notes ?? req.body.notes ?? data.Notes;
+			let taggedPersonsIds: string[] =
+				req.body.TaggedPersonsIds ??
+				req.body.taggedPersonsIds ??
+				data.TaggedPersonsIds;
 
-					if (typeof relatedData === "string") {
-						relatedData = relatedData.trim();
-					}
+			if (typeof relatedData === "string") {
+				relatedData = relatedData.trim();
+			}
 
-					if (typeof notes === "string") {
-						notes = notes.trim();
-					}
+			if (typeof notes === "string") {
+				notes = notes.trim();
+			}
 
-					if (typeof taggedPersonsIds === "string") {
-						taggedPersonsIds = [taggedPersonsIds];
-					}
+			if (typeof taggedPersonsIds === "string") {
+				taggedPersonsIds = [taggedPersonsIds];
+			}
 
-					const updatedData = new RelatedData(
-						relatedData,
-						notes,
-						taggedPersonsIds
-					);
+			const updatedData = {
+				...data,
+				RelatedData: relatedData,
+				Notes: notes,
+				TaggedPersonsIds: taggedPersonsIds,
+			};
 
-					this._database
-						.updateDocument<RelatedData>(
-							this._collectionName,
-							dataDocument,
-							updatedData
-						)
-						.catch(() => {
-							res.status(500).send(new ErrorResult(500));
-						});
+			await this._database.updateDocument<RelatedData>(
+				this._collectionName,
+				{ Id: data.Id },
+				updatedData
+			);
 
-					res.send(data);
-				}
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
-			});
+			res.send(SecurityHelper.removeMongoId(updatedData));
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 
-	private delete(req: Request, res: Response): void {
-		const dataDocument = this._database.findDocument<RelatedData>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		dataDocument
-			.then((data) => {
-				if (data === null || data === undefined) {
-					res.status(404).send(new ErrorResult(404));
-					return;
-				}
-				this._database
-					.deleteDocument(this._collectionName, data)
-					.then(() => {
-						res.status(200).send(
-							new Ok(
-								`Related Data with id ${data.Id} deleted successfully`
-							)
-						);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send(new ErrorResult(500));
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send(new ErrorResult(500));
+	private async delete(req: Request, res: Response): Promise<void> {
+		try {
+			const data = await this._database.findDocument<RelatedData>(
+				this._collectionName,
+				req.params.id
+			);
+			if (!data) {
+				res.status(404).send(new ErrorResult(404));
+				return;
+			}
+			await this._database.deleteDocument(this._collectionName, {
+				Id: data.Id,
 			});
+			res.status(200).send(
+				new Ok(`Related Data with id ${data.Id} deleted successfully`)
+			);
+		} catch (error) {
+			console.error(error);
+			res.status(500).send(new ErrorResult(500));
+		}
 	}
 }
