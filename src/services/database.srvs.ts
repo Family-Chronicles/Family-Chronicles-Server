@@ -310,7 +310,7 @@ export default class DatabaseService {
 		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
 		if (collectionName === "auditlogs") {
 			throw new Error(
-				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
+				"The audit-log collection is read-only and cannot be modified."
 			);
 		}
 		const db = await this.getDb();
@@ -342,7 +342,7 @@ export default class DatabaseService {
 		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
 		if (collectionName === "auditlogs") {
 			throw new Error(
-				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
+				"The audit-log collection is read-only and cannot be modified."
 			);
 		}
 		try {
@@ -380,7 +380,7 @@ export default class DatabaseService {
 	): Promise<boolean> {
 		if (collectionName === "auditlogs") {
 			throw new Error(
-				"Audit-Log-Collection ist read-only und kann nicht verändert werden."
+				"The audit-log collection is read-only and cannot be modified."
 			);
 		}
 

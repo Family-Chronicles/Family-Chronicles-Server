@@ -208,7 +208,7 @@ export default class AuthorizationService {
 
 			return decoded;
 		} catch (err) {
-			console.error("Token-Verifikation fehlgeschlagen:", err);
+			console.error("Token verification failed:", err);
 			return null;
 		}
 	}

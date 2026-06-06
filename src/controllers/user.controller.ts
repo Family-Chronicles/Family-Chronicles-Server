@@ -189,11 +189,11 @@ export default class UserController implements IController {
 				param("pageSize")
 					.isInt({ min: 1, max: 100 })
 					.withMessage(
-						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+						"pageSize must be a number between 1 and 100."
 					),
 				param("page")
 					.isInt({ min: 1 })
-					.withMessage("page muss eine positive Zahl sein."),
+					.withMessage("page must be a positive number."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -217,7 +217,7 @@ export default class UserController implements IController {
 				param("pageSize")
 					.isInt({ min: 1, max: 100 })
 					.withMessage(
-						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+						"pageSize must be a number between 1 and 100."
 					),
 			],
 			(req: Request, res: Response) => {
@@ -282,7 +282,7 @@ export default class UserController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -345,18 +345,18 @@ export default class UserController implements IController {
 				body("Name")
 					.isString()
 					.notEmpty()
-					.withMessage("Name ist erforderlich."),
+					.withMessage("Name is required."),
 				body("Password")
 					.isString()
 					.notEmpty()
-					.withMessage("Password ist erforderlich."),
+					.withMessage("Password is required."),
 				body("Email")
 					.isEmail()
-					.withMessage("Gültige Email ist erforderlich."),
+					.withMessage("A valid email is required."),
 				body("Role")
 					.isString()
 					.isIn(["Admin", "Editor", "Viewer", "Unauthorized"])
-					.withMessage("Ungültige Rolle."),
+					.withMessage("Invalid role."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -419,7 +419,7 @@ export default class UserController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 				body("Name").optional().isString(),
 				body("Email").optional().isEmail(),
 				body("Password").optional().isString(),
@@ -485,7 +485,7 @@ export default class UserController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);

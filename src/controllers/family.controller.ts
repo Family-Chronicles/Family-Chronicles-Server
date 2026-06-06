@@ -127,11 +127,11 @@ export default class FamilyController implements IController {
 				param("pageSize")
 					.isInt({ min: 1, max: 100 })
 					.withMessage(
-						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+						"pageSize must be a number between 1 and 100."
 					),
 				param("page")
 					.isInt({ min: 1 })
-					.withMessage("page muss eine positive Zahl sein."),
+					.withMessage("page must be a positive number."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -191,7 +191,7 @@ export default class FamilyController implements IController {
 				param("pageSize")
 					.isInt({ min: 1, max: 100 })
 					.withMessage(
-						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+						"pageSize must be a number between 1 and 100."
 					),
 			],
 			(req: Request, res: Response) => {
@@ -257,7 +257,7 @@ export default class FamilyController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -323,7 +323,7 @@ export default class FamilyController implements IController {
 			[
 				body("Name")
 					.isString()
-					.withMessage("Name muss ein String sein."),
+					.withMessage("Name must be a string."),
 				body("Description").optional().isString(),
 				body("Notes").optional().isString(),
 				body("HistoricalNames").optional().isArray(),
@@ -391,7 +391,7 @@ export default class FamilyController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 				body("Name").optional().isString(),
 				body("Description").optional().isString(),
 				body("Notes").optional().isString(),
@@ -453,7 +453,7 @@ export default class FamilyController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -526,7 +526,7 @@ export default class FamilyController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -702,7 +702,7 @@ export default class FamilyController implements IController {
 		const familyId = req.params.id;
 		const personId = req.body.personId;
 		if (!personId) {
-			res.status(400).send({ status: 400, message: "personId fehlt" });
+			res.status(400).send({ status: 400, message: "personId is missing" });
 			return;
 		}
 		this._database
@@ -711,7 +711,7 @@ export default class FamilyController implements IController {
 				if (!family) {
 					res.status(404).send({
 						status: 404,
-						message: "Familie nicht gefunden",
+						message: "Family not found",
 					});
 					return;
 				}
@@ -748,7 +748,7 @@ export default class FamilyController implements IController {
 		const familyId = req.params.id;
 		const personId = req.body.personId;
 		if (!personId) {
-			res.status(400).send({ status: 400, message: "personId fehlt" });
+			res.status(400).send({ status: 400, message: "personId is missing" });
 			return;
 		}
 		this._database
@@ -757,7 +757,7 @@ export default class FamilyController implements IController {
 				if (!family) {
 					res.status(404).send({
 						status: 404,
-						message: "Familie nicht gefunden",
+						message: "Family not found",
 					});
 					return;
 				}
@@ -798,7 +798,7 @@ export default class FamilyController implements IController {
 				if (!family) {
 					res.status(404).send({
 						status: 404,
-						message: "Familie nicht gefunden",
+						message: "Family not found",
 					});
 					return;
 				}

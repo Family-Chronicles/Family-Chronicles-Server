@@ -48,7 +48,7 @@ export class AuditLogController {
 	 * @example response - 403 - Nicht berechtigt
 	 * { "status": 403 }
 	 * @example response - 500 - Serverfehler
-	 * { "error": "Fehler beim Laden der Audit-Logs." }
+	 * { "error": "Failed to load audit logs." }
 	 */
 	public routes(app: Express): void {
 		app.get(
@@ -100,7 +100,7 @@ export class AuditLogController {
 						} catch (err) {
 							console.error("AuditLog fetch error:", err);
 							res.status(500).json({
-								error: "Fehler beim Laden der Audit-Logs.",
+								error: "Failed to load audit logs.",
 							});
 						}
 					},

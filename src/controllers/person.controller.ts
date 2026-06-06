@@ -137,11 +137,11 @@ export default class PersonController implements IController {
 				param("pageSize")
 					.isInt({ min: 1, max: 100 })
 					.withMessage(
-						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+						"pageSize must be a number between 1 and 100."
 					),
 				param("page")
 					.isInt({ min: 1 })
-					.withMessage("page muss eine positive Zahl sein."),
+					.withMessage("page must be a positive number."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -201,7 +201,7 @@ export default class PersonController implements IController {
 				param("pageSize")
 					.isInt({ min: 1, max: 100 })
 					.withMessage(
-						"pageSize muss eine Zahl zwischen 1 und 100 sein."
+						"pageSize must be a number between 1 and 100."
 					),
 			],
 			(req: Request, res: Response) => {
@@ -274,7 +274,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -458,7 +458,7 @@ export default class PersonController implements IController {
 			[
 				param("relatedDataIds")
 					.isString()
-					.withMessage("relatedDataIds muss angegeben werden.")
+					.withMessage("relatedDataIds must be provided.")
 					.custom((value: string) => {
 						const ids = value.split(",");
 						const uuidRegex =
@@ -466,7 +466,7 @@ export default class PersonController implements IController {
 						for (const id of ids) {
 							if (!uuidRegex.test(id.trim())) {
 								throw new Error(
-									`Ungültige UUID: ${id}. Alle IDs müssen gültige UUIDs sein.`
+									`Invalid UUID: ${id}. All IDs must be valid UUIDs.`
 								);
 							}
 						}
@@ -546,29 +546,29 @@ export default class PersonController implements IController {
 				body("FirstName")
 					.isArray()
 					.notEmpty()
-					.withMessage("FirstName muss ein nicht-leeres Array sein."),
+					.withMessage("FirstName must be a non-empty array."),
 				body("LastName")
 					.isArray()
 					.notEmpty()
-					.withMessage("LastName muss ein nicht-leeres Array sein."),
+					.withMessage("LastName must be a non-empty array."),
 				body("Sex")
 					.optional()
 					.isIn(["Male", "Female", "Intersex", "Other"])
 					.withMessage(
-						"Sex muss Male, Female, Intersex oder Other sein."
+						"Sex must be Male, Female, Intersex or Other."
 					),
 				body("Gender")
 					.optional()
 					.isString()
-					.withMessage("Gender muss ein String sein."),
+					.withMessage("Gender must be a string."),
 				body("DateOfBirth")
 					.optional()
 					.isISO8601()
-					.withMessage("DateOfBirth muss ein gültiges Datum sein."),
+					.withMessage("DateOfBirth must be a valid date."),
 				body("DateOfDeath")
 					.optional()
 					.isISO8601()
-					.withMessage("DateOfDeath muss ein gültiges Datum sein."),
+					.withMessage("DateOfDeath must be a valid date."),
 				body("PlaceOfBirth").optional().isString().trim().escape(),
 				body("PlaceOfDeath").optional().isString().trim().escape(),
 				body("Notes").optional().isString().trim().escape(),
@@ -648,7 +648,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 				body("FirstName").optional().isArray(),
 				body("LastName").optional().isArray(),
 				body("DateOfBirth").optional().isISO8601(),
@@ -716,7 +716,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -780,7 +780,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -818,10 +818,10 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 				param("relationshipId")
 					.isUUID()
-					.withMessage("relationshipId muss eine gültige UUID sein."),
+					.withMessage("relationshipId must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -868,7 +868,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -910,7 +910,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -942,7 +942,7 @@ export default class PersonController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -1678,7 +1678,7 @@ export default class PersonController implements IController {
 		const files = req.files as any;
 		if (!files || !files.file) {
 			res.status(400).send(
-				new ErrorResult(400, "Keine Datei hochgeladen.")
+				new ErrorResult(400, "No file uploaded.")
 			);
 			return;
 		}
@@ -1716,7 +1716,7 @@ export default class PersonController implements IController {
 		const { mediaId, taggedPersonIds } = req.body;
 		if (!mediaId || !Array.isArray(taggedPersonIds)) {
 			res.status(400).send(
-				new ErrorResult(400, "mediaId oder taggedPersonIds fehlen.")
+				new ErrorResult(400, "mediaId or taggedPersonIds are missing.")
 			);
 			return;
 		}
@@ -1727,7 +1727,7 @@ export default class PersonController implements IController {
 			)) as any;
 			if (!media) {
 				res.status(404).send(
-					new ErrorResult(404, "Medium nicht gefunden.")
+					new ErrorResult(404, "Media not found.")
 				);
 				return;
 			}

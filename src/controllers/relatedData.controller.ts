@@ -217,7 +217,7 @@ export default class RelatedDataController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
@@ -280,7 +280,7 @@ export default class RelatedDataController implements IController {
 			[
 				body("RelatedData")
 					.isString()
-					.withMessage("RelatedData muss ein String sein."),
+					.withMessage("RelatedData must be a string."),
 				body("Notes").optional().isString(),
 				body("TaggedPersonsIds").optional().isArray(),
 			],
@@ -344,7 +344,7 @@ export default class RelatedDataController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 				body("RelatedData").optional().isString(),
 				body("Notes").optional().isString(),
 				body("TaggedPersonsIds").optional().isArray(),
@@ -405,7 +405,7 @@ export default class RelatedDataController implements IController {
 			[
 				param("id")
 					.isUUID()
-					.withMessage("ID muss eine gültige UUID sein."),
+					.withMessage("ID must be a valid UUID."),
 			],
 			(req: Request, res: Response) => {
 				const errors = validationResult(req);
