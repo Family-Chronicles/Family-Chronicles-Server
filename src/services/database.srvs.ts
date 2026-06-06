@@ -234,13 +234,13 @@ export default class DatabaseService {
 	public async createDocument<T>(
 		collectionName: string,
 		document: T,
-		userId?: string // optional: für Audit-Log
+		userId?: string // optional: for the audit log
 	): Promise<boolean> {
 		const db = await this.getDb();
 		const collection = db.collection(collectionName);
 		const result = await collection.insertOne(document!);
 
-		// Audit-Log für Create
+		// Audit log for create
 		if (collectionName !== "auditlogs") {
 			const auditLog = new AuditLogModel({
 				operation: "create",
@@ -257,7 +257,7 @@ export default class DatabaseService {
 	}
 
 	/**
-	 * Entfernt sensible Daten aus Objekten für Audit-Logs
+	 * Removes sensitive data from objects for audit logs
 	 */
 	private sanitizeForAuditLog<T>(obj: T): Partial<T> {
 		if (!obj || typeof obj !== "object") return obj;
@@ -307,7 +307,7 @@ export default class DatabaseService {
 		update: T extends IModel ? Partial<T> : Partial<Document>,
 		userId?: string
 	): Promise<boolean> {
-		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
+		// The audit-log collection is read-only: updates/deletes are not allowed
 		if (collectionName === "auditlogs") {
 			throw new Error(
 				"The audit-log collection is read-only and cannot be modified."
@@ -339,7 +339,7 @@ export default class DatabaseService {
 		filter: Filter<Document>,
 		userId?: string
 	): Promise<boolean> {
-		// Audit-Log-Collection ist read-only: keine Updates/Löschungen zulassen
+		// The audit-log collection is read-only: updates/deletes are not allowed
 		if (collectionName === "auditlogs") {
 			throw new Error(
 				"The audit-log collection is read-only and cannot be modified."

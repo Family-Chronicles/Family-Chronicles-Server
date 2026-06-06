@@ -22,7 +22,7 @@ import DatabaseService from "./database.srvs";
  */
 export default class AuthorizationService {
 	/**
-	 * Erstellt eine neue SessionID für einen User und speichert sie
+	 * Creates and stores a new session ID for a user.
 	 */
 	public async createSession(user: User): Promise<string> {
 		const sessionID = crypto.randomUUID();
@@ -37,7 +37,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Löscht die SessionID eines Users (Logout)
+	 * Clears a user's session ID (logout).
 	 */
 	public async destroySession(user: User): Promise<void> {
 		user.SessionID = undefined;
@@ -50,7 +50,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Prüft, ob die Session gültig ist inkl. Timeout
+	 * Checks whether the session is valid, including the timeout.
 	 */
 	public async isSessionValid(
 		user: User,
@@ -67,7 +67,7 @@ export default class AuthorizationService {
 				: SecurityConstants.SESSION_TIMEOUT_MS;
 
 			if (sessionAge > sessionTimeout) {
-				// Session ist abgelaufen, automatisch zerstören
+				// Session has expired; destroy it automatically
 				await this.destroySession(user);
 				return false;
 			}
@@ -77,7 +77,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Parst einen Timeout-String (z.B. "1d", "2h") in Millisekunden
+	 * Parses a timeout string (e.g. "1d", "2h") into milliseconds.
 	 */
 	private parseTimeoutString(timeout: string): number {
 		const match = timeout.match(/^(\d+)([dhms])$/);
@@ -101,7 +101,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Setzt die Session zurück (z.B. nach Passwort-Änderung)
+	 * Resets the session (e.g. after a password change).
 	 */
 	public async resetSession(user: User): Promise<string> {
 		return await this.createSession(user);
@@ -147,7 +147,7 @@ export default class AuthorizationService {
 		const user = await this._database.getUserByUsername(decoded.Name);
 		if (!user) {
 			await this.addFailedAttempt(decoded.Id, clientIP);
-			// Verzögerung gegen Timing-Attacken
+			// Delay to mitigate timing attacks
 			await SecurityConstants.delay();
 			return res.status(404).send(new ErrorResult(404, "No user found."));
 		}
@@ -160,7 +160,7 @@ export default class AuthorizationService {
 				);
 		}
 
-		// Prüfe ob User gesperrt ist
+		// Check whether the user is locked
 		if (user.Locked) {
 			return res
 				.status(401)
@@ -172,7 +172,7 @@ export default class AuthorizationService {
 				);
 		}
 
-		// Session-Validierung inkl. Timeout-Prüfung
+		// Session validation including the timeout check
 		const isValidSession = await this.isSessionValid(
 			user,
 			decoded.SessionID || ""
@@ -193,7 +193,7 @@ export default class AuthorizationService {
 
 	public decodeToken<T>(token: string): T | null {
 		try {
-			// Token ohne Bearer-Prefix
+			// Token without the Bearer prefix
 			const tokenValue = token.startsWith("Bearer ")
 				? token.slice(7)
 				: token;
@@ -214,7 +214,7 @@ export default class AuthorizationService {
 	}
 
 	public generateToken(payload: User): string {
-		// Sensible Daten aus dem Token-Payload entfernen
+		// Remove sensitive data from the token payload
 		const sanitizedPayload = {
 			Id: payload.Id,
 			Name: payload.Name,
@@ -283,7 +283,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Prüft, ob ein Account temporär gesperrt ist (basierend auf Fehlversuchen)
+	 * Checks whether an account is temporarily locked (based on failed attempts).
 	 */
 	public async isAccountTemporarilyLocked(
 		userId: string,
@@ -303,7 +303,7 @@ export default class AuthorizationService {
 				return true;
 			}
 
-			// Lockout abgelaufen, Versuche zurücksetzen
+			// Lockout has elapsed; reset the attempts
 			await this.resetFailedAttempts(userId);
 		}
 
@@ -311,7 +311,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Prüft, ob ein Account nach dem aktuellen Versuch gesperrt werden sollte
+	 * Checks whether an account should be locked after the current attempt.
 	 */
 	public async shouldLockAccount(
 		userId: string,
@@ -337,7 +337,7 @@ export default class AuthorizationService {
 	}
 
 	/**
-	 * Prüft, ob der aktuelle User die geforderte Rolle besitzt
+	 * Checks whether the current user has the required role.
 	 */
 	public async requireRole(
 		req: Request,

@@ -10,14 +10,14 @@ import crypto from "crypto";
  * @property {string} Description - Family description
  * @property {string} Notes - Family notes
  * @property {string[]} HistoricalNames - Family historical names
- * @property {string[]} MemberIds - IDs der zugehörigen Personen (Mitglieder)
+ * @property {string[]} MemberIds - IDs of the associated persons (members)
  * @constructor
  * @param {string | null | undefined} id - Family id
  * @param {string} Name - Family name
  * @param {string} Description - Family description
  * @param {string} Notes - Family notes
  * @param {string[]} HistoricalNames - Family historical names
- * @param {string[]} MemberIds - IDs der zugehörigen Personen (Mitglieder)
+ * @param {string[]} MemberIds - IDs of the associated persons (members)
  * @returns {Family} - Family instance
  * @example
  * const family = new Family(

@@ -2,46 +2,46 @@ import { ObjectId } from "mongodb";
 
 /**
  * Audit Log Model
- * Speichert unveränderliche Logs zu allen Datenbankoperationen (Create, Update, Delete)
+ * Stores immutable logs for all database operations (create, update, delete)
  */
 export default class AuditLogModel {
 	/**
-	 * Eindeutige ID des Log-Eintrags
+	 * Unique ID of the log entry
 	 */
 	public _id?: ObjectId;
 
 	/**
-	 * Typ der Operation (create, update, delete)
+	 * Type of operation (create, update, delete)
 	 */
 	public operation: "create" | "update" | "delete";
 
 	/**
-	 * Name der Collection
+	 * Name of the collection
 	 */
 	public collection: string;
 
 	/**
-	 * ID des betroffenen Dokuments
+	 * ID of the affected document
 	 */
 	public documentId: string;
 
 	/**
-	 * Zeitstempel der Operation
+	 * Timestamp of the operation
 	 */
 	public timestamp: Date;
 
 	/**
-	 * Benutzer (sofern verfügbar)
+	 * User (if available)
 	 */
 	public userId?: string;
 
 	/**
-	 * Alter Wert (bei update/delete)
+	 * Previous value (for update/delete)
 	 */
 	public oldValue?: any;
 
 	/**
-	 * Neuer Wert (bei create/update)
+	 * New value (for create/update)
 	 */
 	public newValue?: any;
 

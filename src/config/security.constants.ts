@@ -1,40 +1,40 @@
 /**
- * Sicherheitsbezogene Konstanten
- * Zentrale Konfiguration für Authentifizierung und Autorisierung
+ * Security-related constants.
+ * Central configuration for authentication and authorization.
  */
 export const SecurityConstants = {
 	/**
-	 * Maximale Anzahl fehlgeschlagener Anmeldeversuche vor temporärer Sperrung
+	 * Maximum number of failed login attempts before a temporary lock.
 	 */
 	MAX_LOGIN_ATTEMPTS: 5,
 
 	/**
-	 * Dauer der temporären Sperrung in Millisekunden (15 Minuten)
+	 * Duration of the temporary lock in milliseconds (15 minutes).
 	 */
 	LOCKOUT_DURATION_MS: 15 * 60 * 1000,
 
 	/**
-	 * Schwellenwert für permanente Kontosperrung (Faktor von MAX_LOGIN_ATTEMPTS)
+	 * Threshold for a permanent account lock (factor of MAX_LOGIN_ATTEMPTS).
 	 */
 	PERMANENT_LOCK_MULTIPLIER: 3,
 
 	/**
-	 * Session-Timeout in Millisekunden (Standard: 24 Stunden, überschreibbar durch Config)
+	 * Session timeout in milliseconds (default: 24 hours, overridable via config).
 	 */
 	SESSION_TIMEOUT_MS: 24 * 60 * 60 * 1000,
 
 	/**
-	 * Verzögerung für Timing-Attack-Schutz in Millisekunden
+	 * Delay for timing-attack protection in milliseconds.
 	 */
 	TIMING_ATTACK_DELAY_MS: 100,
 
 	/**
-	 * Maximale Anzahl von IPs die für Fehlversuche gespeichert werden
+	 * Maximum number of IPs stored per failed-attempt record.
 	 */
 	MAX_FAILED_IPS: 100,
 
 	/**
-	 * Passwort-Anforderungen
+	 * Password requirements.
 	 */
 	PASSWORD: {
 		MIN_LENGTH: 8,
@@ -45,7 +45,7 @@ export const SecurityConstants = {
 	},
 
 	/**
-	 * Username-Anforderungen
+	 * Username requirements.
 	 */
 	USERNAME: {
 		MIN_LENGTH: 3,
@@ -54,8 +54,8 @@ export const SecurityConstants = {
 	},
 
 	/**
-	 * Verzögerungsfunktion für Timing-Attack-Schutz
-	 * Zentrale Utility-Funktion um DRY zu gewährleisten
+	 * Delay helper for timing-attack protection.
+	 * Central utility function to keep things DRY.
 	 */
 	delay: (ms?: number): Promise<void> => {
 		const delayMs = ms ?? SecurityConstants.TIMING_ATTACK_DELAY_MS;
@@ -64,27 +64,27 @@ export const SecurityConstants = {
 } as const;
 
 /**
- * Extrahiert die Client-IP-Adresse aus einem Express-Request
- * Unterstützt X-Forwarded-For Header für Reverse Proxies
- * @param req Express Request-Objekt
- * @returns Client-IP-Adresse oder "unknown"
+ * Extracts the client IP address from an Express request.
+ * Supports the X-Forwarded-For header for reverse proxies.
+ * @param req Express request object
+ * @returns Client IP address, or "unknown"
  */
 export function getClientIP(req: {
 	headers?: { [key: string]: string | string[] | undefined };
 	ip?: string;
 	socket?: { remoteAddress?: string };
 }): string {
-	// Prüfe X-Forwarded-For Header (Reverse Proxy)
+	// Check the X-Forwarded-For header (reverse proxy)
 	const forwardedFor = req.headers?.["x-forwarded-for"];
 	if (forwardedFor) {
-		// Kann mehrere IPs enthalten, erste ist die Client-IP
+		// May contain multiple IPs; the first one is the client IP
 		const ips = Array.isArray(forwardedFor)
 			? forwardedFor[0]
 			: forwardedFor.split(",")[0];
 		return ips?.trim() || "unknown";
 	}
 
-	// Fallback auf req.ip oder socket.remoteAddress
+	// Fall back to req.ip or socket.remoteAddress
 	return req.ip || req.socket?.remoteAddress || "unknown";
 }
 

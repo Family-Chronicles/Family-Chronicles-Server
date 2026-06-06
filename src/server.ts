@@ -58,7 +58,7 @@ class Server {
 		this.app.use(morgan("combined"));
 		this.app.use(limiter);
 
-		// CORS-Konfiguration: Erlaubte Origins aus Umgebungsvariable laden
+		// CORS configuration: load the allowed origins from an environment variable
 		const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
 			"http://localhost:3000",
 		];
@@ -77,7 +77,7 @@ class Server {
 			);
 			res.header("Access-Control-Allow-Credentials", "true");
 
-			// Preflight-Requests beantworten
+			// Answer preflight requests
 			if (req.method === "OPTIONS") {
 				return res.status(204).end();
 			}
@@ -102,7 +102,7 @@ class Server {
 				console.log(
 					`⚡️[server]: Server is running at http://localhost:${this.port}`
 				);
-				// Testdaten-Initialisierung entfernt für Testkontext
+				// Test-data initialization removed for the test context
 			});
 		}
 	}

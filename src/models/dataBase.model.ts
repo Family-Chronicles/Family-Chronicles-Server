@@ -46,9 +46,9 @@ export default class DatabaseModel {
 	public failedAttempts: FailedAttemptModel[];
 
 	/**
-	 * Audit Logs der Datenbank
+	 * Audit logs of the database
 	 */
-	public auditlogs?: any[]; // Optional, da nicht Teil des normalen Workflows, aber für Vollständigkeit
+	public auditlogs?: any[]; // Optional, not part of the normal workflow but kept for completeness
 
 	/**
 	 * Creates an instance of database model.

@@ -14,9 +14,9 @@ import { Config } from "../types/config.type.js";
  * const configService = ConfigService.getInstance();
  * const config = configService._config;
  *
- * @security JWT-Signing-Secret und RSA-Keys für den Passworttransport dürfen nicht
- * im Repository gespeichert werden. Für produktive Umgebungen müssen diese Werte aus
- * Environment-Variablen oder Secret Stores geladen werden.
+ * @security The JWT signing secret and the RSA keys used for password transport must
+ * not be stored in the repository. In production these values must be loaded from
+ * environment variables or a secret store.
  */
 export default class ConfigService {
 	private static _instance: ConfigService;
