@@ -1,4 +1,4 @@
-FROM node:current
+FROM node:24
 
 # Delete all the files in the current directory
 RUN rm -rf /usr/src/app/*
