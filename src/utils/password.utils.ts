@@ -2,7 +2,7 @@ import NodeRSA from "node-rsa";
 import PasswordValidator from "../classes/passwordValidator";
 
 /**
- * Ergebnis der Passwort-Entschlüsselung und Validierung
+ * Result of password decryption and (optional) strength validation.
  */
 export interface PasswordDecryptionResult {
 	success: boolean;
@@ -14,36 +14,36 @@ export interface PasswordDecryptionResult {
 }
 
 /**
- * Konfiguration für Passwort-Operationen
+ * Configuration for password operations.
  */
 export interface PasswordOperationConfig {
-	/** RSA-Schlüssel für Entschlüsselung */
+	/** RSA private key used for decryption. */
 	privateKey: string;
-	/** Ob Passwort-Stärke validiert werden soll (z.B. bei Passwort-Änderungen) */
+	/** Whether to validate password strength (e.g. on registration or password changes). */
 	validateStrength?: boolean;
 }
 
 /**
- * Entschlüsselt ein RSA-verschlüsseltes Passwort und validiert optional die Passwortstärke.
- * Zentrale Utility-Funktion um DRY zu gewährleisten.
+ * Decrypts an RSA-encrypted password and optionally validates its strength.
+ * Central utility function to keep password handling DRY.
  *
- * @param encryptedPassword - Das verschlüsselte Passwort
- * @param config - Konfiguration mit privatem Schlüssel und Validierungsoptionen
- * @returns Ergebnis mit entschlüsseltem Passwort oder Fehlerinformationen
+ * @param encryptedPassword - The base64 RSA-encrypted password.
+ * @param config - Configuration with the private key and validation options.
+ * @returns Result with the decrypted password or error information.
  *
  * @example
- * // Nur entschlüsseln (z.B. beim Login)
+ * // Decrypt only (e.g. on login)
  * const result = decryptPassword(encryptedPw, { privateKey: key });
  *
  * @example
- * // Entschlüsseln und Stärke validieren (z.B. bei Registrierung)
+ * // Decrypt and validate strength (e.g. on registration)
  * const result = decryptPassword(encryptedPw, { privateKey: key, validateStrength: true });
  */
 export function decryptPassword(
 	encryptedPassword: string,
 	config: PasswordOperationConfig
 ): PasswordDecryptionResult {
-	// RSA-Entschlüsselung
+	// RSA decryption
 	let decryptedPassword: string;
 	try {
 		const key = new NodeRSA(config.privateKey);
@@ -59,14 +59,17 @@ export function decryptPassword(
 		};
 	}
 
-	// Optionale Passwort-Stärke-Validierung
+	// Optional password-strength validation.
 	if (config.validateStrength) {
-		if (!PasswordValidator.validate(decryptedPassword)) {
+		const validation = PasswordValidator.validate(decryptedPassword);
+		if (!validation.isValid) {
 			return {
 				success: false,
 				error: {
 					code: 400,
-					message: "Password does not meet strength requirements",
+					message:
+						validation.errors.join(" ") ||
+						"Password does not meet strength requirements",
 				},
 			};
 		}
@@ -79,12 +82,12 @@ export function decryptPassword(
 }
 
 /**
- * Entschlüsselt und validiert ein Passwort für Registrierung/Update-Szenarien.
- * Kurzform für decryptPassword mit aktivierter Stärke-Validierung.
+ * Decrypts and validates a password for registration/update scenarios.
+ * Shorthand for {@link decryptPassword} with strength validation enabled.
  *
- * @param encryptedPassword - Das verschlüsselte Passwort
- * @param privateKey - RSA Private Key
- * @returns Ergebnis mit entschlüsseltem Passwort oder Fehlerinformationen
+ * @param encryptedPassword - The base64 RSA-encrypted password.
+ * @param privateKey - RSA private key.
+ * @returns Result with the decrypted password or error information.
  */
 export function decryptAndValidatePassword(
 	encryptedPassword: string,
@@ -97,11 +100,11 @@ export function decryptAndValidatePassword(
 }
 
 /**
- * Entschlüsselt ein Passwort ohne Stärke-Validierung (für Login-Szenarien).
+ * Decrypts a password without strength validation (for login scenarios).
  *
- * @param encryptedPassword - Das verschlüsselte Passwort
- * @param privateKey - RSA Private Key
- * @returns Ergebnis mit entschlüsseltem Passwort oder Fehlerinformationen
+ * @param encryptedPassword - The base64 RSA-encrypted password.
+ * @param privateKey - RSA private key.
+ * @returns Result with the decrypted password or error information.
  */
 export function decryptPasswordOnly(
 	encryptedPassword: string,

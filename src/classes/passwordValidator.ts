@@ -1,12 +1,14 @@
 /**
- * Passwort-Validierungsklasse
- * Prüft Passwörter auf Sicherheitsanforderungen
+ * Result of a password validation run.
  */
 export interface PasswordValidationResult {
 	isValid: boolean;
 	errors: string[];
 }
 
+/**
+ * Configurable password security requirements.
+ */
 export interface PasswordRequirements {
 	minLength: number;
 	requireUppercase: boolean;
@@ -15,6 +17,10 @@ export interface PasswordRequirements {
 	requireSpecialChars: boolean;
 }
 
+/**
+ * Password validation class.
+ * Checks passwords against configurable security requirements.
+ */
 export default class PasswordValidator {
 	private static readonly DEFAULT_REQUIREMENTS: PasswordRequirements = {
 		minLength: 8,
@@ -27,10 +33,10 @@ export default class PasswordValidator {
 	private static readonly SPECIAL_CHARS = /[^A-Za-z0-9\s]/;
 
 	/**
-	 * Validiert ein Passwort gegen die definierten Anforderungen
-	 * @param password - Das zu validierende Passwort
-	 * @param requirements - Optionale benutzerdefinierte Anforderungen
-	 * @returns Validierungsergebnis mit Fehlermeldungen
+	 * Validates a password against the configured requirements.
+	 * @param password - The password to validate.
+	 * @param requirements - Optional custom requirements that override the defaults.
+	 * @returns Validation result with a list of human-readable error messages.
 	 */
 	public static validate(
 		password: string,
@@ -41,37 +47,31 @@ export default class PasswordValidator {
 
 		if (!password || password.length < reqs.minLength) {
 			errors.push(
-				`Passwort muss mindestens ${reqs.minLength} Zeichen lang sein.`
+				`Password must be at least ${reqs.minLength} characters long.`
 			);
 		}
 
 		if (reqs.requireUppercase && !/[A-Z]/.test(password)) {
-			errors.push(
-				"Passwort muss mindestens einen Großbuchstaben enthalten."
-			);
+			errors.push("Password must contain at least one uppercase letter.");
 		}
 
 		if (reqs.requireLowercase && !/[a-z]/.test(password)) {
-			errors.push(
-				"Passwort muss mindestens einen Kleinbuchstaben enthalten."
-			);
+			errors.push("Password must contain at least one lowercase letter.");
 		}
 
 		if (reqs.requireNumbers && !/[0-9]/.test(password)) {
-			errors.push("Passwort muss mindestens eine Zahl enthalten.");
+			errors.push("Password must contain at least one number.");
 		}
 
 		if (reqs.requireSpecialChars && !this.SPECIAL_CHARS.test(password)) {
 			errors.push(
-				"Passwort muss mindestens ein Sonderzeichen enthalten (!@#$%^&*()_+-=[]{};\\':\\\"\\\\|,.<>/?)."
+				"Password must contain at least one special character (e.g. !@#$%^&*)."
 			);
 		}
 
-		// Prüfung auf häufig verwendete, unsichere Passwörter
+		// Reject commonly used, insecure passwords.
 		if (this.isCommonPassword(password)) {
-			errors.push(
-				"Dieses Passwort ist zu häufig verwendet und unsicher."
-			);
+			errors.push("This password is too common and therefore insecure.");
 		}
 
 		return {
@@ -81,9 +81,13 @@ export default class PasswordValidator {
 	}
 
 	/**
-	 * Prüft, ob ein Passwort in der Liste häufiger Passwörter ist
+	 * Checks whether a password is part of a small denylist of common passwords.
 	 */
 	private static isCommonPassword(password: string): boolean {
+		if (!password) {
+			return false;
+		}
+
 		const commonPasswords = [
 			"password",
 			"123456",
@@ -115,7 +119,8 @@ export default class PasswordValidator {
 	}
 
 	/**
-	 * Generiert einen Hinweis zur Passwortstärke
+	 * Returns a coarse, human-readable strength label for a password.
+	 * Intended as a UI hint, not as the authoritative validation check.
 	 */
 	public static getStrengthHint(password: string): string {
 		let strength = 0;
@@ -128,9 +133,9 @@ export default class PasswordValidator {
 		if (/[0-9]/.test(password)) strength++;
 		if (this.SPECIAL_CHARS.test(password)) strength++;
 
-		if (strength <= 2) return "Schwach";
-		if (strength <= 4) return "Mittel";
-		if (strength <= 6) return "Stark";
-		return "Sehr stark";
+		if (strength <= 2) return "Weak";
+		if (strength <= 4) return "Medium";
+		if (strength <= 6) return "Strong";
+		return "Very strong";
 	}
 }
