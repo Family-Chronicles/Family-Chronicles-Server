@@ -58,6 +58,15 @@ export class MongoRepository<T extends IModel> implements IRepository<T> {
 		return entity;
 	}
 
+	async createMany(entities: T[]): Promise<number> {
+		if (entities.length === 0) return 0;
+		// insertMany mutates the documents (adds _id), so pass copies
+		const result = await this.collection.insertMany(
+			entities.map((e) => ({ ...e }))
+		);
+		return result.insertedCount;
+	}
+
 	async update(id: string, patch: Partial<T>): Promise<T | null> {
 		const { Id, ...rest } = patch as Partial<T> & { Id?: string };
 		const result = await this.collection.findOneAndUpdate(

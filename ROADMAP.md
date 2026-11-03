@@ -66,9 +66,9 @@ Legende: ✅ erledigt · 🚧 in Arbeit · ⬜ offen
 - ✅ GitHub-Action: Lint, Build, Test bei jedem PR (Server und App).
 - ✅ OpenAPI-Dokumentation für alle Endpunkte (`/docs`, JSON unter `/openapi.json`).
 - ✅ Docker-Compose: Zugangsdaten über `.env`, Healthchecks, Upload-Volume.
-- ⬜ Integrationstests gegen eine echte MongoDB (z. B. per Testcontainer in CI).
+- ✅ Integrationstests gegen eine echte MongoDB (MongoDB-Container in der CI, lokal mit `TEST_MONGO_URL`).
 
-## Phase 5 – Web-App (Svelte, bQuery.js, TypeScript, Tailwind) ✅ (Basis)
+## Phase 5 – Web-App (Svelte, bQuery.js, TypeScript, Tailwind) ✅
 
 Technik: Vite + Svelte 5 + TypeScript + Tailwind CSS 4. **bQuery.js** (`@bquery/bquery`) liefert
 Signals für den globalen Zustand (Session, Benachrichtigungen), den HTTP-Client, das Hash-Routing
@@ -84,14 +84,16 @@ Code: [Family-Chronicles-App](https://github.com/Family-Chronicles/Family-Chroni
 - ✅ Medien hochladen, anzeigen, Personen taggen.
 - ✅ Stammbaum-Ansicht (Vorfahren/Nachkommen).
 - ✅ Benutzerverwaltung (nur Admin).
-- ⬜ Mehrsprachigkeit (DE/EN).
-- ⬜ E2E-Tests (Playwright) ins Repo übernehmen – ein Durchlauf wurde manuell geprüft.
-- ⬜ Docker-Compose für App + Server gemeinsam.
+- ✅ Mehrsprachigkeit (DE/EN) mit bQuery i18n, Sprache wird gemerkt.
+- ✅ E2E-Tests (Playwright) im App-Repo, laufen in der CI gegen den echten Server.
+- ✅ Docker-Compose für App + Server + MongoDB (im App-Repo).
 - ⬜ Paginierung/Server-Suche für sehr große Stammbäume (aktuell wird die Personenliste komplett geladen).
 
-## Phase 6 – Erweiterungen (nach 1.0)
+## Phase 6 – Erweiterungen
 
-- ⬜ GEDCOM-Import/-Export (Issue #37).
-- ⬜ WebSocket-API für Live-Updates evaluieren (Issue #38).
+- ✅ GEDCOM-Import/-Export (Issue #37) – siehe [docs/gedcom.md](docs/gedcom.md), in der App unter „Import/Export“.
+- ⬜ GEDCOM: Quellen (`SOUR`), Medien (`OBJE`) und weitere Ereignisse (Taufe, Beerdigung, …) übernehmen.
+- ✅ WebSocket-API für Live-Updates (Issue #38) – Bewertung und Protokoll in [docs/websocket.md](docs/websocket.md), in der App aktiv.
+- ⬜ Live-Updates über mehrere Server-Instanzen (MongoDB Change Streams oder Redis).
 - ⬜ Verknüpfung mehrerer Instanzen (Föderation) – die eigentliche Vision des Projekts.
 - ⬜ Refresh-Tokens, Passwort-Zurücksetzen per E-Mail.

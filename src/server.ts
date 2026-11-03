@@ -6,6 +6,7 @@ import { Config } from "./types/config.type.js";
 import { loadConfig } from "./services/config.srvs.js";
 import { createDatabase } from "./services/database.srvs.js";
 import { createApp, createContext, ensureAdmin } from "./core/app.core.js";
+import { LiveService } from "./services/live.srvs.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
@@ -51,8 +52,10 @@ async function main(): Promise<void> {
 			`⚡️[server]: Server is running at http://localhost:${config.server.port}`
 		);
 	});
+	const live = new LiveService(server, ctx.auth, ctx.events);
 
 	const shutdown = () => {
+		live.close();
 		server.close(() => {
 			database.close().finally(() => process.exit(0));
 		});

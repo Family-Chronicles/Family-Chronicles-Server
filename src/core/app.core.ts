@@ -5,10 +5,11 @@ import crypto from "crypto";
 import { AppContext } from "./context.core.js";
 import { errorHandler, HttpError, now } from "./http.core.js";
 import { Config } from "../types/config.type.js";
-import { Database } from "../services/database.srvs.js";
+import { Database, Repositories } from "../services/database.srvs.js";
 import { AuthService, hashPassword } from "../services/auth.srvs.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
 import { FileStorage } from "../storage/file.storage.js";
+import { ChangeBus, ObservableRepository } from "../services/events.srvs.js";
 import { indexController } from "../controllers/index.controller.js";
 import { authController } from "../controllers/auth.controller.js";
 import { userController } from "../controllers/user.controller.js";
@@ -19,14 +20,23 @@ import {
 } from "../controllers/family.controller.js";
 import { relationshipController } from "../controllers/relationship.controller.js";
 import { mediaController } from "../controllers/media.controller.js";
+import { gedcomController } from "../controllers/gedcom.controller.js";
 
 export const API_PREFIX = "/api/v1";
 
 export function createContext(config: Config, database: Database): AppContext {
-	const repos = database.repositories;
+	const events = new ChangeBus();
+	// every write is reported on the change bus (live updates)
+	const repos = Object.fromEntries(
+		Object.entries(database.repositories).map(([name, repo]) => [
+			name,
+			new ObservableRepository(repo, name, events),
+		])
+	) as unknown as Repositories;
 	return {
 		config,
 		repos,
+		events,
 		auth: new AuthService(
 			repos.users,
 			config.auth.jwtSecret,
@@ -106,6 +116,7 @@ export function createApp(
 	api.use("/memberships", membershipController(ctx));
 	api.use("/relationships", relationshipController(ctx));
 	api.use("/media", mediaController(ctx, genealogy));
+	api.use("/gedcom", gedcomController(ctx));
 	app.use(API_PREFIX, api);
 	extend?.(app);
 

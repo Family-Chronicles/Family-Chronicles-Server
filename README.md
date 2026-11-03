@@ -34,6 +34,9 @@ npm run dev            # admin: admin@family-chronicles.local / admin12345
 | `npm run lint`  | ESLint + Prettier check             |
 | `npm test`      | API tests (in-memory, no DB needed) |
 
+MongoDB integration tests run when `TEST_MONGO_URL` is set, e.g.
+`TEST_MONGO_URL=mongodb://localhost:27017 npm test` (CI does this with a MongoDB container).
+
 ## API overview
 
 All routes live under `/api/v1` and, except `auth/login` and `health`, need a

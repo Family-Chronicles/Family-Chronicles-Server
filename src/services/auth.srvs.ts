@@ -98,16 +98,25 @@ export class AuthService {
 		if (scheme !== "Bearer" || !token) {
 			throw new HttpError(401, "No token provided");
 		}
+		return this.verify(token);
+	}
+
+	/** Checks a token and returns the user plus the token expiry (ms since epoch) */
+	public async verify(
+		token: string
+	): Promise<AuthUser & { ExpiresAt: number }> {
 		let subject: string;
+		let expiresAt: number;
 		try {
 			const payload = jwt.verify(token, this.secret) as jwt.JwtPayload;
 			subject = payload.sub as string;
+			expiresAt = (payload.exp ?? 0) * 1000;
 		} catch {
 			throw new HttpError(401, "Invalid or expired token");
 		}
 		// load the user so deleted users and role changes take effect immediately
 		const user = await this.users.findById(subject);
 		if (!user) throw new HttpError(401, "User no longer exists");
-		return { Id: user.Id, Role: user.Role };
+		return { Id: user.Id, Role: user.Role, ExpiresAt: expiresAt };
 	}
 }
