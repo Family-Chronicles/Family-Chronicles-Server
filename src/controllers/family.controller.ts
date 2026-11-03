@@ -4,7 +4,11 @@ import { AppContext } from "../core/context.core.js";
 import { handle, HttpError, notFound, now, parse } from "../core/http.core.js";
 import { Family, FamilyMembership } from "../models/family.model.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
-import { familySchema, membershipSchema } from "../validation/schemas.js";
+import {
+	familySchema,
+	membershipSchema,
+	patchSchema,
+} from "../validation/schemas.js";
 
 export function familyController(
 	ctx: AppContext,
@@ -131,7 +135,7 @@ export function familyController(
 		write,
 		handle(async (req, res) => {
 			const family = await load(req.params.id);
-			const patch = parse(familySchema.partial(), req.body);
+			const patch = parse(patchSchema(familySchema), req.body);
 			res.send(
 				await families.update(family.Id, { ...patch, UpdatedAt: now() })
 			);
@@ -239,9 +243,9 @@ export function membershipController(ctx: AppContext): Router {
 		write,
 		handle(async (req, res) => {
 			const patch = parse(
-				membershipSchema
-					.omit({ FamilyId: true, PersonId: true })
-					.partial(),
+				patchSchema(
+					membershipSchema.omit({ FamilyId: true, PersonId: true })
+				),
 				req.body
 			);
 			const updated = await memberships.update(req.params.id, patch);

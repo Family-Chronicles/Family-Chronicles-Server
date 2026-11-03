@@ -104,3 +104,21 @@ export const passwordChangeSchema = z.object({
 	CurrentPassword: z.string(),
 	NewPassword: password,
 });
+
+/**
+ * Schema for partial updates: every field optional and without default values,
+ * so fields that are not sent keep their stored value.
+ * (`.partial()` alone would still fill in the defaults.)
+ */
+export function patchSchema<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
+	const shape = Object.fromEntries(
+		Object.entries(schema.shape).map(([key, field]) => [
+			key,
+			(field instanceof z.ZodDefault
+				? (field.unwrap() as z.ZodType)
+				: (field as z.ZodType)
+			).optional(),
+		])
+	);
+	return z.object(shape) as unknown as ReturnType<z.ZodObject<S>["partial"]>;
+}

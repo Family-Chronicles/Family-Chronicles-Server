@@ -55,7 +55,7 @@
 		"multer": "^2.5.0",
 		"swagger-jsdoc": "^6.2.8",
 		"swagger-ui-express": "^4.6.3",
-		"zod": "^3.25.76"
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@types/cors": "^2.8.19",

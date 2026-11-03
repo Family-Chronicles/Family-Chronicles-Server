@@ -4,7 +4,7 @@ import { AppContext } from "../core/context.core.js";
 import { handle, notFound, now, parse } from "../core/http.core.js";
 import { fullName, Person } from "../models/person.model.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
-import { personSchema } from "../validation/schemas.js";
+import { patchSchema, personSchema } from "../validation/schemas.js";
 
 const normalize = (s: string) =>
 	s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -211,7 +211,7 @@ export function personController(
 		write,
 		handle(async (req, res) => {
 			const person = await load(req.params.id);
-			const patch = parse(personSchema.partial(), req.body);
+			const patch = parse(patchSchema(personSchema), req.body);
 			res.send(
 				await persons.update(person.Id, { ...patch, UpdatedAt: now() })
 			);

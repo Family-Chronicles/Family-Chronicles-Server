@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { AppContext } from "../core/context.core.js";
 import { handle, HttpError, notFound, parse } from "../core/http.core.js";
 import { Relationship } from "../models/relationship.model.js";
-import { relationshipSchema } from "../validation/schemas.js";
+import { patchSchema, relationshipSchema } from "../validation/schemas.js";
 
 const SYMMETRIC = [
 	"Spouse",
@@ -146,7 +146,7 @@ export function relationshipController(ctx: AppContext): Router {
 		handle(async (req, res) => {
 			const existing = await relationships.findById(req.params.id);
 			if (!existing) throw notFound("Relationship");
-			const patch = parse(relationshipSchema.partial(), req.body);
+			const patch = parse(patchSchema(relationshipSchema), req.body);
 			const merged = canonical<Relationship>({ ...existing, ...patch });
 			await validate(merged, existing.Id);
 			res.send(await relationships.update(existing.Id, merged));

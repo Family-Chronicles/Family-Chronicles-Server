@@ -1,5 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
-import { ZodError, ZodTypeAny, z } from "zod";
+import { ZodError, z } from "zod";
 
 /** Error with an HTTP status – thrown in handlers, turned into a JSON response */
 export class HttpError extends Error {
@@ -23,13 +23,17 @@ export const handle =
 	};
 
 /** Parses a request body with a zod schema, throws a 400 on failure */
-export function parse<S extends ZodTypeAny>(
+export function parse<S extends z.ZodType>(
 	schema: S,
 	data: unknown
 ): z.infer<S> {
 	const result = schema.safeParse(data);
 	if (!result.success) {
-		throw new HttpError(400, "Validation failed", result.error.flatten());
+		throw new HttpError(
+			400,
+			"Validation failed",
+			z.flattenError(result.error)
+		);
 	}
 	return result.data;
 }
@@ -52,7 +56,7 @@ export function errorHandler(
 		res.status(400).send({
 			status: 400,
 			message: "Validation failed",
-			details: error.flatten(),
+			details: z.flattenError(error),
 		});
 		return;
 	}

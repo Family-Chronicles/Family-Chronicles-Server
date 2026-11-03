@@ -5,7 +5,7 @@ import { AppContext } from "../core/context.core.js";
 import { handle, HttpError, notFound, now, parse } from "../core/http.core.js";
 import { Media, MediaTag, MediaType } from "../models/media.model.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
-import { mediaSchema, tagSchema } from "../validation/schemas.js";
+import { mediaSchema, patchSchema, tagSchema } from "../validation/schemas.js";
 
 function typeFromMime(mime: string | null): MediaType {
 	if (!mime) return "Text";
@@ -165,7 +165,7 @@ export function mediaController(
 		write,
 		handle(async (req, res) => {
 			const item = await load(req.params.id);
-			const patch = parse(mediaSchema.partial(), req.body);
+			const patch = parse(patchSchema(mediaSchema), req.body);
 			if (patch.PersonId && !(await persons.findById(patch.PersonId))) {
 				throw notFound("Person");
 			}

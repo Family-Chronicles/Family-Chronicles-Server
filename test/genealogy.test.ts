@@ -145,6 +145,15 @@ describe("persons, families, relationships, media", () => {
 			.send({ FamilyId: fam.Id, PersonId: a.Id })
 			.expect(409);
 
+		// partial updates keep fields that are not sent
+		const renamed = await request(t.app)
+			.put(`/api/v1/families/${fam.Id}`)
+			.set(h)
+			.send({ Description: "Aus Franken" })
+			.expect(200);
+		expect(renamed.body.HistoricalNames).toEqual(["Schmitt"]);
+		expect(renamed.body.Name).toBe("Schmidt");
+
 		const detail = await request(t.app)
 			.get(`/api/v1/families/${fam.Id}`)
 			.set(h);
