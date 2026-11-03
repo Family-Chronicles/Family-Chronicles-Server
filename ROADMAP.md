@@ -59,19 +59,21 @@ Legende: ✅ erledigt · 🚧 in Arbeit · ⬜ offen
 - ✅ Suche: Personen nach Name, Geburtsdatum; Familienbaum-Endpunkt (`/persons/:id/tree`).
 - ✅ Kaskadierendes Aufräumen (Löschen einer Person entfernt Beziehungen, Mitgliedschaften, Tags).
 
-## Phase 4 – Qualitätssicherung 🚧
+## Phase 4 – Qualitätssicherung ✅
 
 - ✅ Test-Setup mit Vitest + Supertest gegen die In-Memory-Repositories.
 - ✅ Tests für Auth, Rechte, CRUD, Beziehungen, Baum.
-- ⬜ GitHub-Action: Lint, Build, Test bei jedem PR.
-- ⬜ OpenAPI-Dokumentation an die neuen Endpunkte anpassen (`/docs`).
-- ⬜ Docker-Compose: Zugangsdaten über `.env`, Healthcheck.
+- ✅ GitHub-Action: Lint, Build, Test bei jedem PR (Server und App).
+- ✅ OpenAPI-Dokumentation für alle Endpunkte (`/docs`, JSON unter `/openapi.json`).
+- ✅ Docker-Compose: Zugangsdaten über `.env`, Healthchecks, Upload-Volume.
+- ⬜ Integrationstests gegen eine echte MongoDB (z. B. per Testcontainer in CI).
 
-## Phase 5 – Web-App (Svelte, bQuery.js, TypeScript, Tailwind) 🚧
+## Phase 5 – Web-App (Svelte, bQuery.js, TypeScript, Tailwind) ✅ (Basis)
 
 Technik: Vite + Svelte 5 + TypeScript + Tailwind CSS 4. **bQuery.js** (`@bquery/bquery`) liefert
-reaktive Signals für den globalen Zustand (Session, Benachrichtigungen) sowie DOM-Helfer;
-Svelte übernimmt das Rendering der Komponenten.
+Signals für den globalen Zustand (Session, Benachrichtigungen), den HTTP-Client, das Hash-Routing
+und Screenreader-Ansagen; Svelte übernimmt das Rendering der Komponenten.
+Code: [Family-Chronicles-App](https://github.com/Family-Chronicles/Family-Chronicles-App).
 
 - ✅ Projektgerüst, Build, Lint/Typecheck.
 - ✅ Typisierter API-Client inkl. Token-Handling.
@@ -83,7 +85,9 @@ Svelte übernimmt das Rendering der Komponenten.
 - ✅ Stammbaum-Ansicht (Vorfahren/Nachkommen).
 - ✅ Benutzerverwaltung (nur Admin).
 - ⬜ Mehrsprachigkeit (DE/EN).
-- ⬜ E2E-Tests (Playwright).
+- ⬜ E2E-Tests (Playwright) ins Repo übernehmen – ein Durchlauf wurde manuell geprüft.
+- ⬜ Docker-Compose für App + Server gemeinsam.
+- ⬜ Paginierung/Server-Suche für sehr große Stammbäume (aktuell wird die Personenliste komplett geladen).
 
 ## Phase 6 – Erweiterungen (nach 1.0)
 
