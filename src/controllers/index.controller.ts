@@ -1,40 +1,31 @@
-import { Express, Request, Response } from "express";
-import { ConfigService } from "../services/config.srvs.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { IController } from "../interfaces/controller.interface.js";
-import { Config } from "../types/config.type.js";
+import { Router } from "express";
+import { AppContext } from "../core/context.core.js";
 
-/**
- * Index controller
- */
-export class IndexController implements IController {
-	private _config = ConfigService.getInstance()._config as Config;
-	private _database = DatabaseService.getInstance();
+export function indexController(ctx: AppContext): Router {
+	const router = Router();
 
-	public routes(app: Express): void {
-		/**
-		 * GET /
-		 * @summary This returns the base data of the API
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 *  "version": "1.0.0",
-		 * 	"name": "API"
-		 * }
-		 */
-		app.get("/", (req: Request, res: Response) => {
-			this.getBaseData(req, res);
+	/**
+	 * GET /api/v1
+	 * @tags meta
+	 * @summary Base data of the API
+	 * @return {object} 200 - name and version
+	 */
+	router.get("/", (req, res) => {
+		res.send({
+			name: ctx.config.meta.name,
+			version: ctx.config.meta.version,
 		});
-	}
+	});
 
-	private getBaseData(req: Request, res: Response): void {
-		const result = {
-			version: this._config.meta.version,
-			name: this._config.meta.name,
-		};
-		// eslint-disable-next-line no-unused-vars
-		this._database.listAllDatabases().then((dbs) => {
-			res.send(result);
-		});
-	}
+	/**
+	 * GET /api/v1/health
+	 * @tags meta
+	 * @summary Health check
+	 * @return {object} 200 - ok
+	 */
+	router.get("/health", (req, res) => {
+		res.send({ status: "ok" });
+	});
+
+	return router;
 }

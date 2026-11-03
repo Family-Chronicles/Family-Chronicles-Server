@@ -1,55 +1,56 @@
-version: "3"
 services:
   family-chronicles-server:
     container_name: family-chronicles-server
     image: family-chronicles/family-chronicles-server
-    restart: always
     build: .
+    restart: unless-stopped
     ports:
       - "8080:8080"
-    links:
-      - mongo
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_DRIVER: mongo
+      DB_HOST: mongodb://mongo:27017
+      DB_USER: ${MONGO_USER:-admin}
+      DB_PASSWORD: ${MONGO_PASSWORD:-admin}
+    volumes:
+      - UPLOADS:/data/uploads
     networks:
       - family-chronicles-network
     depends_on:
-      - mongo
-      - mongo-express
+      mongo:
+        condition: service_healthy
 
   mongo:
     container_name: mongo
-    image: mongo:latest
+    image: mongo:7
+    restart: unless-stopped
     volumes:
-      - type: volume
-        source: MONGO_DATA
-        target: /data/db
-      - type: volume
-        source: MONGO_CONFIG
-        target: /data/configdb
-      - type: volume
-        source: MONGO_LOG
-        target: /var/log/mongodb
-    ports:
-      - "27017:27017"
-    restart: always
+      - MONGO_DATA:/data/db
+      - MONGO_CONFIG:/data/configdb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin}
       MONGO_INITDB_DATABASE: family-chronicles
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     networks:
       - family-chronicles-network
 
+  # Optional database UI: `docker compose --profile tools up`
   mongo-express:
     image: mongo-express:latest
     container_name: mongo-express
-    restart: always
+    profiles: ["tools"]
+    restart: unless-stopped
     ports:
-      - 8081:8081
+      - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_MONGODB_PORT: "27017"
-      ME_CONFIG_MONGODB_URL: mongodb://0.0.0.0:27017
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongo:27017/
     networks:
       - family-chronicles-network
 
@@ -61,4 +62,4 @@ networks:
 volumes:
   MONGO_DATA:
   MONGO_CONFIG:
-  MONGO_LOG:
+  UPLOADS:

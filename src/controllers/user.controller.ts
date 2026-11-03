@@ -1,399 +1,139 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { User } from "../models/user.model.js";
-import { AuthorizationService } from "../services/auth.srvs.js";
-import bodyParser from "body-parser";
+import { Router } from "express";
+import crypto from "crypto";
+import { AppContext } from "../core/context.core.js";
+import { handle, HttpError, notFound, now, parse } from "../core/http.core.js";
+import { toPublicUser, User } from "../models/user.model.js";
+import { hashPassword } from "../services/auth.srvs.js";
+import { userCreateSchema, userUpdateSchema } from "../validation/schemas.js";
 
-export class UserController implements IController {
-	private _database = DatabaseService.getInstance();
-	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "users";
+/** User management – admins only */
+export function userController(ctx: AppContext): Router {
+	const router = Router();
+	const { users } = ctx.repos;
+	router.use(ctx.auth.require("Admin"));
+
+	const ensureEmailFree = async (email: string, exceptId?: string) => {
+		const existing = await users.findOne({ Email: email });
+		if (existing && existing.Id !== exceptId) {
+			throw new HttpError(409, "Email already in use");
+		}
+	};
+
+	const ensureAnotherAdmin = async (id: string) => {
+		const admins = await users.findAll({ Role: "Admin" });
+		if (admins.every((a) => a.Id === id)) {
+			throw new HttpError(409, "The last admin cannot be removed");
+		}
+	};
+
 	/**
-	 * Routes user controller
-	 * @param app
+	 * GET /api/v1/users
+	 * @tags users
+	 * @summary All users (Admin)
+	 * @security BearerAuth
+	 * @return {array<object>} 200 - users
 	 */
-	public routes(app: Express): void {
-		/**
-		 * GET /users
-		 * @tags users
-		 * @summary This returns an array of all users
-		 * @security BearerAuth
-		 * @return {object[]} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * [
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	},
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
-		 * ]
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.get("/users", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
-		});
+	router.get(
+		"/",
+		handle(async (req, res) => {
+			res.send((await users.findAll()).map(toPublicUser));
+		})
+	);
 
-		/**
-		 * GET /user/:id
-		 * @tags users
-		 * @summary This returns a user by id
-		 * @security BearerAuth
-		 * @param {string} id.path.required - the id of the user
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.get("/user/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
+	/**
+	 * GET /api/v1/users/{id}
+	 * @tags users
+	 * @summary One user (Admin)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - user id
+	 * @return {object} 200 - user
+	 */
+	router.get(
+		"/:id",
+		handle(async (req, res) => {
+			const user = await users.findById(req.params.id);
+			if (!user) throw notFound("User");
+			res.send(toPublicUser(user));
+		})
+	);
 
-		/**
-		 * POST /user
-		 * @tags users
-		 * @summary This a new user and saves it to the database
-		 * @security BearerAuth
-		 * @param {object} - the new user - application/json
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"name": "string",
-		 * 		"email": "string",
-		 * 		"password": "string",
-		 * 		"role": "Date",
-		 * 	}
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.post("/user", bodyParser.json(), (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.create(req, res);
-			});
-		});
+	/**
+	 * POST /api/v1/users
+	 * @tags users
+	 * @summary Create a user (Admin)
+	 * @security BearerAuth
+	 * @param {object} request.body.required - { Name, Email, Password, Role }
+	 * @return {object} 201 - user
+	 */
+	router.post(
+		"/",
+		handle(async (req, res) => {
+			const body = parse(userCreateSchema, req.body);
+			await ensureEmailFree(body.Email);
+			const user: User = {
+				Id: crypto.randomUUID(),
+				Name: body.Name,
+				Email: body.Email,
+				PasswordHash: await hashPassword(body.Password),
+				Role: body.Role,
+				CreatedAt: now(),
+				UpdatedAt: now(),
+			};
+			await users.create(user);
+			res.status(201).send(toPublicUser(user));
+		})
+	);
 
-		/**
-		 * PUT /user/:id
-		 * @tags users
-		 * @summary This updates a user by id
-		 * @security BearerAuth
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"id": "string",
-		 * 		"name": "string",
-		 * 		"password": "string",
-		 * 		"createdAt": "Date",
-		 * 		"updatedAt": "Date",
-		 * 		"userType": "UserType"
-		 * 	}
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.put(
-			"/user/:id",
-			bodyParser.json(),
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
+	/**
+	 * PUT /api/v1/users/{id}
+	 * @tags users
+	 * @summary Update a user (Admin)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - user id
+	 * @return {object} 200 - user
+	 */
+	router.put(
+		"/:id",
+		handle(async (req, res) => {
+			const body = parse(userUpdateSchema, req.body);
+			const user = await users.findById(req.params.id);
+			if (!user) throw notFound("User");
+			if (body.Email) await ensureEmailFree(body.Email, user.Id);
+			if (body.Role && body.Role !== "Admin" && user.Role === "Admin") {
+				await ensureAnotherAdmin(user.Id);
 			}
-		);
+			const patch: Partial<User> = { UpdatedAt: now() };
+			if (body.Name) patch.Name = body.Name;
+			if (body.Email) patch.Email = body.Email;
+			if (body.Role) patch.Role = body.Role;
+			if (body.Password)
+				patch.PasswordHash = await hashPassword(body.Password);
+			const updated = await users.update(user.Id, patch);
+			res.send(toPublicUser(updated!));
+		})
+	);
 
-		/**
-		 * DELETE /user/:id
-		 * @tags users
-		 * @summary This deletes a user by id
-		 * @security BearerAuth
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * 	{
-		 * 		"success": true,
-		 * 	}
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.delete("/user/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
-	}
+	/**
+	 * DELETE /api/v1/users/{id}
+	 * @tags users
+	 * @summary Delete a user (Admin)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - user id
+	 * @return {object} 200 - success
+	 */
+	router.delete(
+		"/:id",
+		handle(async (req, res) => {
+			const user = await users.findById(req.params.id);
+			if (!user) throw notFound("User");
+			if (user.Id === req.user!.Id) {
+				throw new HttpError(409, "You cannot delete yourself");
+			}
+			if (user.Role === "Admin") await ensureAnotherAdmin(user.Id);
+			await users.delete(user.Id);
+			res.send({ success: true });
+		})
+	);
 
-	private index(req: Request, res: Response): void {
-		const userDocuments = this._database.listAllDocuments<User>(
-			this._collectionName
-		);
-
-		userDocuments
-			.then((users) => {
-				if (users === null) {
-					users = [];
-				}
-
-				users.forEach((user) => {
-					//@ts-ignore
-					delete user._id;
-				});
-
-				res.send(users);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private create(req: Request, res: Response): void {
-		console.log(req.body);
-		const user = new User(
-			null,
-			req.body.name,
-			req.body.email,
-			req.body.password,
-			new Date(),
-			new Date(),
-			req.body.role
-		);
-
-		this._database
-			.createDocument<User>(this._collectionName, user)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
-
-		res.send(user);
-	}
-
-	private show(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.params.id
-		);
-
-		userDocument
-			.then((user) => {
-				if (user === null) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-				//@ts-ignore
-				delete user!._id;
-				res.send(user);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private update(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.params.id
-		);
-
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-				const updatedUser = new User(
-					user.Id,
-					req.body.name ?? user.Name,
-					req.body.email ?? user.Email,
-					req.body.password ?? user.Password,
-					user.CreatedAt,
-					new Date(),
-					req.body.role ?? user.Role
-				);
-
-				const result = JSON.stringify(updatedUser);
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						userDocument,
-						updatedUser
-					)
-					.then(() => {
-						res.status(200).send(result);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send({ status: 500 });
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private delete(req: Request, res: Response): void {
-		const userDocument = this._database.findDocument<User>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		userDocument
-			.then((user) => {
-				if (user === null || user === undefined) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-				this._database
-					.deleteDocument(this._collectionName, user)
-					.then(() => {
-						res.status(200).send({
-							success: true,
-							message: `User ${user.Name} with id ${user.Id} deleted successfully`,
-						});
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send({ status: 500 });
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
+	return router;
 }
