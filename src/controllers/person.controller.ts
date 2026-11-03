@@ -76,7 +76,7 @@ export function personController(
 			if (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(str("born"))) {
 				options.match!.push({
 					field: "DateOfBirth",
-					pattern: new RegExp(`^${str("born")}`),
+					pattern: new RegExp(`^${escapeRegExp(str("born"))}`),
 				});
 			}
 			if (str("living") === "true" || str("living") === "false") {
