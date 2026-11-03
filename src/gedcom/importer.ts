@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { Gender, Person } from "../models/person.model.js";
+import { Gender, Person, withSearchFields } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { Family, FamilyMembership } from "../models/family.model.js";
 import { Repositories } from "../services/database.srvs.js";
@@ -135,8 +135,8 @@ export async function importGedcom(
 		};
 		if (!main)
 			warnings.push(`Line ${indi.line}: ${indi.xref} has no NAME.`);
-		persons.push(person);
-		byXref.set(indi.xref, person);
+		persons.push(withSearchFields(person));
+		byXref.set(indi.xref, persons[persons.length - 1]);
 	}
 
 	// pedigree type (adopted, foster, ...) per child and family

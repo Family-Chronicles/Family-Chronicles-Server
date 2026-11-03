@@ -21,6 +21,7 @@ import {
 import { relationshipController } from "../controllers/relationship.controller.js";
 import { mediaController } from "../controllers/media.controller.js";
 import { gedcomController } from "../controllers/gedcom.controller.js";
+import { statsController } from "../controllers/stats.controller.js";
 
 export const API_PREFIX = "/api/v1";
 
@@ -89,6 +90,7 @@ export function createApp(
 				origin: origins,
 				methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
 				allowedHeaders: ["Content-Type", "Authorization"],
+				exposedHeaders: ["X-Total-Count"],
 			})
 		);
 	}
@@ -117,6 +119,7 @@ export function createApp(
 	api.use("/relationships", relationshipController(ctx));
 	api.use("/media", mediaController(ctx, genealogy));
 	api.use("/gedcom", gedcomController(ctx));
+	api.use("/stats", statsController(ctx));
 	app.use(API_PREFIX, api);
 	extend?.(app);
 

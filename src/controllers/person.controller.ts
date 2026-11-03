@@ -2,12 +2,17 @@ import { Router } from "express";
 import crypto from "crypto";
 import { AppContext } from "../core/context.core.js";
 import { handle, notFound, now, parse } from "../core/http.core.js";
-import { fullName, Person } from "../models/person.model.js";
+import {
+	normalizeText,
+	Person,
+	withSearchFields,
+} from "../models/person.model.js";
+import {
+	escapeRegExp,
+	QueryOptions,
+} from "../repositories/repository.interface.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
 import { patchSchema, personSchema } from "../validation/schemas.js";
-
-const normalize = (s: string) =>
-	s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 export function personController(
 	ctx: AppContext,
@@ -28,41 +33,65 @@ export function personController(
 	/**
 	 * GET /api/v1/persons
 	 * @tags persons
-	 * @summary All persons, optionally filtered
+	 * @summary Persons, searched, filtered and paged. The total number of matches is in the X-Total-Count header.
 	 * @security BearerAuth
-	 * @param {string} q.query - search in all names and the birth name
+	 * @param {string} q.query - search in names, birth name and places (all words must match)
 	 * @param {string} born.query - date of birth prefix (YYYY, YYYY-MM or YYYY-MM-DD)
+	 * @param {string} living.query - "true": only living, "false": only deceased
+	 * @param {string} ids.query - comma separated ids, returns exactly these persons
+	 * @param {number} limit.query - page size (max 500); without limit all matches are returned
+	 * @param {number} offset.query - number of matches to skip
 	 * @return {array<object>} 200 - persons, sorted by last name
 	 */
 	router.get(
 		"/",
 		read,
 		handle(async (req, res) => {
-			const q =
-				typeof req.query.q === "string" ? normalize(req.query.q) : "";
-			const born =
-				typeof req.query.born === "string" ? req.query.born : "";
-			let result = await persons.findAll();
-			if (q) {
-				const terms = q.split(/\s+/).filter(Boolean);
-				result = result.filter((p) => {
-					const haystack = normalize(
-						`${fullName(p)} ${p.BirthName ?? ""}`
-					);
-					return terms.every((t) => haystack.includes(t));
+			const str = (key: string) =>
+				typeof req.query[key] === "string"
+					? (req.query[key] as string)
+					: "";
+
+			if (str("ids")) {
+				const ids = str("ids").split(",").filter(Boolean).slice(0, 500);
+				const found = await persons.findByIds(ids);
+				res.setHeader("X-Total-Count", String(found.length));
+				res.send(found);
+				return;
+			}
+
+			const options: QueryOptions<Person> = {
+				match: [],
+				notNull: [],
+				sort: [{ field: "SortName", direction: 1 }],
+			};
+			for (const term of normalizeText(str("q"))
+				.split(/\s+/)
+				.filter(Boolean)) {
+				options.match!.push({
+					field: "SearchText",
+					pattern: new RegExp(escapeRegExp(term)),
 				});
 			}
-			if (born) {
-				result = result.filter((p) => p.DateOfBirth?.startsWith(born));
+			if (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(str("born"))) {
+				options.match!.push({
+					field: "DateOfBirth",
+					pattern: new RegExp(`^${str("born")}`),
+				});
 			}
-			result.sort(
-				(a, b) =>
-					a.LastNames.join(" ").localeCompare(
-						b.LastNames.join(" ")
-					) ||
-					a.FirstNames.join(" ").localeCompare(b.FirstNames.join(" "))
-			);
-			res.send(result);
+			if (str("living") === "true" || str("living") === "false") {
+				options.notNull!.push({
+					field: "DateOfDeath",
+					value: str("living") === "false",
+				});
+			}
+			const limit = Number(str("limit"));
+			if (limit > 0) options.limit = Math.min(limit, 500);
+			options.skip = Math.max(Number(str("offset")) || 0, 0);
+
+			const page = await persons.query(options);
+			res.setHeader("X-Total-Count", String(page.total));
+			res.send(page.items);
 		})
 	);
 
@@ -187,12 +216,12 @@ export function personController(
 		write,
 		handle(async (req, res) => {
 			const body = parse(personSchema, req.body);
-			const person: Person = {
+			const person: Person = withSearchFields({
 				Id: crypto.randomUUID(),
 				...body,
 				CreatedAt: now(),
 				UpdatedAt: now(),
-			};
+			});
 			await persons.create(person);
 			res.status(201).send(person);
 		})
@@ -213,7 +242,10 @@ export function personController(
 			const person = await load(req.params.id);
 			const patch = parse(patchSchema(personSchema), req.body);
 			res.send(
-				await persons.update(person.Id, { ...patch, UpdatedAt: now() })
+				await persons.update(
+					person.Id,
+					withSearchFields({ ...person, ...patch, UpdatedAt: now() })
+				)
 			);
 		})
 	);

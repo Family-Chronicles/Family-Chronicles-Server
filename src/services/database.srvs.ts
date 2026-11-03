@@ -29,6 +29,15 @@ const COLLECTIONS: Record<keyof Repositories, string> = {
 	tags: "tags",
 };
 
+/** Extra indexes per collection (besides the unique Id) */
+const INDEXES: Partial<Record<string, string[]>> = {
+	persons: ["SortName", "DateOfBirth", "UpdatedAt"],
+	relationships: ["PersonId", "RelatedPersonId"],
+	memberships: ["FamilyId", "PersonId"],
+	media: ["PersonId"],
+	tags: ["MediaId", "PersonId"],
+};
+
 export interface Database {
 	repositories: Repositories;
 	close(): Promise<void>;
@@ -57,7 +66,7 @@ export async function createMongoDatabase(
 
 	const repositories = {} as Record<string, MongoRepository<never>>;
 	for (const [key, name] of Object.entries(COLLECTIONS)) {
-		const repo = new MongoRepository<never>(db, name);
+		const repo = new MongoRepository<never>(db, name, INDEXES[key] ?? []);
 		await repo.ensureIndexes();
 		repositories[key] = repo;
 	}

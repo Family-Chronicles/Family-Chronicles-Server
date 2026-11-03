@@ -1,6 +1,10 @@
 import { EventEmitter } from "events";
 import { IModel } from "../interfaces/model.interface.js";
-import { Filter, IRepository } from "../repositories/repository.interface.js";
+import {
+	Filter,
+	IRepository,
+	QueryOptions,
+} from "../repositories/repository.interface.js";
 
 export type ChangeAction = "created" | "updated" | "deleted";
 
@@ -62,6 +66,9 @@ export class ObservableRepository<T extends IModel> implements IRepository<T> {
 	}
 	findByIds(ids: string[]) {
 		return this.inner.findByIds(ids);
+	}
+	query(options: QueryOptions<T>) {
+		return this.inner.query(options);
 	}
 	count(filter?: Filter<T>) {
 		return this.inner.count(filter);

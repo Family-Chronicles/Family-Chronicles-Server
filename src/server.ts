@@ -7,6 +7,7 @@ import { loadConfig } from "./services/config.srvs.js";
 import { createDatabase } from "./services/database.srvs.js";
 import { createApp, createContext, ensureAdmin } from "./core/app.core.js";
 import { LiveService } from "./services/live.srvs.js";
+import { GenealogyService } from "./services/genealogy.srvs.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
@@ -41,6 +42,11 @@ async function main(): Promise<void> {
 	const database = await createDatabase(config.database);
 	const ctx = createContext(config, database);
 
+	const updated = await new GenealogyService(
+		ctx.repos,
+		ctx.storage
+	).backfillSearchFields();
+	if (updated) console.log(`🔎 Added search fields to ${updated} persons`);
 	if (await ensureAdmin(ctx)) {
 		console.log(`👤 Created admin "${config.auth.adminEmail}"`);
 	}

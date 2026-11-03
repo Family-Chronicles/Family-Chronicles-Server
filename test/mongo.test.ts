@@ -80,6 +80,39 @@ describe.skipIf(!MONGO_URL)("MongoDB", () => {
 		).toBe(2);
 	});
 
+	it("queries with patterns, null checks, sorting and paging", async () => {
+		const repo = db.repositories.persons;
+		await repo.deleteMany({});
+		await repo.createMany([
+			{ ...person("Anna"), SortName: "b", DateOfDeath: "1990" },
+			{ ...person("Bert"), SortName: "a" },
+			{ ...person("Carl"), SortName: "c" },
+		]);
+		const page = await repo.query({
+			sort: [{ field: "SortName", direction: 1 }],
+			limit: 2,
+		});
+		expect(page.total).toBe(3);
+		expect(page.items.map((p) => p.FirstNames[0])).toEqual([
+			"Bert",
+			"Anna",
+		]);
+		expect(page.items[0]).not.toHaveProperty("_id");
+		const dead = await repo.query({
+			notNull: [{ field: "DateOfDeath", value: true }],
+		});
+		expect(dead.items.map((p) => p.FirstNames[0])).toEqual(["Anna"]);
+		const living = await repo.query({
+			notNull: [{ field: "DateOfDeath", value: false }],
+		});
+		expect(living.total).toBe(2);
+		const match = await repo.query({
+			match: [{ field: "SortName", pattern: /^c/ }],
+		});
+		expect(match.items.map((p) => p.FirstNames[0])).toEqual(["Carl"]);
+		await repo.deleteMany({});
+	});
+
 	it("enforces unique ids", async () => {
 		const p = person("Dup");
 		await db.repositories.persons.create(p);
