@@ -42,15 +42,15 @@ MongoDB integration tests run when `TEST_MONGO_URL` is set, e.g.
 All routes live under `/api/v1` and, except `auth/login` and `health`, need a
 `Authorization: Bearer <token>` header (token from `POST /auth/login`).
 
-| Resource         | Routes                                                                   | Write access |
-| ---------------- | ------------------------------------------------------------------------ | ------------ |
-| `/auth`          | `login`, `me`, `me/password`                                             | –            |
-| `/users`         | CRUD                                                                     | Admin        |
-| `/persons`       | CRUD, `?q=` search, `/:id/relationships`, `/families`, `/media`, `/tree` | Editor       |
-| `/families`      | CRUD, `/:id/members` (incl. surnames on detail)                          | Editor       |
-| `/memberships`   | CRUD – person ↔ family with role and dates                               | Editor       |
-| `/relationships` | CRUD – person ↔ person with type, role and dates                         | Editor       |
-| `/media`         | CRUD with file upload, `/:id/file`, `/:id/tags`                          | Editor       |
+| Resource         | Routes                                                                        | Write access |
+| ---------------- | ----------------------------------------------------------------------------- | ------------ |
+| `/auth`          | `login`, `refresh`, `logout`, `me`, `me/password`, `password-reset`, `config` | –            |
+| `/users`         | CRUD                                                                          | Admin        |
+| `/persons`       | CRUD, `?q=` search, `/:id/relationships`, `/families`, `/media`, `/tree`      | Editor       |
+| `/families`      | CRUD, `/:id/members` (incl. surnames on detail)                               | Editor       |
+| `/memberships`   | CRUD – person ↔ family with role and dates                                    | Editor       |
+| `/relationships` | CRUD – person ↔ person with type, role and dates                              | Editor       |
+| `/media`         | CRUD with file upload, `/:id/file`, `/:id/tags`                               | Editor       |
 
 Login returns a short-lived access token (default 15 minutes) and a refresh token (default 30 days) that
 `POST /auth/refresh` exchanges for a new pair. Password reset by email needs `SMTP_URL` and `APP_URL`.
