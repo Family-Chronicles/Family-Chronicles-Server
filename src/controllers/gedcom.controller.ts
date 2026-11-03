@@ -49,9 +49,15 @@ export function gedcomController(ctx: AppContext): Router {
 		upload.single("file"),
 		rawText,
 		handle(async (req, res) => {
-			const data: Buffer | undefined =
-				req.file?.buffer ??
-				(Buffer.isBuffer(req.body) ? req.body : undefined);
+			// the raw body parser gives a Buffer; anything else (string, array, object) is ignored
+			const body: unknown = req.body;
+			const raw =
+				typeof body === "string" ||
+				Array.isArray(body) ||
+				!Buffer.isBuffer(body)
+					? undefined
+					: body;
+			const data: Buffer | undefined = req.file?.buffer ?? raw;
 			if (!data || data.length === 0) {
 				throw new HttpError(400, "No GEDCOM data received");
 			}

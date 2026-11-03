@@ -6,6 +6,7 @@ const MAX_TOTAL_BYTES = 500 * 1024 * 1024;
 
 export function isZip(data: unknown): data is Buffer {
 	// only real buffers count – query or body values could be strings or arrays
+	if (typeof data === "string" || Array.isArray(data)) return false;
 	if (!Buffer.isBuffer(data) || data.length < 4) return false;
 	return (
 		data[0] === 0x50 &&
