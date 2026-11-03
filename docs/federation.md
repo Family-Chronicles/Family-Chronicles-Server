@@ -15,6 +15,24 @@ Nothing is copied or changed on the other side.
 A can now search persons of B and link them. B decides what A sees by the role of the token's user,
 and can revoke the token at any time.
 
+### Connect both ways
+
+When A sets `PUBLIC_URL` (its public address, e.g. `https://chronik-a.example.org`) and `INSTANCE_NAME`,
+the admin of A can tick _"also connect back"_ in step 3. A then creates a viewer user and an API token for B on its
+own side and sends B a **connection request** with it. B's admin sees the request under _Föderation_ and accepts
+it with one click (B checks A's address and token first) or declines it. Requests are only accepted from other
+instances (requests must come with an API token of B), at most 50 are kept.
+
+## Family trees across instances
+
+From a link, everyone who can read the person can open the family tree of the linked person on the other
+instance (ancestors, descendants, siblings – up to 5 generations, basic fields only).
+
+## Taking over persons
+
+Editors can copy a person of another instance into this one (`POST …/persons/{remoteId}/import`). The copy gets
+the basic data, a source entry pointing to the other instance, and is linked as `SamePerson` automatically.
+
 ## Linking persons
 
 Editors of A link a local person with a person of B (`POST /api/v1/federation/links`):
@@ -50,6 +68,6 @@ Deleting a local person or the connection removes its links.
 
 ## Not yet included
 
-- Writing to other instances, or copying persons between instances
-- Showing the family tree across instances (following links automatically)
-- Mutual discovery of instances; connections are set up manually on both sides
+- Writing to other instances; copying relatives together with a person
+- Following links automatically inside one combined family tree
+- Finding instances without knowing their address (a directory of instances)

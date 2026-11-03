@@ -25,7 +25,9 @@
 		"rateLimitPerMinute": 300,
 		"uploadDir": "./uploads",
 		"maxUploadMb": 50,
-		"liveRelay": "none"
+		"liveRelay": "none",
+		"publicUrl": "",
+		"instanceName": "Family Chronicles"
 	},
 	"auth": {
 		"jwtSecret": "",

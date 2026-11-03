@@ -25,6 +25,10 @@ export type Config = {
 		maxUploadMb: number;
 		/** "mongo" shares live updates between several instances using the same MongoDB */
 		liveRelay: "none" | "mongo";
+		/** Public address of this server (e.g. https://chronik.example.org), told to other instances */
+		publicUrl: string;
+		/** Display name of this instance for other instances */
+		instanceName: string;
 	};
 	auth: {
 		jwtSecret: string;

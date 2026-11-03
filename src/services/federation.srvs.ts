@@ -2,6 +2,22 @@ import crypto from "crypto";
 import { HttpError } from "../core/http.core.js";
 import { Peer, PeerStatus, RemotePerson } from "../models/federation.model.js";
 
+interface RemoteAncestor {
+	Person: RemotePerson;
+	Parents: RemoteAncestor[];
+}
+interface RemoteDescendant {
+	Person: RemotePerson;
+	Partners: RemotePerson[];
+	Children: RemoteDescendant[];
+}
+export interface RemoteTree {
+	Root: RemotePerson;
+	Ancestors: RemoteAncestor;
+	Descendants: RemoteDescendant;
+	Siblings: RemotePerson[];
+}
+
 const TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
@@ -89,18 +105,32 @@ export class FederationClient {
 		private readonly fetcher: typeof fetch = fetch
 	) {}
 
-	private async get(
+	private get(
 		baseUrl: string,
 		token: string,
 		path: string
 	): Promise<unknown> {
+		return this.call(baseUrl, token, path);
+	}
+
+	private async call(
+		baseUrl: string,
+		token: string,
+		path: string,
+		body?: unknown
+	): Promise<unknown> {
 		let response: Response;
 		try {
 			response = await this.fetcher(`${baseUrl}${path}`, {
+				method: body === undefined ? "GET" : "POST",
 				headers: {
 					Authorization: `Bearer ${token}`,
 					Accept: "application/json",
+					...(body === undefined
+						? {}
+						: { "Content-Type": "application/json" }),
 				},
+				body: body === undefined ? undefined : JSON.stringify(body),
 				redirect: "error",
 				signal: AbortSignal.timeout(TIMEOUT_MS),
 			});
@@ -166,6 +196,79 @@ export class FederationClient {
 		if (!Array.isArray(data))
 			throw new HttpError(502, "Unexpected answer of the other instance");
 		return data.map((p) => pickPerson(p as Record<string, unknown>));
+	}
+
+	/** Family tree of a remote person, reduced to basic fields and limited in size */
+	async getTree(
+		peer: Peer,
+		remoteId: string,
+		depth: number
+	): Promise<RemoteTree> {
+		if (!/^[\w-]{1,100}$/.test(remoteId))
+			throw new HttpError(400, "Invalid id");
+		const d = Math.min(Math.max(depth, 1), 5);
+		const data = (await this.get(
+			peer.BaseUrl,
+			this.cipher.decrypt(peer.TokenEncrypted),
+			`/persons/${remoteId}/tree?depth=${d}`
+		)) as Record<string, unknown>;
+		let budget = 2000;
+		const person = (p: unknown) => {
+			if (--budget < 0)
+				throw new HttpError(
+					502,
+					"Family tree of the other instance is too large"
+				);
+			return pickPerson((p ?? {}) as Record<string, unknown>);
+		};
+		const list = (v: unknown) => (Array.isArray(v) ? v : []);
+		const ancestors = (
+			n: Record<string, unknown>,
+			level: number
+		): RemoteAncestor => ({
+			Person: person(n.Person),
+			Parents:
+				level >= d
+					? []
+					: list(n.Parents).map((x) => ancestors(x, level + 1)),
+		});
+		const descendants = (
+			n: Record<string, unknown>,
+			level: number
+		): RemoteDescendant => ({
+			Person: person(n.Person),
+			Partners: list(n.Partners).map(person),
+			Children:
+				level >= d
+					? []
+					: list(n.Children).map((x) => descendants(x, level + 1)),
+		});
+		return {
+			Root: person(data.Root),
+			Ancestors: ancestors(
+				(data.Ancestors ?? {}) as Record<string, unknown>,
+				0
+			),
+			Descendants: descendants(
+				(data.Descendants ?? {}) as Record<string, unknown>,
+				0
+			),
+			Siblings: list(data.Siblings).map(person),
+		};
+	}
+
+	/** Sends a connection request to another instance (see peer requests) */
+	async sendRequest(
+		baseUrl: string,
+		token: string,
+		request: {
+			Name: string;
+			BaseUrl: string;
+			Token: string;
+			Message: string;
+		}
+	): Promise<void> {
+		await this.call(baseUrl, token, "/federation/requests", request);
 	}
 
 	async getPerson(peer: Peer, remoteId: string): Promise<RemotePerson> {

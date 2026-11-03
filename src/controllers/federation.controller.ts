@@ -2,12 +2,21 @@ import { Router } from "express";
 import crypto from "crypto";
 import { AppContext } from "../core/context.core.js";
 import { handle, HttpError, notFound, now, parse } from "../core/http.core.js";
-import { Peer, PersonLink } from "../models/federation.model.js";
+import { Peer, PeerRequest, PersonLink } from "../models/federation.model.js";
+import { Person, withSearchFields } from "../models/person.model.js";
+import { hashPassword } from "../services/auth.srvs.js";
 import { normalizePeerUrl, remoteName } from "../services/federation.srvs.js";
-import { linkSchema, peerSchema } from "../validation/schemas.js";
+import {
+	linkSchema,
+	peerRequestSchema,
+	peerSchema,
+} from "../validation/schemas.js";
 
 /** Never send the (encrypted) token */
 const toPublicPeer = ({ TokenEncrypted, ...rest }: Peer) => rest;
+const toPublicRequest = ({ TokenEncrypted, ...rest }: PeerRequest) => rest;
+
+const MAX_PENDING_REQUESTS = 50;
 
 /**
  * Connections to other Family Chronicles instances and links between
@@ -15,10 +24,32 @@ const toPublicPeer = ({ TokenEncrypted, ...rest }: Peer) => rest;
  */
 export function federationController(ctx: AppContext): Router {
 	const router = Router();
-	const { peers, links, persons } = ctx.repos;
+	const { peers, links, persons, peerRequests: requests } = ctx.repos;
 	const read = ctx.auth.require("Viewer");
 	const write = ctx.auth.require("Editor");
 	const admin = ctx.auth.require("Admin");
+
+	/** A viewer user plus API token another instance uses to read from this one */
+	const createAccessFor = async (peerName: string): Promise<string> => {
+		const user = {
+			Id: crypto.randomUUID(),
+			Name: `Instanz ${peerName}`.slice(0, 100),
+			Email: `peer-${crypto.randomUUID()}@peers.invalid`,
+			PasswordHash: await hashPassword(
+				crypto.randomBytes(32).toString("hex")
+			),
+			Role: "Viewer" as const,
+			CreatedAt: now(),
+			UpdatedAt: now(),
+		};
+		await ctx.repos.users.create(user);
+		const { token } = await ctx.auth.createApiToken(
+			user,
+			`Verbindung mit ${peerName}`.slice(0, 100),
+			null
+		);
+		return token;
+	};
 
 	const loadPeer = async (id: string) => {
 		const peer = await peers.findById(id);
@@ -58,6 +89,12 @@ export function federationController(ctx: AppContext): Router {
 		handle(async (req, res) => {
 			const body = parse(peerSchema, req.body);
 			const baseUrl = normalizePeerUrl(body.BaseUrl);
+			if (body.Mutual && !ctx.config.server.publicUrl) {
+				throw new HttpError(
+					400,
+					"Set PUBLIC_URL on this server to connect both ways"
+				);
+			}
 			const status = await ctx.federation.check(baseUrl, body.Token);
 			if (status === "Unreachable")
 				throw new HttpError(
@@ -76,7 +113,28 @@ export function federationController(ctx: AppContext): Router {
 				CreatedAt: now(),
 			};
 			await peers.create(peer);
-			res.status(201).send(toPublicPeer(peer));
+
+			// ask the other instance to connect back, with read access for it
+			let requestError: string | null = null;
+			if (body.Mutual) {
+				try {
+					const token = await createAccessFor(peer.Name);
+					await ctx.federation.sendRequest(baseUrl, body.Token, {
+						Name: ctx.config.server.instanceName,
+						BaseUrl: ctx.config.server.publicUrl,
+						Token: token,
+						Message: body.Message,
+					});
+				} catch (error) {
+					requestError =
+						error instanceof Error ? error.message : String(error);
+				}
+			}
+			res.status(201).send({
+				...toPublicPeer(peer),
+				RequestSent: body.Mutual && !requestError,
+				RequestError: requestError,
+			});
 		})
 	);
 
@@ -164,6 +222,229 @@ export function federationController(ctx: AppContext): Router {
 		handle(async (req, res) => {
 			const peer = await loadPeer(req.params.id);
 			res.send(await ctx.federation.getPerson(peer, req.params.remoteId));
+		})
+	);
+
+	/**
+	 * GET /api/v1/federation/peers/{id}/persons/{remoteId}/tree
+	 * @tags federation
+	 * @summary Family tree of a person on another instance (Viewer)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - peer id
+	 * @param {string} remoteId.path.required - person id on the other instance
+	 * @param {number} depth.query - generations (1-5, default 3)
+	 * @return {object} 200 - tree with basic person fields
+	 */
+	router.get(
+		"/peers/:id/persons/:remoteId/tree",
+		read,
+		handle(async (req, res) => {
+			const peer = await loadPeer(req.params.id);
+			res.send(
+				await ctx.federation.getTree(
+					peer,
+					req.params.remoteId,
+					Number(req.query.depth) || 3
+				)
+			);
+		})
+	);
+
+	/**
+	 * POST /api/v1/federation/peers/{id}/persons/{remoteId}/import
+	 * @tags federation
+	 * @summary Copy a person of another instance into this one and link both (Editor)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - peer id
+	 * @param {string} remoteId.path.required - person id on the other instance
+	 * @return {object} 201 - { Person, Link }
+	 * @return {object} 409 - the remote person is already linked as the same person
+	 */
+	router.post(
+		"/peers/:id/persons/:remoteId/import",
+		write,
+		handle(async (req, res) => {
+			const peer = await loadPeer(req.params.id);
+			const remote = await ctx.federation.getPerson(
+				peer,
+				req.params.remoteId
+			);
+			const existing = await links.findOne({
+				PeerId: peer.Id,
+				RemotePersonId: remote.Id,
+				Relation: "SamePerson",
+			});
+			if (existing)
+				throw new HttpError(
+					409,
+					"This person is already linked as the same person"
+				);
+			const gender = ["Male", "Female", "Diverse"].includes(remote.Gender)
+				? remote.Gender
+				: "Unknown";
+			const person: Person = withSearchFields({
+				Id: crypto.randomUUID(),
+				FirstNames: remote.FirstNames.length
+					? remote.FirstNames
+					: ["?"],
+				MiddleNames: remote.MiddleNames,
+				LastNames: remote.LastNames,
+				BirthName: remote.BirthName,
+				Gender: gender as Person["Gender"],
+				DateOfBirth: remote.DateOfBirth,
+				PlaceOfBirth: remote.PlaceOfBirth,
+				DateOfDeath: remote.DateOfDeath,
+				PlaceOfDeath: remote.PlaceOfDeath,
+				CauseOfDeath: null,
+				Notes: `Übernommen aus ${peer.Name}`,
+				Events: [],
+				Sources: [
+					{
+						Title: peer.Name,
+						Citation: `Person ${remote.Id}`,
+						Url: null,
+					},
+				],
+				CreatedAt: now(),
+				UpdatedAt: now(),
+			});
+			await persons.create(person);
+			const link: PersonLink = {
+				Id: crypto.randomUUID(),
+				PersonId: person.Id,
+				PeerId: peer.Id,
+				RemotePersonId: remote.Id,
+				RemoteName: remoteName(remote).slice(0, 300),
+				Relation: "SamePerson",
+				Notes: "",
+				CreatedAt: now(),
+			};
+			await links.create(link);
+			res.status(201).send({ Person: person, Link: link });
+		})
+	);
+
+	/**
+	 * POST /api/v1/federation/requests
+	 * @tags federation
+	 * @summary Another instance asks to be connected (only with an API token of this instance)
+	 * @security BearerAuth
+	 * @param {object} request.body.required - { Name, BaseUrl, Token, Message }
+	 * @return {object} 202 - request is waiting for an admin
+	 */
+	router.post(
+		"/requests",
+		read,
+		handle(async (req, res) => {
+			if (!req.user!.ViaApiToken) {
+				throw new HttpError(
+					403,
+					"Connection requests come from other instances with an API token"
+				);
+			}
+			const body = parse(peerRequestSchema, req.body);
+			const baseUrl = normalizePeerUrl(body.BaseUrl);
+			const pending = await requests.findAll();
+			const previous = pending.find((r) => r.BaseUrl === baseUrl);
+			if (!previous && pending.length >= MAX_PENDING_REQUESTS) {
+				throw new HttpError(429, "Too many open connection requests");
+			}
+			if (previous) await requests.delete(previous.Id);
+			const request: PeerRequest = {
+				Id: crypto.randomUUID(),
+				Name: body.Name,
+				BaseUrl: baseUrl,
+				TokenEncrypted: ctx.cipher.encrypt(body.Token),
+				Message: body.Message,
+				FromUserId: req.user!.Id,
+				CreatedAt: now(),
+			};
+			await requests.create(request);
+			res.status(202).send({ success: true });
+		})
+	);
+
+	/**
+	 * GET /api/v1/federation/requests
+	 * @tags federation
+	 * @summary Open connection requests of other instances (Admin)
+	 * @security BearerAuth
+	 * @return {array<object>} 200 - requests (without tokens)
+	 */
+	router.get(
+		"/requests",
+		admin,
+		handle(async (req, res) => {
+			const all = await requests.findAll();
+			all.sort((a, b) => b.CreatedAt.localeCompare(a.CreatedAt));
+			res.send(all.map(toPublicRequest));
+		})
+	);
+
+	/**
+	 * POST /api/v1/federation/requests/{id}/accept
+	 * @tags federation
+	 * @summary Accept a connection request: checks the other instance and connects it (Admin)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - request id
+	 * @return {object} 201 - peer
+	 */
+	router.post(
+		"/requests/:id/accept",
+		admin,
+		handle(async (req, res) => {
+			const request = await requests.findById(req.params.id);
+			if (!request) throw notFound("Request");
+			const token = ctx.cipher.decrypt(request.TokenEncrypted);
+			const status = await ctx.federation.check(request.BaseUrl, token);
+			if (status !== "Ok") {
+				throw new HttpError(
+					400,
+					status === "Unauthorized"
+						? "The instance rejected the token"
+						: "The instance cannot be reached"
+				);
+			}
+			const existing = await peers.findOne({ BaseUrl: request.BaseUrl });
+			let peer: Peer;
+			if (existing) {
+				peer = (await peers.update(existing.Id, {
+					TokenEncrypted: request.TokenEncrypted,
+					Status: status,
+					CheckedAt: now(),
+				}))!;
+			} else {
+				peer = {
+					Id: crypto.randomUUID(),
+					Name: request.Name,
+					BaseUrl: request.BaseUrl,
+					TokenEncrypted: request.TokenEncrypted,
+					Status: status,
+					CheckedAt: now(),
+					CreatedAt: now(),
+				};
+				await peers.create(peer);
+			}
+			await requests.delete(request.Id);
+			res.status(201).send(toPublicPeer(peer));
+		})
+	);
+
+	/**
+	 * DELETE /api/v1/federation/requests/{id}
+	 * @tags federation
+	 * @summary Reject a connection request (Admin)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - request id
+	 * @return {object} 200 - success
+	 */
+	router.delete(
+		"/requests/:id",
+		admin,
+		handle(async (req, res) => {
+			if (!(await requests.delete(req.params.id)))
+				throw notFound("Request");
+			res.send({ success: true });
 		})
 	);
 

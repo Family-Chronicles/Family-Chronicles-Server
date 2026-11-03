@@ -27,6 +27,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 		config.server.rateLimitPerMinute
 	);
 	config.server.uploadDir = str("UPLOAD_DIR", config.server.uploadDir);
+	config.server.publicUrl = str(
+		"PUBLIC_URL",
+		config.server.publicUrl
+	).replace(/\/+$/, "");
+	config.server.instanceName = str(
+		"INSTANCE_NAME",
+		config.server.instanceName
+	);
 	config.server.maxUploadMb = num("MAX_UPLOAD_MB", config.server.maxUploadMb);
 	config.server.liveRelay =
 		str("LIVE_RELAY", config.server.liveRelay) === "mongo"

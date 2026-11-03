@@ -18,7 +18,9 @@ export interface TestApp {
 	tokenFor(role: "Admin" | "Editor" | "Viewer"): Promise<string>;
 }
 
-export async function setup(): Promise<TestApp> {
+export async function setup(
+	env: Record<string, string> = {}
+): Promise<TestApp> {
 	const config = loadConfig({
 		JWT_SECRET: "test-secret",
 		ADMIN_EMAIL: ADMIN.Email,
@@ -26,6 +28,7 @@ export async function setup(): Promise<TestApp> {
 		UPLOAD_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "fc-uploads-")),
 		RATE_LIMIT_PER_MINUTE: "100000",
 		DB_DRIVER: "memory",
+		...env,
 	});
 	const ctx = createContext(config, createMemoryDatabase());
 	await ensureAdmin(ctx);

@@ -14,6 +14,7 @@ export function indexController(ctx: AppContext): Router {
 		res.send({
 			name: ctx.config.meta.name,
 			version: ctx.config.meta.version,
+			instance: ctx.config.server.instanceName,
 		});
 	});
 

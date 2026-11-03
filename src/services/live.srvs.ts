@@ -71,7 +71,10 @@ export class LiveService {
 				}
 				const allowed =
 					PUBLIC_ENTITIES.includes(event.Entity) ||
-					(event.Entity === "users" && client.user.Role === "Admin");
+					(["users", "peerRequests", "apiTokens"].includes(
+						event.Entity
+					) &&
+						client.user.Role === "Admin");
 				if (allowed) client.socket.send(message);
 			}
 		});
