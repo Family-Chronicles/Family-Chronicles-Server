@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { GENDERS } from "../models/person.model.js";
+import { EVENT_TYPES, GENDERS } from "../models/person.model.js";
 import { RELATIONSHIP_TYPES } from "../models/relationship.model.js";
 import { MEDIA_TYPES } from "../models/media.model.js";
 import { ROLES } from "../models/user.model.js";
@@ -21,6 +21,19 @@ const names = z
 			.filter(Boolean)
 	);
 
+const eventSchema = z.object({
+	Type: z.enum(EVENT_TYPES),
+	Date: date.default(null),
+	Place: text(200).nullable().default(null),
+	Description: text(1000).default(""),
+});
+
+const sourceSchema = z.object({
+	Title: text(500).min(1),
+	Citation: text(1000).default(""),
+	Url: z.string().trim().url().max(2000).nullable().default(null),
+});
+
 export const personSchema = z.object({
 	FirstNames: names,
 	MiddleNames: names.default([]),
@@ -33,6 +46,8 @@ export const personSchema = z.object({
 	PlaceOfDeath: text(200).nullable().default(null),
 	CauseOfDeath: text(500).nullable().default(null),
 	Notes: text(10000).default(""),
+	Events: z.array(eventSchema).max(200).default([]),
+	Sources: z.array(sourceSchema).max(200).default([]),
 });
 
 export const familySchema = z.object({

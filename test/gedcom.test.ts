@@ -218,3 +218,89 @@ describe("GEDCOM API", () => {
 			.expect(403);
 	});
 });
+
+describe("GEDCOM events and sources", () => {
+	it("imports life events and source citations", async () => {
+		const db = createMemoryDatabase();
+		await importGedcom(SAMPLE.toString(), db.repositories);
+		const karl = (await db.repositories.persons.findAll()).find(
+			(p) => p.FirstNames[0] === "Karl"
+		)!;
+		expect(karl.Events).toEqual([
+			{
+				Type: "Baptism",
+				Date: "1901-04-20",
+				Place: "St. Lorenz, Nürnberg",
+				Description: "",
+			},
+			{
+				Type: "Occupation",
+				Date: "1925",
+				Place: null,
+				Description: "Schmied (ABT 1925)",
+			},
+			{
+				Type: "Residence",
+				Date: "1930",
+				Place: "Fürth",
+				Description: "",
+			},
+			{
+				Type: "Burial",
+				Date: null,
+				Place: "Friedhof Fürth",
+				Description: "",
+			},
+			{
+				Type: "Other",
+				Date: "1950",
+				Place: null,
+				Description: "Auszeichnung",
+			},
+		]);
+		expect(karl.Sources).toEqual([
+			{
+				Title: "Sterberegister Fürth",
+				Citation: "Nr. 117",
+				Url: "https://example.org/register",
+			},
+			{
+				Title: "Kirchenbuch St. Lorenz (Ev.-Luth. Pfarramt)",
+				Citation: "Taufbuch 1901, S. 42",
+				Url: null,
+			},
+		]);
+		// events are searchable
+		expect(karl.SearchText).toContain("schmied");
+	});
+
+	it("exports events and sources and reads them back", async () => {
+		const first = createMemoryDatabase();
+		await importGedcom(SAMPLE.toString(), first.repositories);
+		const exported = exportGedcom(
+			await first.repositories.persons.findAll(),
+			await first.repositories.relationships.findAll(),
+			{ name: "test", version: "1" }
+		);
+		expect(exported).toContain("1 OCCU Schmied (ABT 1925)");
+		expect(exported).toContain("1 BAPM");
+		expect(exported).toContain("2 TYPE Auszeichnung");
+		expect(exported).toMatch(
+			/0 @S\d+@ SOUR\r\n1 TITL Sterberegister Fürth\r\n1 WWW https:\/\/example.org\/register/
+		);
+		const second = createMemoryDatabase();
+		const result = await importGedcom(exported, second.repositories);
+		expect(result.Warnings).toEqual([]);
+		const karl = (await second.repositories.persons.findAll()).find(
+			(p) => p.FirstNames[0] === "Karl"
+		)!;
+		const original = (await first.repositories.persons.findAll()).find(
+			(p) => p.FirstNames[0] === "Karl"
+		)!;
+		expect(karl.Sources).toEqual(original.Sources);
+		expect(karl.Events.map((e) => e.Type)).toEqual(
+			original.Events.map((e) => e.Type)
+		);
+		expect(karl.Events[0]).toEqual(original.Events[0]);
+	});
+});

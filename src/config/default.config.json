@@ -1,43 +1,43 @@
 {
-  "meta": {
-    "name": "family-chronicles-server",
-    "version": "0.1.0",
-    "description": "The Family Chronicles project is an attempt to develop a family tree management tool. The focus here is on an open API that should support existing standards, but also provide its own more complex interfaces. The vision is to make instances of the API linkable by administrators to form multiple family pedigrees into one big whole.",
-    "homepage_url": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
-    "author": {
-      "name": "Jonas Pfalzgraf",
-      "email": "info@josunlp.de"
-    },
-    "contributors": [
-      {
-        "name": "Jonas Pfalzgraf",
-        "email": "info@josunlp.de"
-      }
-    ],
-    "license": "MPL-2.0",
-    "repository": "git+https://github.com/Family-Chronicles/Family-Chronicles-Server.git",
-    "homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
-    "bugs": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
-  },
-  "server": {
-    "port": 8080,
-    "corsOrigins": [],
-    "rateLimitPerMinute": 300,
-    "uploadDir": "./uploads",
-    "maxUploadMb": 50
-  },
-  "auth": {
-    "jwtSecret": "",
-    "tokenLifetime": "12h",
-    "adminName": "Administrator",
-    "adminEmail": "admin@family-chronicles.local",
-    "adminPassword": ""
-  },
-  "database": {
-    "driver": "mongo",
-    "host": "mongodb://mongo:27017",
-    "databasename": "family-chronicles",
-    "username": "admin",
-    "password": "admin"
-  }
+	"meta": {
+		"name": "family-chronicles-server",
+		"version": "0.1.0",
+		"description": "The Family Chronicles project is an attempt to develop a family tree management tool. The focus here is on an open API that should support existing standards, but also provide its own more complex interfaces. The vision is to make instances of the API linkable by administrators to form multiple family pedigrees into one big whole.",
+		"homepage_url": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+		"author": {
+			"name": "Jonas Pfalzgraf",
+			"email": "info@josunlp.de"
+		},
+		"contributors": [
+			{
+				"name": "Jonas Pfalzgraf",
+				"email": "info@josunlp.de"
+			}
+		],
+		"license": "MPL-2.0",
+		"repository": "git+https://github.com/Family-Chronicles/Family-Chronicles-Server.git",
+		"homepage": "https://github.com/Family-Chronicles/Family-Chronicles-Server#readme",
+		"bugs": "https://github.com/Family-Chronicles/Family-Chronicles-Server/issues"
+	},
+	"server": {
+		"port": 8080,
+		"corsOrigins": [],
+		"rateLimitPerMinute": 300,
+		"uploadDir": "./uploads",
+		"maxUploadMb": 50
+	},
+	"auth": {
+		"jwtSecret": "",
+		"tokenLifetime": "12h",
+		"adminName": "Administrator",
+		"adminEmail": "admin@family-chronicles.local",
+		"adminPassword": ""
+	},
+	"database": {
+		"driver": "mongo",
+		"host": "mongodb://mongo:27017",
+		"databasename": "family-chronicles",
+		"username": "admin",
+		"password": "admin"
+	}
 }

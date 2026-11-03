@@ -1,5 +1,12 @@
 import crypto from "crypto";
-import { Gender, Person, withSearchFields } from "../models/person.model.js";
+import {
+	Gender,
+	Person,
+	PersonEvent,
+	Source,
+	withSearchFields,
+} from "../models/person.model.js";
+import { EVENT_TAGS } from "./tags.js";
 import { Relationship } from "../models/relationship.model.js";
 import { Family, FamilyMembership } from "../models/family.model.js";
 import { Repositories } from "../services/database.srvs.js";
@@ -88,6 +95,43 @@ export async function importGedcom(
 		};
 	};
 
+	// --- sources ---
+	const sourceRecords = new Map(
+		records
+			.filter((r) => r.tag === "SOUR" && r.xref)
+			.map((r) => {
+				const title =
+					childValue(r, "TITL") ||
+					childValue(r, "ABBR") ||
+					r.value ||
+					r.xref!;
+				const author = childValue(r, "AUTH");
+				const url = childrenOf(r, "WWW")[0]?.value.trim() || null;
+				return [
+					r.xref!,
+					{ title: author ? `${title} (${author})` : title, url },
+				];
+			})
+	);
+	/** Source citations of a node (INDI or an event), pointers and inline texts */
+	const citations = (node: GedcomNode): Source[] =>
+		childrenOf(node, "SOUR").map((s) => {
+			const record = sourceRecords.get(s.value.trim());
+			if (/^@[^@]+@$/.test(s.value.trim()) && !record) {
+				warnings.push(
+					`Line ${s.line}: unknown source ${s.value.trim()}.`
+				);
+			}
+			return {
+				Title: (record?.title ?? s.value.trim()).slice(0, 500) || "?",
+				Citation: childValue(s, "PAGE").slice(0, 1000),
+				Url:
+					record?.url && /^https?:\/\//.test(record.url)
+						? record.url
+						: null,
+			};
+		});
+
 	// --- persons ---
 	const persons: Person[] = [];
 	const byXref = new Map<string, Person>();
@@ -116,6 +160,39 @@ export async function importGedcom(
 		const death = event(indi, "DEAT", "Death", extra);
 		const note = [noteText(indi), ...extra].filter(Boolean).join("\n");
 
+		const events: PersonEvent[] = [];
+		for (const ev of indi.children.filter((c) => EVENT_TAGS[c.tag])) {
+			const rawDate = childValue(ev, "DATE");
+			const parsed = fromGedcomDate(rawDate);
+			const kind = childValue(ev, "TYPE");
+			const description = [
+				ev.value.trim() === "Y" ? "" : ev.value.trim(),
+				ev.tag === "EVEN" ? kind : "",
+				rawDate && parsed.approximate ? `(${rawDate})` : "",
+			]
+				.filter(Boolean)
+				.join(" ");
+			events.push({
+				Type: EVENT_TAGS[ev.tag],
+				Date: parsed.value,
+				Place: childValue(ev, "PLAC") || childValue(ev, "ADDR") || null,
+				Description: description.slice(0, 1000),
+			});
+		}
+
+		// citations on the person and on all events, without duplicates
+		const sources: Source[] = [];
+		for (const node of [indi, ...indi.children]) {
+			for (const c of citations(node)) {
+				if (
+					!sources.some(
+						(x) => x.Title === c.Title && x.Citation === c.Citation
+					)
+				)
+					sources.push(c);
+			}
+		}
+
 		const person: Person = {
 			Id: crypto.randomUUID(),
 			FirstNames: given.slice(0, 1).length ? given.slice(0, 1) : ["?"],
@@ -130,6 +207,8 @@ export async function importGedcom(
 			PlaceOfDeath: death.place,
 			CauseOfDeath: death.cause,
 			Notes: note.slice(0, 10000),
+			Events: events.slice(0, 200),
+			Sources: sources.slice(0, 200),
 			CreatedAt: now(),
 			UpdatedAt: now(),
 		};

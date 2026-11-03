@@ -39,7 +39,13 @@ export class GenealogyService {
 		});
 		for (const p of items) {
 			const { SearchText, SortName } = withSearchFields(p);
-			await this.repos.persons.update(p.Id, { SearchText, SortName });
+			await this.repos.persons.update(p.Id, {
+				SearchText,
+				SortName,
+				// fields added later get their empty default
+				Events: p.Events ?? [],
+				Sources: p.Sources ?? [],
+			});
 		}
 		return items.length;
 	}

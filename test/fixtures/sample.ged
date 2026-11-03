@@ -17,6 +17,23 @@
 2 DATE ABT 1975
 2 PLAC Fürth
 2 CAUS Herzversagen
+1 BAPM
+2 DATE 20 APR 1901
+2 PLAC St. Lorenz, Nürnberg
+2 SOUR @S1@
+3 PAGE Taufbuch 1901, S. 42
+1 OCCU Schmied
+2 DATE ABT 1925
+1 RESI
+2 DATE 1930
+2 PLAC Fürth
+1 BURI
+2 PLAC Friedhof Fürth
+1 EVEN
+2 TYPE Auszeichnung
+2 DATE 1950
+1 SOUR @S2@
+2 PAGE Nr. 117
 1 NOTE Schmied in dritter Generation.
 2 CONT Zog 1930 nach Fürth und eröffnete eine eigene Werkst
 2 CONC att.
@@ -50,4 +67,10 @@
 1 MARR
 2 DATE 3 JUN 1928
 0 @N1@ NOTE Geborene Meier aus Erlangen.
+0 @S1@ SOUR
+1 TITL Kirchenbuch St. Lorenz
+1 AUTH Ev.-Luth. Pfarramt
+0 @S2@ SOUR
+1 TITL Sterberegister Fürth
+1 WWW https://example.org/register
 0 TRLR
