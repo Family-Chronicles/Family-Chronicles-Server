@@ -87,13 +87,15 @@ Code: [Family-Chronicles-App](https://github.com/Family-Chronicles/Family-Chroni
 - ✅ Mehrsprachigkeit (DE/EN) mit bQuery i18n, Sprache wird gemerkt.
 - ✅ E2E-Tests (Playwright) im App-Repo, laufen in der CI gegen den echten Server.
 - ✅ Docker-Compose für App + Server + MongoDB (im App-Repo).
-- ⬜ Paginierung/Server-Suche für sehr große Stammbäume (aktuell wird die Personenliste komplett geladen).
+- ✅ Paginierung und Server-Suche (`limit`/`offset`, `X-Total-Count`, `/stats`); die App lädt nur noch, was sie anzeigt.
 
 ## Phase 6 – Erweiterungen
 
 - ✅ GEDCOM-Import/-Export (Issue #37) – siehe [docs/gedcom.md](docs/gedcom.md), in der App unter „Import/Export“.
-- ⬜ GEDCOM: Quellen (`SOUR`), Medien (`OBJE`) und weitere Ereignisse (Taufe, Beerdigung, …) übernehmen.
+- ✅ GEDCOM: Lebensereignisse (Taufe, Beerdigung, Beruf, Wohnort, …) und Quellen; in der App bearbeitbar.
+- ⬜ GEDCOM: Medien (`OBJE`) – die Dateien sind nicht Teil der GEDCOM-Datei, bräuchte z. B. ZIP-Import (GEDZIP).
 - ✅ WebSocket-API für Live-Updates (Issue #38) – Bewertung und Protokoll in [docs/websocket.md](docs/websocket.md), in der App aktiv.
-- ⬜ Live-Updates über mehrere Server-Instanzen (MongoDB Change Streams oder Redis).
-- ⬜ Verknüpfung mehrerer Instanzen (Föderation) – die eigentliche Vision des Projekts.
-- ⬜ Refresh-Tokens, Passwort-Zurücksetzen per E-Mail.
+- ✅ Live-Updates über mehrere Server-Instanzen (`LIVE_RELAY=mongo`, capped collection).
+- ✅ Föderation, erste Version: API-Tokens, verbundene Instanzen, Personen-Verknüpfungen – siehe [docs/federation.md](docs/federation.md).
+- ⬜ Föderation: Stammbaum über Instanzgrenzen hinweg anzeigen, Personen übernehmen, Instanzen gegenseitig finden.
+- ✅ Refresh-Tokens (rotierend), Abmelden auf dem Server, Passwort-Zurücksetzen per E-Mail.
