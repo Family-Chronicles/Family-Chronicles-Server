@@ -43,6 +43,8 @@ when the token expires. The server pings every 30 seconds and drops dead connect
 
 ## Limits
 
-- Events are sent by the server process that handled the write. Running several server instances would need a
-  shared bus (e.g. MongoDB change streams or Redis pub/sub) – not needed for a single instance.
+- With several server instances behind a load balancer, set `LIVE_RELAY=mongo` on all of them. Each instance then
+  writes its change events into the capped collection `live_events` and follows it with a tailable cursor, so
+  clients connected to any instance get all changes. This works with a standalone MongoDB (no replica set or Redis
+  needed). The collection is limited to 8 MB, old events are dropped automatically.
 - Reverse proxies must forward WebSocket upgrades for `/api/v1/live` (see the nginx config of the web app).

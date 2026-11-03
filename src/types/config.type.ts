@@ -23,6 +23,8 @@ export type Config = {
 		rateLimitPerMinute: number;
 		uploadDir: string;
 		maxUploadMb: number;
+		/** "mongo" shares live updates between several instances using the same MongoDB */
+		liveRelay: "none" | "mongo";
 	};
 	auth: {
 		jwtSecret: string;

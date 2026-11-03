@@ -13,6 +13,8 @@ import {
 import { loadConfig } from "../src/services/config.srvs.js";
 import { createApp, createContext, ensureAdmin } from "../src/core/app.core.js";
 import { Person } from "../src/models/person.model.js";
+import { ChangeBus, ChangeEvent } from "../src/services/events.srvs.js";
+import { MongoEventRelay } from "../src/services/relay.srvs.js";
 
 const MONGO_URL = process.env.TEST_MONGO_URL;
 
@@ -111,6 +113,37 @@ describe.skipIf(!MONGO_URL)("MongoDB", () => {
 		});
 		expect(match.items.map((p) => p.FirstNames[0])).toEqual(["Carl"]);
 		await repo.deleteMany({});
+	});
+
+	it("shares change events between instances", async () => {
+		const busA = new ChangeBus();
+		const busB = new ChangeBus();
+		const relayA = new MongoEventRelay(db.db!, busA);
+		const relayB = new MongoEventRelay(db.db!, busB);
+		await relayA.start();
+		await relayB.start();
+		await Promise.all([relayA.whenReady(), relayB.whenReady()]);
+		const receivedA: ChangeEvent[] = [];
+		const receivedB: ChangeEvent[] = [];
+		busA.subscribe((e) => receivedA.push(e));
+		busB.subscribe((e) => receivedB.push(e));
+
+		busA.emit("persons", "created", ["p1"]);
+		const start = Date.now();
+		while (!receivedB.length && Date.now() - start < 5000) {
+			await new Promise((r) => setTimeout(r, 50));
+		}
+		await new Promise((r) => setTimeout(r, 300));
+		relayA.stop();
+		relayB.stop();
+
+		expect(receivedB).toEqual([
+			{ Entity: "persons", Action: "created", Ids: ["p1"], Remote: true },
+		]);
+		// A got its own event once (locally), not a second time through MongoDB
+		expect(receivedA).toEqual([
+			{ Entity: "persons", Action: "created", Ids: ["p1"] },
+		]);
 	});
 
 	it("enforces unique ids", async () => {

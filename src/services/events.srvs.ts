@@ -14,6 +14,8 @@ export interface ChangeEvent {
 	Action: ChangeAction;
 	/** Changed ids, or null when too many changed at once (e.g. an import) */
 	Ids: string[] | null;
+	/** True when the change happened on another server instance (see MongoEventRelay) */
+	Remote?: boolean;
 }
 
 const MAX_IDS = 100;
@@ -32,11 +34,16 @@ export class ChangeBus {
 		ids: string[] | null
 	): void {
 		if (ids && ids.length === 0) return;
-		this.emitter.emit("change", {
+		this.publish({
 			Entity: entity,
 			Action: action,
 			Ids: ids && ids.length <= MAX_IDS ? ids : null,
-		} satisfies ChangeEvent);
+		});
+	}
+
+	/** Publishes a complete event, e.g. one received from another instance */
+	public publish(event: ChangeEvent): void {
+		this.emitter.emit("change", event);
 	}
 
 	public subscribe(listener: (event: ChangeEvent) => void): () => void {

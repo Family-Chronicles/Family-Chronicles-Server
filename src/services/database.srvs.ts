@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { Db, MongoClient } from "mongodb";
 import { Config } from "../types/config.type.js";
 import { Family, FamilyMembership } from "../models/family.model.js";
 import { Media, MediaTag } from "../models/media.model.js";
@@ -40,6 +40,8 @@ const INDEXES: Partial<Record<string, string[]>> = {
 
 export interface Database {
 	repositories: Repositories;
+	/** The MongoDB database, only for the MongoDB driver */
+	db?: Db;
 	close(): Promise<void>;
 }
 
@@ -73,6 +75,7 @@ export async function createMongoDatabase(
 
 	return {
 		repositories: repositories as unknown as Repositories,
+		db,
 		close: () => client.close(),
 	};
 }

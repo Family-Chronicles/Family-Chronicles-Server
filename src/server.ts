@@ -8,6 +8,7 @@ import { createDatabase } from "./services/database.srvs.js";
 import { createApp, createContext, ensureAdmin } from "./core/app.core.js";
 import { LiveService } from "./services/live.srvs.js";
 import { GenealogyService } from "./services/genealogy.srvs.js";
+import { MongoEventRelay } from "./services/relay.srvs.js";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
@@ -60,8 +61,20 @@ async function main(): Promise<void> {
 	});
 	const live = new LiveService(server, ctx.auth, ctx.events);
 
+	let relay: MongoEventRelay | null = null;
+	if (config.server.liveRelay === "mongo") {
+		if (!database.db)
+			throw new Error("LIVE_RELAY=mongo needs DB_DRIVER=mongo");
+		relay = new MongoEventRelay(database.db, ctx.events);
+		await relay.start();
+		console.log(
+			"📡 Live updates are shared with other instances via MongoDB"
+		);
+	}
+
 	const shutdown = () => {
 		live.close();
+		relay?.stop();
 		server.close(() => {
 			database.close().finally(() => process.exit(0));
 		});

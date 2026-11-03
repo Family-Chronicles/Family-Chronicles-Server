@@ -28,6 +28,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	);
 	config.server.uploadDir = str("UPLOAD_DIR", config.server.uploadDir);
 	config.server.maxUploadMb = num("MAX_UPLOAD_MB", config.server.maxUploadMb);
+	config.server.liveRelay =
+		str("LIVE_RELAY", config.server.liveRelay) === "mongo"
+			? "mongo"
+			: "none";
 
 	config.auth.jwtSecret = str("JWT_SECRET", config.auth.jwtSecret);
 	config.auth.tokenLifetime = str(

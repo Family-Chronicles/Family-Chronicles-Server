@@ -24,7 +24,8 @@
 		"corsOrigins": [],
 		"rateLimitPerMinute": 300,
 		"uploadDir": "./uploads",
-		"maxUploadMb": 50
+		"maxUploadMb": 50,
+		"liveRelay": "none"
 	},
 	"auth": {
 		"jwtSecret": "",
