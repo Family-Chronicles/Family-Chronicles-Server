@@ -53,3 +53,15 @@ export interface RemotePerson {
 	DateOfDeath: string | null;
 	PlaceOfDeath: string | null;
 }
+
+/** A connection request another instance sent to this one, waiting for an admin */
+export interface PeerRequest extends IModel {
+	Name: string;
+	BaseUrl: string;
+	/** Token to read from the requesting instance, encrypted */
+	TokenEncrypted: string;
+	Message: string;
+	/** User of the API token the request came with */
+	FromUserId: string;
+	CreatedAt: string;
+}

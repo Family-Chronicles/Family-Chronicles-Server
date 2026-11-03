@@ -170,6 +170,16 @@ export const peerSchema = z.object({
 	Name: text(100).min(1),
 	BaseUrl: z.string().trim().min(1).max(500),
 	Token: z.string().trim().min(10).max(500),
+	/** Also ask the other instance to connect back (needs PUBLIC_URL) */
+	Mutual: z.boolean().default(false),
+	Message: text(1000).default(""),
+});
+
+export const peerRequestSchema = z.object({
+	Name: text(100).min(1),
+	BaseUrl: z.string().trim().min(1).max(500),
+	Token: z.string().trim().min(10).max(500),
+	Message: text(1000).default(""),
 });
 
 export const linkSchema = z.object({

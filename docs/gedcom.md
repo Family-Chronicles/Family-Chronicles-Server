@@ -55,8 +55,15 @@ the original text is added to the person's notes, so no information is lost.
 
 Encoding: UTF-8 (with or without BOM). Other files are read as Latin-1 with a warning; ANSEL is not supported.
 
-Not imported: media objects (`OBJE`) – GEDCOM files only reference file paths on the original computer,
-the files themselves are not part of the file.
+### Media (GEDZIP)
+
+A GEDCOM file only references media by file path (`OBJE` / `FILE`). To import the pictures and documents too,
+upload a **zip file** containing the `.ged` file and the media files (often called GEDZIP; many programs can
+export it). Paths are matched case-insensitively, also Windows paths like `C:\Fotos\Hochzeit.jpg` are found
+by file name. Each file becomes a media item of the person (title from `TITL`, description from `NOTE`);
+small text files are shown as text. Files that are referenced but missing are listed as one warning.
+
+Limits: 50 MB upload, 500 MB unpacked, 10,000 files.
 
 ## Export
 
@@ -65,6 +72,8 @@ curl -H "Authorization: Bearer $TOKEN" -o stammbaum.ged http://localhost:8080/ap
 ```
 
 Exports all persons with their life events and sources, and their relationships as GEDCOM 5.5.1 in UTF-8.
+With `?format=zip` the export is a GEDZIP: `family-chronicles.ged` plus all media files in `media/`, referenced
+from the persons with `OBJE`.
 Sources become `SOUR` records that the persons cite with `PAGE`. Couples and their children become
 `FAM` records; spouses get `MARR` (and `DIV` with an end date). Families (surname groups) and media are not part
 of the export.

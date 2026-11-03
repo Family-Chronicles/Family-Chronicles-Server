@@ -6,7 +6,12 @@ import { Person } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { User } from "../models/user.model.js";
 import { PasswordReset, Session } from "../models/session.model.js";
-import { ApiToken, Peer, PersonLink } from "../models/federation.model.js";
+import {
+	ApiToken,
+	Peer,
+	PeerRequest,
+	PersonLink,
+} from "../models/federation.model.js";
 import { IRepository } from "../repositories/repository.interface.js";
 import { MemoryRepository } from "../repositories/memory.repository.js";
 import { MongoRepository } from "../repositories/mongo.repository.js";
@@ -24,6 +29,7 @@ export interface Repositories {
 	apiTokens: IRepository<ApiToken>;
 	peers: IRepository<Peer>;
 	links: IRepository<PersonLink>;
+	peerRequests: IRepository<PeerRequest>;
 }
 
 const COLLECTIONS: Record<keyof Repositories, string> = {
@@ -39,6 +45,7 @@ const COLLECTIONS: Record<keyof Repositories, string> = {
 	apiTokens: "api_tokens",
 	peers: "peers",
 	links: "person_links",
+	peerRequests: "peer_requests",
 };
 
 /** Extra indexes per collection (besides the unique Id) */

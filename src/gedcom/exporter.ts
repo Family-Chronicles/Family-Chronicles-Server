@@ -100,7 +100,9 @@ function buildFamilies(
 export function exportGedcom(
 	personList: Person[],
 	relationships: Relationship[],
-	meta: { name: string; version: string }
+	meta: { name: string; version: string },
+	/** Media files per person id, written as OBJE references (GEDZIP export) */
+	media: Map<string, { path: string; title: string }[]> = new Map()
 ): string {
 	const out: string[] = [];
 	const persons = new Map(personList.map((p) => [p.Id, p]));
@@ -164,6 +166,12 @@ export function exportGedcom(
 			if (ev.Place) line(out, 2, "PLAC", ev.Place);
 			if (!isAttribute && tag !== "EVEN" && ev.Description)
 				line(out, 2, "NOTE", ev.Description);
+		}
+		for (const file of media.get(p.Id) ?? []) {
+			line(out, 1, "OBJE");
+			line(out, 2, "FILE", file.path);
+			line(out, 3, "FORM", file.path.split(".").pop() ?? "");
+			line(out, 3, "TITL", file.title);
 		}
 		for (const src of p.Sources ?? []) {
 			line(out, 1, "SOUR", sourceXref(src.Title, src.Url));

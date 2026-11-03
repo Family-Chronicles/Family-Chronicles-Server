@@ -29,6 +29,8 @@ const ROLE_LEVEL: Record<Role, number> = { Viewer: 1, Editor: 2, Admin: 3 };
 export interface AuthUser {
 	Id: string;
 	Role: Role;
+	/** True when the request was authenticated with an API token (another instance) */
+	ViaApiToken?: boolean;
 }
 
 declare module "express-serve-static-core" {
@@ -134,6 +136,7 @@ export class AuthService {
 		return {
 			Id: user.Id,
 			Role: user.Role,
+			ViaApiToken: true,
 			ExpiresAt: entry.ExpiresAt
 				? Date.parse(entry.ExpiresAt)
 				: Number.MAX_SAFE_INTEGER,

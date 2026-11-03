@@ -49,6 +49,7 @@
 		"express": "^4.18.2",
 		"express-jsdoc-swagger": "^1.8.0",
 		"express-rate-limit": "^6.7.1",
+		"fflate": "^0.8.3",
 		"friendly-helper": "^1.9.2",
 		"jsonwebtoken": "^9.0.3",
 		"mongodb": "^5.1.0",
