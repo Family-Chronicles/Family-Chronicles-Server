@@ -2,6 +2,7 @@ import { Config } from "../types/config.type.js";
 import { Repositories } from "../services/database.srvs.js";
 import { AuthService } from "../services/auth.srvs.js";
 import { FileStorage } from "../storage/file.storage.js";
+import { ChangeBus } from "../services/events.srvs.js";
 
 /** Everything a controller needs – passed in instead of global singletons */
 export interface AppContext {
@@ -9,4 +10,6 @@ export interface AppContext {
 	repos: Repositories;
 	auth: AuthService;
 	storage: FileStorage;
+	/** Data changes, used for live updates */
+	events: ChangeBus;
 }

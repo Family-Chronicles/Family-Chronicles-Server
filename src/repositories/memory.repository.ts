@@ -48,6 +48,11 @@ export class MemoryRepository<T extends IModel> implements IRepository<T> {
 		return clone(entity);
 	}
 
+	async createMany(entities: T[]): Promise<number> {
+		entities.forEach((e) => this.items.set(e.Id, clone(e)));
+		return entities.length;
+	}
+
 	async update(id: string, patch: Partial<T>): Promise<T | null> {
 		const item = this.items.get(id);
 		if (!item) return null;

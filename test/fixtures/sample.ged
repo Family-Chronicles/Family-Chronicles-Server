@@ -1,0 +1,53 @@
+0 HEAD
+1 SOUR TestSoft
+2 VERS 1.0
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Karl Friedrich /Schmidt/
+2 GIVN Karl Friedrich
+2 SURN Schmidt
+1 SEX M
+1 BIRT
+2 DATE 12 APR 1901
+2 PLAC Nürnberg, Bayern
+1 DEAT
+2 DATE ABT 1975
+2 PLAC Fürth
+2 CAUS Herzversagen
+1 NOTE Schmied in dritter Generation.
+2 CONT Zog 1930 nach Fürth und eröffnete eine eigene Werkst
+2 CONC att.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Erika /Schmidt/
+1 NAME Erika /Meier/
+2 TYPE birth
+1 SEX F
+1 BIRT
+2 DATE MAR 1905
+1 FAMS @F1@
+1 NOTE @N1@
+0 @I3@ INDI
+1 NAME Hans /Schmidt/
+1 SEX M
+1 BIRT
+2 DATE 1930
+1 FAMC @F1@
+0 @I4@ INDI
+1 NAME Lena /Schmidt/
+1 SEX F
+1 FAMC @F1@
+2 PEDI adopted
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I3@
+1 CHIL @I4@
+1 CHIL @I99@
+1 MARR
+2 DATE 3 JUN 1928
+0 @N1@ NOTE Geborene Meier aus Erlangen.
+0 TRLR
