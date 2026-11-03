@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { GENDERS } from "../models/person.model.js";
+import { EVENT_TYPES, GENDERS } from "../models/person.model.js";
 import { RELATIONSHIP_TYPES } from "../models/relationship.model.js";
 import { MEDIA_TYPES } from "../models/media.model.js";
 import { ROLES } from "../models/user.model.js";
+import { LINK_RELATIONS } from "../models/federation.model.js";
 
 const text = (max = 2000) => z.string().trim().max(max);
 
@@ -21,6 +22,19 @@ const names = z
 			.filter(Boolean)
 	);
 
+const eventSchema = z.object({
+	Type: z.enum(EVENT_TYPES),
+	Date: date.default(null),
+	Place: text(200).nullable().default(null),
+	Description: text(1000).default(""),
+});
+
+const sourceSchema = z.object({
+	Title: text(500).min(1),
+	Citation: text(1000).default(""),
+	Url: z.string().trim().url().max(2000).nullable().default(null),
+});
+
 export const personSchema = z.object({
 	FirstNames: names,
 	MiddleNames: names.default([]),
@@ -33,6 +47,8 @@ export const personSchema = z.object({
 	PlaceOfDeath: text(200).nullable().default(null),
 	CauseOfDeath: text(500).nullable().default(null),
 	Notes: text(10000).default(""),
+	Events: z.array(eventSchema).max(200).default([]),
+	Sources: z.array(sourceSchema).max(200).default([]),
 });
 
 export const familySchema = z.object({
@@ -103,6 +119,21 @@ export const loginSchema = z.object({
 export const passwordChangeSchema = z.object({
 	CurrentPassword: z.string(),
 	NewPassword: password,
+	/** The refresh token of this device; its session is kept, all others end */
+	RefreshToken: z.string().optional(),
+});
+
+export const refreshSchema = z.object({
+	RefreshToken: z.string().min(1).max(500),
+});
+
+export const resetRequestSchema = z.object({
+	Email: z.string().trim().max(320),
+});
+
+export const resetConfirmSchema = z.object({
+	Token: z.string().min(1).max(500),
+	NewPassword: password,
 });
 
 /**
@@ -122,3 +153,29 @@ export function patchSchema<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
 	);
 	return z.object(shape) as unknown as ReturnType<z.ZodObject<S>["partial"]>;
 }
+
+export const apiTokenSchema = z.object({
+	UserId: z.string().uuid(),
+	Name: text(100).min(1),
+	ExpiresInDays: z.coerce
+		.number()
+		.int()
+		.min(1)
+		.max(3650)
+		.nullable()
+		.default(null),
+});
+
+export const peerSchema = z.object({
+	Name: text(100).min(1),
+	BaseUrl: z.string().trim().min(1).max(500),
+	Token: z.string().trim().min(10).max(500),
+});
+
+export const linkSchema = z.object({
+	PersonId: z.string().uuid(),
+	PeerId: z.string().uuid(),
+	RemotePersonId: z.string().trim().min(1).max(100),
+	Relation: z.enum(LINK_RELATIONS).default("SamePerson"),
+	Notes: text(2000).default(""),
+});

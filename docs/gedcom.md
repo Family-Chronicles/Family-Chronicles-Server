@@ -55,7 +55,8 @@ the original text is added to the person's notes, so no information is lost.
 
 Encoding: UTF-8 (with or without BOM). Other files are read as Latin-1 with a warning; ANSEL is not supported.
 
-Not imported (yet): sources (`SOUR`), media objects (`OBJE`), other events (baptism, burial, residence, …).
+Not imported: media objects (`OBJE`) – GEDCOM files only reference file paths on the original computer,
+the files themselves are not part of the file.
 
 ## Export
 
@@ -63,7 +64,8 @@ Not imported (yet): sources (`SOUR`), media objects (`OBJE`), other events (bapt
 curl -H "Authorization: Bearer $TOKEN" -o stammbaum.ged http://localhost:8080/api/v1/gedcom/export
 ```
 
-Exports all persons and their relationships as GEDCOM 5.5.1 in UTF-8. Couples and their children become
+Exports all persons with their life events and sources, and their relationships as GEDCOM 5.5.1 in UTF-8.
+Sources become `SOUR` records that the persons cite with `PAGE`. Couples and their children become
 `FAM` records; spouses get `MARR` (and `DIV` with an end date). Families (surname groups) and media are not part
 of the export.
 

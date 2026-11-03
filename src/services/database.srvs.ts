@@ -1,10 +1,12 @@
-import { MongoClient } from "mongodb";
+import { Db, MongoClient } from "mongodb";
 import { Config } from "../types/config.type.js";
 import { Family, FamilyMembership } from "../models/family.model.js";
 import { Media, MediaTag } from "../models/media.model.js";
 import { Person } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { User } from "../models/user.model.js";
+import { PasswordReset, Session } from "../models/session.model.js";
+import { ApiToken, Peer, PersonLink } from "../models/federation.model.js";
 import { IRepository } from "../repositories/repository.interface.js";
 import { MemoryRepository } from "../repositories/memory.repository.js";
 import { MongoRepository } from "../repositories/mongo.repository.js";
@@ -17,6 +19,11 @@ export interface Repositories {
 	relationships: IRepository<Relationship>;
 	media: IRepository<Media>;
 	tags: IRepository<MediaTag>;
+	sessions: IRepository<Session>;
+	passwordResets: IRepository<PasswordReset>;
+	apiTokens: IRepository<ApiToken>;
+	peers: IRepository<Peer>;
+	links: IRepository<PersonLink>;
 }
 
 const COLLECTIONS: Record<keyof Repositories, string> = {
@@ -27,10 +34,30 @@ const COLLECTIONS: Record<keyof Repositories, string> = {
 	relationships: "relationships",
 	media: "media",
 	tags: "tags",
+	sessions: "sessions",
+	passwordResets: "password_resets",
+	apiTokens: "api_tokens",
+	peers: "peers",
+	links: "person_links",
+};
+
+/** Extra indexes per collection (besides the unique Id) */
+const INDEXES: Partial<Record<string, string[]>> = {
+	persons: ["SortName", "DateOfBirth", "UpdatedAt"],
+	relationships: ["PersonId", "RelatedPersonId"],
+	memberships: ["FamilyId", "PersonId"],
+	media: ["PersonId"],
+	tags: ["MediaId", "PersonId"],
+	sessions: ["UserId"],
+	passwordResets: ["UserId"],
+	apiTokens: ["UserId"],
+	links: ["PersonId", "PeerId"],
 };
 
 export interface Database {
 	repositories: Repositories;
+	/** The MongoDB database, only for the MongoDB driver */
+	db?: Db;
 	close(): Promise<void>;
 }
 
@@ -57,13 +84,14 @@ export async function createMongoDatabase(
 
 	const repositories = {} as Record<string, MongoRepository<never>>;
 	for (const [key, name] of Object.entries(COLLECTIONS)) {
-		const repo = new MongoRepository<never>(db, name);
+		const repo = new MongoRepository<never>(db, name, INDEXES[key] ?? []);
 		await repo.ensureIndexes();
 		repositories[key] = repo;
 	}
 
 	return {
 		repositories: repositories as unknown as Repositories,
+		db,
 		close: () => client.close(),
 	};
 }

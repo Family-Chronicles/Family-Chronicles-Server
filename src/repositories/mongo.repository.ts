@@ -1,6 +1,11 @@
 import { Collection, Db, Document, Filter as MongoFilter } from "mongodb";
 import { IModel } from "../interfaces/model.interface.js";
-import { Filter, IRepository } from "./repository.interface.js";
+import {
+	Filter,
+	IRepository,
+	Page,
+	QueryOptions,
+} from "./repository.interface.js";
 
 const PROJECTION = { projection: { _id: 0 } };
 
@@ -11,12 +16,18 @@ const PROJECTION = { projection: { _id: 0 } };
 export class MongoRepository<T extends IModel> implements IRepository<T> {
 	private collection: Collection;
 
-	constructor(db: Db, collectionName: string) {
+	constructor(
+		db: Db,
+		collectionName: string,
+		private readonly indexes: string[] = []
+	) {
 		this.collection = db.collection(collectionName);
 	}
 
 	public async ensureIndexes(): Promise<void> {
 		await this.collection.createIndex({ Id: 1 }, { unique: true });
+		for (const field of this.indexes)
+			await this.collection.createIndex({ [field]: 1 });
 	}
 
 	private filter(filter?: Filter<T>): MongoFilter<Document> {
@@ -47,6 +58,35 @@ export class MongoRepository<T extends IModel> implements IRepository<T> {
 		return (await this.collection
 			.find({ Id: { $in: ids } }, PROJECTION)
 			.toArray()) as unknown as T[];
+	}
+
+	async query(options: QueryOptions<T>): Promise<Page<T>> {
+		const and: Document[] = [this.filter(options.where)];
+		for (const { field, pattern } of options.match ?? []) {
+			and.push({
+				[field]: {
+					$regex: pattern.source,
+					$options: pattern.flags.includes("i") ? "i" : "",
+				},
+			});
+		}
+		for (const { field, value } of options.notNull ?? []) {
+			and.push({ [field]: value ? { $ne: null } : null });
+		}
+		const filter = { $and: and };
+		const sort = Object.fromEntries(
+			(options.sort ?? []).map((s) => [s.field, s.direction])
+		);
+		let cursor = this.collection
+			.find(filter, PROJECTION)
+			.sort({ ...sort, Id: 1 })
+			.skip(options.skip ?? 0);
+		if (options.limit !== undefined) cursor = cursor.limit(options.limit);
+		const [items, total] = await Promise.all([
+			cursor.toArray(),
+			this.collection.countDocuments(filter),
+		]);
+		return { items: items as unknown as T[], total };
 	}
 
 	async count(filter?: Filter<T>): Promise<number> {

@@ -1,5 +1,5 @@
 import { Repositories } from "./database.srvs.js";
-import { Person } from "../models/person.model.js";
+import { Person, withSearchFields } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { FileStorage } from "../storage/file.storage.js";
 
@@ -32,6 +32,24 @@ export class GenealogyService {
 		private readonly storage: FileStorage
 	) {}
 
+	/** Adds search fields to persons stored before they existed. Returns the number of updated persons. */
+	public async backfillSearchFields(): Promise<number> {
+		const { items } = await this.repos.persons.query({
+			notNull: [{ field: "SortName", value: false }],
+		});
+		for (const p of items) {
+			const { SearchText, SortName } = withSearchFields(p);
+			await this.repos.persons.update(p.Id, {
+				SearchText,
+				SortName,
+				// fields added later get their empty default
+				Events: p.Events ?? [],
+				Sources: p.Sources ?? [],
+			});
+		}
+		return items.length;
+	}
+
 	/** Deletes a person including all links, memberships, tags and media */
 	public async deletePerson(id: string): Promise<boolean> {
 		const { persons, relationships, memberships, tags, media } = this.repos;
@@ -39,6 +57,7 @@ export class GenealogyService {
 		await relationships.deleteMany({ PersonId: id });
 		await relationships.deleteMany({ RelatedPersonId: id });
 		await memberships.deleteMany({ PersonId: id });
+		await this.repos.links.deleteMany({ PersonId: id });
 		await tags.deleteMany({ PersonId: id });
 		for (const item of await media.findAll({ PersonId: id })) {
 			await this.deleteMedia(item.Id);

@@ -1,6 +1,10 @@
 import { Person } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { toGedcomDate } from "./dates.js";
+import { TAG_FOR_EVENT } from "./tags.js";
+
+/** Event tags whose description is the value of the tag (GEDCOM attributes) */
+const ATTRIBUTE_TAGS = ["OCCU", "RELI", "EDUC", "_MILT"];
 
 const MAX_LINE = 240;
 
@@ -104,6 +108,18 @@ export function exportGedcom(
 	const families = buildFamilies(persons, relationships);
 	const famXref = families.map((_, i) => `@F${i + 1}@`);
 
+	// sources become SOUR records, citations point to them
+	const sources = new Map<
+		string,
+		{ xref: string; title: string; url: string | null }
+	>();
+	const sourceXref = (title: string, url: string | null) => {
+		const key = `${title}|${url ?? ""}`;
+		if (!sources.has(key))
+			sources.set(key, { xref: `@S${sources.size + 1}@`, title, url });
+		return sources.get(key)!.xref;
+	};
+
 	const today = new Date();
 	line(out, 0, "HEAD");
 	line(out, 1, "SOUR", "FAMILY_CHRONICLES");
@@ -139,6 +155,20 @@ export function exportGedcom(
 			if (p.PlaceOfDeath) line(out, 2, "PLAC", p.PlaceOfDeath);
 			if (p.CauseOfDeath) line(out, 2, "CAUS", p.CauseOfDeath);
 		}
+		for (const ev of p.Events ?? []) {
+			const tag = TAG_FOR_EVENT[ev.Type];
+			const isAttribute = ATTRIBUTE_TAGS.includes(tag);
+			line(out, 1, tag, isAttribute ? ev.Description || null : null);
+			if (tag === "EVEN") line(out, 2, "TYPE", ev.Description || "Other");
+			if (ev.Date) line(out, 2, "DATE", toGedcomDate(ev.Date));
+			if (ev.Place) line(out, 2, "PLAC", ev.Place);
+			if (!isAttribute && tag !== "EVEN" && ev.Description)
+				line(out, 2, "NOTE", ev.Description);
+		}
+		for (const src of p.Sources ?? []) {
+			line(out, 1, "SOUR", sourceXref(src.Title, src.Url));
+			if (src.Citation) line(out, 2, "PAGE", src.Citation);
+		}
 		if (p.Notes) line(out, 1, "NOTE", p.Notes);
 		families.forEach((f, i) => {
 			if (f.parents.includes(p.Id)) line(out, 1, "FAMS", famXref[i]);
@@ -168,6 +198,12 @@ export function exportGedcom(
 		}
 		if (f.marriage?.Notes) line(out, 1, "NOTE", f.marriage.Notes);
 	});
+
+	for (const src of sources.values()) {
+		line(out, 0, "SOUR", null, src.xref);
+		line(out, 1, "TITL", src.title);
+		if (src.url) line(out, 1, "WWW", src.url);
+	}
 
 	line(out, 0, "TRLR");
 	return out.join("\r\n") + "\r\n";

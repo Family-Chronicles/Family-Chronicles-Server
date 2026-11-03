@@ -1,5 +1,10 @@
 import { IModel } from "../interfaces/model.interface.js";
-import { Filter, IRepository } from "./repository.interface.js";
+import {
+	Filter,
+	IRepository,
+	Page,
+	QueryOptions,
+} from "./repository.interface.js";
 
 const clone = <T>(value: T): T => structuredClone(value);
 
@@ -37,6 +42,43 @@ export class MemoryRepository<T extends IModel> implements IRepository<T> {
 			.map((id) => this.items.get(id))
 			.filter((i): i is T => i !== undefined)
 			.map(clone);
+	}
+
+	async query(options: QueryOptions<T>): Promise<Page<T>> {
+		const get = (item: T, field: string) =>
+			(item as Record<string, unknown>)[field];
+		let items = [...this.items.values()].filter((item) =>
+			matches(item, options.where)
+		);
+		for (const { field, pattern } of options.match ?? []) {
+			items = items.filter((item) => {
+				const value = get(item, field);
+				return typeof value === "string" && pattern.test(value);
+			});
+		}
+		for (const { field, value } of options.notNull ?? []) {
+			items = items.filter(
+				(item) =>
+					(get(item, field) !== null &&
+						get(item, field) !== undefined) === value
+			);
+		}
+		const sort = options.sort ?? [];
+		items.sort((a, b) => {
+			for (const { field, direction } of sort) {
+				const x = String(get(a, field) ?? "");
+				const y = String(get(b, field) ?? "");
+				if (x !== y) return x < y ? -direction : direction;
+			}
+			return 0;
+		});
+		const skip = options.skip ?? 0;
+		const end =
+			options.limit !== undefined ? skip + options.limit : undefined;
+		return {
+			items: items.slice(skip, end).map(clone),
+			total: items.length,
+		};
 	}
 
 	async count(filter?: Filter<T>): Promise<number> {

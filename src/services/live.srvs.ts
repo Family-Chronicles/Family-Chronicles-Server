@@ -15,6 +15,8 @@ const PUBLIC_ENTITIES = [
 	"relationships",
 	"media",
 	"tags",
+	"links",
+	"peers",
 ];
 
 interface Client {

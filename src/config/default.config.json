@@ -24,14 +24,21 @@
     "corsOrigins": [],
     "rateLimitPerMinute": 300,
     "uploadDir": "./uploads",
-    "maxUploadMb": 50
+    "maxUploadMb": 50,
+    "liveRelay": "none"
   },
   "auth": {
     "jwtSecret": "",
-    "tokenLifetime": "12h",
+    "tokenLifetime": "15m",
+    "refreshTokenDays": 30,
     "adminName": "Administrator",
     "adminEmail": "admin@family-chronicles.local",
     "adminPassword": ""
+  },
+  "mail": {
+    "smtpUrl": "",
+    "from": "Family Chronicles <no-reply@family-chronicles.local>",
+    "appUrl": "http://localhost:5173"
   },
   "database": {
     "driver": "mongo",

@@ -28,12 +28,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	);
 	config.server.uploadDir = str("UPLOAD_DIR", config.server.uploadDir);
 	config.server.maxUploadMb = num("MAX_UPLOAD_MB", config.server.maxUploadMb);
+	config.server.liveRelay =
+		str("LIVE_RELAY", config.server.liveRelay) === "mongo"
+			? "mongo"
+			: "none";
 
 	config.auth.jwtSecret = str("JWT_SECRET", config.auth.jwtSecret);
 	config.auth.tokenLifetime = str(
 		"TOKEN_LIFETIME",
 		config.auth.tokenLifetime
 	);
+	config.auth.refreshTokenDays = num(
+		"REFRESH_TOKEN_DAYS",
+		config.auth.refreshTokenDays
+	);
+	config.mail.smtpUrl = str("SMTP_URL", config.mail.smtpUrl);
+	config.mail.from = str("MAIL_FROM", config.mail.from);
+	config.mail.appUrl = str("APP_URL", config.mail.appUrl).replace(/\/$/, "");
 	config.auth.adminName = str("ADMIN_NAME", config.auth.adminName);
 	config.auth.adminEmail = str("ADMIN_EMAIL", config.auth.adminEmail);
 	config.auth.adminPassword = str(
