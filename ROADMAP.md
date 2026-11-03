@@ -93,9 +93,10 @@ Code: [Family-Chronicles-App](https://github.com/Family-Chronicles/Family-Chroni
 
 - ✅ GEDCOM-Import/-Export (Issue #37) – siehe [docs/gedcom.md](docs/gedcom.md), in der App unter „Import/Export“.
 - ✅ GEDCOM: Lebensereignisse (Taufe, Beerdigung, Beruf, Wohnort, …) und Quellen; in der App bearbeitbar.
-- ⬜ GEDCOM: Medien (`OBJE`) – die Dateien sind nicht Teil der GEDCOM-Datei, bräuchte z. B. ZIP-Import (GEDZIP).
+- ✅ GEDCOM mit Medien: ZIP-Import und -Export (GEDZIP), `OBJE`-Verweise werden zu Medien der Person.
 - ✅ WebSocket-API für Live-Updates (Issue #38) – Bewertung und Protokoll in [docs/websocket.md](docs/websocket.md), in der App aktiv.
 - ✅ Live-Updates über mehrere Server-Instanzen (`LIVE_RELAY=mongo`, capped collection).
 - ✅ Föderation, erste Version: API-Tokens, verbundene Instanzen, Personen-Verknüpfungen – siehe [docs/federation.md](docs/federation.md).
-- ⬜ Föderation: Stammbaum über Instanzgrenzen hinweg anzeigen, Personen übernehmen, Instanzen gegenseitig finden.
+- ✅ Föderation, zweite Stufe: Stammbaum verknüpfter Personen auf der anderen Instanz ansehen, Personen übernehmen, gegenseitig verbinden per Verbindungsanfrage.
+- ⬜ Föderation: verknüpfte Stammbäume automatisch zu einem gemeinsamen Baum zusammenführen; Verzeichnis zum Finden von Instanzen.
 - ✅ Refresh-Tokens (rotierend), Abmelden auf dem Server, Passwort-Zurücksetzen per E-Mail.
