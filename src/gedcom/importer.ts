@@ -7,6 +7,9 @@ import {
 	withSearchFields,
 } from "../models/person.model.js";
 import { EVENT_TAGS } from "./tags.js";
+import { FileStorage } from "../storage/file.storage.js";
+import { Media, MediaType } from "../models/media.model.js";
+import { extensionOf, MIME_BY_EXTENSION, normalizePath } from "./zip.js";
 import { Relationship } from "../models/relationship.model.js";
 import { Family, FamilyMembership } from "../models/family.model.js";
 import { Repositories } from "../services/database.srvs.js";
@@ -22,11 +25,18 @@ import {
 export interface ImportOptions {
 	/** When set, a family with this name is created and all imported persons become members */
 	familyName?: string;
+	/** Media files of a GEDZIP, by normalized path */
+	files?: Map<string, Uint8Array>;
+	/** Where media files are stored (needed together with files) */
+	storage?: FileStorage;
+	/** User who imports, recorded as creator of media */
+	userId?: string;
 }
 
 export interface ImportResult {
 	Persons: number;
 	Relationships: number;
+	Media: number;
 	FamilyId: string | null;
 	Warnings: string[];
 }
@@ -40,6 +50,15 @@ const PEDIGREE_ROLE: Record<string, string> = {
 };
 
 const now = () => new Date().toISOString();
+
+function mediaType(mime: string): MediaType {
+	if (mime.startsWith("image/")) return "Image";
+	if (mime.startsWith("video/")) return "Video";
+	if (mime.startsWith("audio/")) return "Audio";
+	if (mime === "text/plain") return "Text";
+	if (mime === "application/pdf") return "Document";
+	return "Other";
+}
 
 /** "Anna Maria /Müller/" → given and surname parts */
 function splitName(node: GedcomNode): { given: string[]; surname: string[] } {
@@ -286,8 +305,91 @@ export async function importGedcom(
 		}
 	}
 
+	// --- media (OBJE) ---
+	const media: Media[] = [];
+	const objects = new Map(
+		records
+			.filter((r) => r.tag === "OBJE" && r.xref)
+			.map((r) => [r.xref!, r])
+	);
+	let missingFiles = 0;
+	const byBaseName = new Map<string, string>();
+	for (const path of options.files?.keys() ?? []) {
+		const base = path.split("/").pop()!;
+		if (!byBaseName.has(base)) byBaseName.set(base, path);
+	}
+	for (const indi of records.filter((r) => r.tag === "INDI" && r.xref)) {
+		const owner = byXref.get(indi.xref!);
+		if (!owner) continue;
+		for (const ref of childrenOf(indi, "OBJE")) {
+			const object = /^@[^@]+@$/.test(ref.value.trim())
+				? objects.get(ref.value.trim())
+				: ref;
+			if (!object) {
+				warnings.push(
+					`Line ${
+						ref.line
+					}: unknown media object ${ref.value.trim()}.`
+				);
+				continue;
+			}
+			for (const fileNode of childrenOf(object, "FILE")) {
+				const path = normalizePath(fileNode.value);
+				const data =
+					options.files?.get(path) ??
+					options.files?.get(
+						byBaseName.get(path.split("/").pop()!) ?? ""
+					);
+				if (!data || !options.storage) {
+					missingFiles++;
+					continue;
+				}
+				const fileName = fileNode.value
+					.trim()
+					.replace(/\\/g, "/")
+					.split("/")
+					.pop()!
+					.slice(0, 200);
+				const mime =
+					MIME_BY_EXTENSION[extensionOf(fileName)] ??
+					"application/octet-stream";
+				const title =
+					childValue(fileNode, "TITL") ||
+					childValue(object, "TITL") ||
+					fileName;
+				media.push({
+					Id: crypto.randomUUID(),
+					PersonId: owner.Id,
+					Title: title.slice(0, 200),
+					Description: noteText(object).slice(0, 5000),
+					Type: mediaType(mime),
+					// small text files are shown inline, like text media created in the app
+					Content:
+						mime === "text/plain" && data.length < 200_000
+							? new TextDecoder().decode(data)
+							: null,
+					FileName: fileName,
+					MimeType: mime,
+					Size: data.length,
+					StorageKey: await options.storage.save(Buffer.from(data)),
+					CreatedBy: options.userId ?? "",
+					CreatedAt: now(),
+					UpdatedAt: now(),
+				});
+			}
+		}
+	}
+	if (missingFiles) {
+		warnings.push(
+			options.files
+				? `${missingFiles} media files referenced in the GEDCOM file were not found in the zip file.`
+				: `${missingFiles} media files are referenced; import a zip file (GEDZIP) with the files to include them.`
+		);
+	}
+
 	await repos.persons.createMany(persons);
 	await repos.relationships.createMany(relationships);
+	await repos.media.createMany(media);
 
 	let familyId: string | null = null;
 	if (options.familyName?.trim() && persons.length) {
@@ -317,6 +419,7 @@ export async function importGedcom(
 	return {
 		Persons: persons.length,
 		Relationships: relationships.length,
+		Media: media.length,
 		FamilyId: familyId,
 		Warnings: warnings,
 	};
