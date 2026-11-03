@@ -6,6 +6,7 @@ import { AppContext } from "./context.core.js";
 import { errorHandler, HttpError, now } from "./http.core.js";
 import { Config } from "../types/config.type.js";
 import { Database, Repositories } from "../services/database.srvs.js";
+import { Mailer, SmtpMailer } from "../services/mail.srvs.js";
 import { AuthService, hashPassword } from "../services/auth.srvs.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
 import { FileStorage } from "../storage/file.storage.js";
@@ -25,7 +26,11 @@ import { statsController } from "../controllers/stats.controller.js";
 
 export const API_PREFIX = "/api/v1";
 
-export function createContext(config: Config, database: Database): AppContext {
+export function createContext(
+	config: Config,
+	database: Database,
+	options: { mailer?: Mailer | null } = {}
+): AppContext {
 	const events = new ChangeBus();
 	// every write is reported on the change bus (live updates)
 	const repos = Object.fromEntries(
@@ -38,11 +43,13 @@ export function createContext(config: Config, database: Database): AppContext {
 		config,
 		repos,
 		events,
-		auth: new AuthService(
-			repos.users,
-			config.auth.jwtSecret,
-			config.auth.tokenLifetime
-		),
+		auth: new AuthService(repos, config.auth),
+		mailer:
+			options.mailer !== undefined
+				? options.mailer
+				: config.mail.smtpUrl
+				? new SmtpMailer(config.mail.smtpUrl, config.mail.from)
+				: null,
 		storage: new FileStorage(config.server.uploadDir),
 	};
 }

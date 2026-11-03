@@ -118,6 +118,21 @@ export const loginSchema = z.object({
 export const passwordChangeSchema = z.object({
 	CurrentPassword: z.string(),
 	NewPassword: password,
+	/** The refresh token of this device; its session is kept, all others end */
+	RefreshToken: z.string().optional(),
+});
+
+export const refreshSchema = z.object({
+	RefreshToken: z.string().min(1).max(500),
+});
+
+export const resetRequestSchema = z.object({
+	Email: z.string().trim().max(320),
+});
+
+export const resetConfirmSchema = z.object({
+	Token: z.string().min(1).max(500),
+	NewPassword: password,
 });
 
 /**

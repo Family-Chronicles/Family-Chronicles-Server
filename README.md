@@ -52,4 +52,7 @@ All routes live under `/api/v1` and, except `auth/login` and `health`, need a
 | `/relationships` | CRUD – person ↔ person with type, role and dates                         | Editor       |
 | `/media`         | CRUD with file upload, `/:id/file`, `/:id/tags`                          | Editor       |
 
+Login returns a short-lived access token (default 15 minutes) and a refresh token (default 30 days) that
+`POST /auth/refresh` exchanges for a new pair. Password reset by email needs `SMTP_URL` and `APP_URL`.
+
 Reading needs at least the role `Viewer`. See [ROADMAP.md](./ROADMAP.md) for the plan.

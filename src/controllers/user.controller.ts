@@ -131,6 +131,7 @@ export function userController(ctx: AppContext): Router {
 			}
 			if (user.Role === "Admin") await ensureAnotherAdmin(user.Id);
 			await users.delete(user.Id);
+			await ctx.auth.revokeAll(user.Id);
 			res.send({ success: true });
 		})
 	);

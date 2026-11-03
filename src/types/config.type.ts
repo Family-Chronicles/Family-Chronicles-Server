@@ -28,10 +28,20 @@ export type Config = {
 	};
 	auth: {
 		jwtSecret: string;
+		/** Lifetime of access tokens, e.g. "15m" */
 		tokenLifetime: string;
+		/** Lifetime of refresh tokens (logins) in days */
+		refreshTokenDays: number;
 		adminName: string;
 		adminEmail: string;
 		adminPassword: string;
+	};
+	mail: {
+		/** SMTP connection URL; without it password reset is disabled */
+		smtpUrl: string;
+		from: string;
+		/** Public URL of the web app, used for links in mails */
+		appUrl: string;
 	};
 	database: {
 		/** "mongo" for production, "memory" for tests and quick local runs */

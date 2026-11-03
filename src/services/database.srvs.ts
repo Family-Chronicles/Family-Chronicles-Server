@@ -5,6 +5,7 @@ import { Media, MediaTag } from "../models/media.model.js";
 import { Person } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { User } from "../models/user.model.js";
+import { PasswordReset, Session } from "../models/session.model.js";
 import { IRepository } from "../repositories/repository.interface.js";
 import { MemoryRepository } from "../repositories/memory.repository.js";
 import { MongoRepository } from "../repositories/mongo.repository.js";
@@ -17,6 +18,8 @@ export interface Repositories {
 	relationships: IRepository<Relationship>;
 	media: IRepository<Media>;
 	tags: IRepository<MediaTag>;
+	sessions: IRepository<Session>;
+	passwordResets: IRepository<PasswordReset>;
 }
 
 const COLLECTIONS: Record<keyof Repositories, string> = {
@@ -27,6 +30,8 @@ const COLLECTIONS: Record<keyof Repositories, string> = {
 	relationships: "relationships",
 	media: "media",
 	tags: "tags",
+	sessions: "sessions",
+	passwordResets: "password_resets",
 };
 
 /** Extra indexes per collection (besides the unique Id) */
@@ -36,6 +41,8 @@ const INDEXES: Partial<Record<string, string[]>> = {
 	memberships: ["FamilyId", "PersonId"],
 	media: ["PersonId"],
 	tags: ["MediaId", "PersonId"],
+	sessions: ["UserId"],
+	passwordResets: ["UserId"],
 };
 
 export interface Database {
