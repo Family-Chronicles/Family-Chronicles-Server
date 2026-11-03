@@ -57,6 +57,7 @@ export class GenealogyService {
 		await relationships.deleteMany({ PersonId: id });
 		await relationships.deleteMany({ RelatedPersonId: id });
 		await memberships.deleteMany({ PersonId: id });
+		await this.repos.links.deleteMany({ PersonId: id });
 		await tags.deleteMany({ PersonId: id });
 		for (const item of await media.findAll({ PersonId: id })) {
 			await this.deleteMedia(item.Id);

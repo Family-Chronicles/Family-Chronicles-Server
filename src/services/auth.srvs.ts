@@ -8,6 +8,7 @@ import { HttpError } from "../core/http.core.js";
 import { Repositories } from "./database.srvs.js";
 import { Config } from "../types/config.type.js";
 import { PasswordReset, Session } from "../models/session.model.js";
+import { ApiToken } from "../models/federation.model.js";
 
 const scrypt = promisify(crypto.scrypt) as (
 	password: string,
@@ -15,6 +16,8 @@ const scrypt = promisify(crypto.scrypt) as (
 	keylen: number
 ) => Promise<Buffer>;
 
+/** API tokens look like "fc_<id>.<secret>" */
+export const API_TOKEN_PREFIX = "fc_";
 const RESET_LIFETIME_MS = 60 * 60 * 1000;
 const randomToken = () => crypto.randomBytes(32).toString("base64url");
 const sha256 = (s: string) =>
@@ -65,7 +68,7 @@ export class AuthService {
 	constructor(
 		private readonly repos: Pick<
 			Repositories,
-			"users" | "sessions" | "passwordResets"
+			"users" | "sessions" | "passwordResets" | "apiTokens"
 		>,
 		private readonly options: Config["auth"]
 	) {
@@ -80,6 +83,61 @@ export class AuthService {
 			expiresIn: this.options
 				.tokenLifetime as jwt.SignOptions["expiresIn"],
 		});
+	}
+
+	/** Creates a long-lived API token for a user; the plain token is only returned here */
+	public async createApiToken(
+		user: User,
+		name: string,
+		expiresInDays: number | null
+	): Promise<{ token: string; entry: ApiToken }> {
+		const secret = randomToken();
+		const entry: ApiToken = {
+			Id: crypto.randomUUID(),
+			UserId: user.Id,
+			Name: name,
+			TokenHash: sha256(secret),
+			CreatedAt: new Date().toISOString(),
+			LastUsedAt: null,
+			ExpiresAt: expiresInDays
+				? new Date(
+						Date.now() + expiresInDays * 86_400_000
+				  ).toISOString()
+				: null,
+		};
+		await this.repos.apiTokens.create(entry);
+		return { token: `${API_TOKEN_PREFIX}${entry.Id}.${secret}`, entry };
+	}
+
+	private async verifyApiToken(
+		token: string
+	): Promise<AuthUser & { ExpiresAt: number }> {
+		const entry = await this.findByToken(
+			this.repos.apiTokens as IRepository<
+				ApiToken & { ExpiresAt: string }
+			>,
+			token.slice(API_TOKEN_PREFIX.length),
+			true
+		);
+		if (!entry) throw new HttpError(401, "Invalid or expired token");
+		const user = await this.users.findById(entry.UserId);
+		if (!user) throw new HttpError(401, "User no longer exists");
+		// remember the last use, at most once per minute
+		if (
+			!entry.LastUsedAt ||
+			Date.now() - Date.parse(entry.LastUsedAt) > 60_000
+		) {
+			await this.repos.apiTokens.update(entry.Id, {
+				LastUsedAt: new Date().toISOString(),
+			});
+		}
+		return {
+			Id: user.Id,
+			Role: user.Role,
+			ExpiresAt: entry.ExpiresAt
+				? Date.parse(entry.ExpiresAt)
+				: Number.MAX_SAFE_INTEGER,
+		};
 	}
 
 	/** Starts a session and returns its refresh token ("<id>.<secret>", only the hash is stored) */
@@ -190,8 +248,12 @@ export class AuthService {
 	}
 
 	private async findByToken<
-		T extends { Id: string; TokenHash: string; ExpiresAt: string }
-	>(repo: IRepository<T>, token: string): Promise<T | null> {
+		T extends { Id: string; TokenHash: string; ExpiresAt: string | null }
+	>(
+		repo: IRepository<T>,
+		token: string,
+		keepExpired = false
+	): Promise<T | null> {
 		const [id, secret] = String(token ?? "").split(".");
 		if (!id || !secret) return null;
 		const entry = await repo.findById(id);
@@ -203,8 +265,8 @@ export class AuthService {
 			!crypto.timingSafeEqual(expected, actual)
 		)
 			return null;
-		if (Date.parse(entry.ExpiresAt) < Date.now()) {
-			await repo.delete(entry.Id);
+		if (entry.ExpiresAt && Date.parse(entry.ExpiresAt) < Date.now()) {
+			if (!keepExpired) await repo.delete(entry.Id);
 			return null;
 		}
 		return entry;
@@ -251,6 +313,8 @@ export class AuthService {
 	public async verify(
 		token: string
 	): Promise<AuthUser & { ExpiresAt: number }> {
+		if (token.startsWith(API_TOKEN_PREFIX))
+			return this.verifyApiToken(token);
 		let subject: string;
 		let expiresAt: number;
 		try {

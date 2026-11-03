@@ -7,6 +7,7 @@ import { errorHandler, HttpError, now } from "./http.core.js";
 import { Config } from "../types/config.type.js";
 import { Database, Repositories } from "../services/database.srvs.js";
 import { Mailer, SmtpMailer } from "../services/mail.srvs.js";
+import { FederationClient, TokenCipher } from "../services/federation.srvs.js";
 import { AuthService, hashPassword } from "../services/auth.srvs.js";
 import { GenealogyService } from "../services/genealogy.srvs.js";
 import { FileStorage } from "../storage/file.storage.js";
@@ -23,14 +24,17 @@ import { relationshipController } from "../controllers/relationship.controller.j
 import { mediaController } from "../controllers/media.controller.js";
 import { gedcomController } from "../controllers/gedcom.controller.js";
 import { statsController } from "../controllers/stats.controller.js";
+import { tokenController } from "../controllers/token.controller.js";
+import { federationController } from "../controllers/federation.controller.js";
 
 export const API_PREFIX = "/api/v1";
 
 export function createContext(
 	config: Config,
 	database: Database,
-	options: { mailer?: Mailer | null } = {}
+	options: { mailer?: Mailer | null; fetcher?: typeof fetch } = {}
 ): AppContext {
+	const cipher = new TokenCipher(config.auth.jwtSecret);
 	const events = new ChangeBus();
 	// every write is reported on the change bus (live updates)
 	const repos = Object.fromEntries(
@@ -51,6 +55,8 @@ export function createContext(
 				? new SmtpMailer(config.mail.smtpUrl, config.mail.from)
 				: null,
 		storage: new FileStorage(config.server.uploadDir),
+		cipher,
+		federation: new FederationClient(cipher, options.fetcher),
 	};
 }
 
@@ -127,6 +133,8 @@ export function createApp(
 	api.use("/media", mediaController(ctx, genealogy));
 	api.use("/gedcom", gedcomController(ctx));
 	api.use("/stats", statsController(ctx));
+	api.use("/tokens", tokenController(ctx));
+	api.use("/federation", federationController(ctx));
 	app.use(API_PREFIX, api);
 	extend?.(app);
 

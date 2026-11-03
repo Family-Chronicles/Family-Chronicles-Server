@@ -3,6 +3,7 @@ import { EVENT_TYPES, GENDERS } from "../models/person.model.js";
 import { RELATIONSHIP_TYPES } from "../models/relationship.model.js";
 import { MEDIA_TYPES } from "../models/media.model.js";
 import { ROLES } from "../models/user.model.js";
+import { LINK_RELATIONS } from "../models/federation.model.js";
 
 const text = (max = 2000) => z.string().trim().max(max);
 
@@ -152,3 +153,29 @@ export function patchSchema<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
 	);
 	return z.object(shape) as unknown as ReturnType<z.ZodObject<S>["partial"]>;
 }
+
+export const apiTokenSchema = z.object({
+	UserId: z.string().uuid(),
+	Name: text(100).min(1),
+	ExpiresInDays: z.coerce
+		.number()
+		.int()
+		.min(1)
+		.max(3650)
+		.nullable()
+		.default(null),
+});
+
+export const peerSchema = z.object({
+	Name: text(100).min(1),
+	BaseUrl: z.string().trim().min(1).max(500),
+	Token: z.string().trim().min(10).max(500),
+});
+
+export const linkSchema = z.object({
+	PersonId: z.string().uuid(),
+	PeerId: z.string().uuid(),
+	RemotePersonId: z.string().trim().min(1).max(100),
+	Relation: z.enum(LINK_RELATIONS).default("SamePerson"),
+	Notes: text(2000).default(""),
+});

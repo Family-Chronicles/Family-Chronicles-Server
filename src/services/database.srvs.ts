@@ -6,6 +6,7 @@ import { Person } from "../models/person.model.js";
 import { Relationship } from "../models/relationship.model.js";
 import { User } from "../models/user.model.js";
 import { PasswordReset, Session } from "../models/session.model.js";
+import { ApiToken, Peer, PersonLink } from "../models/federation.model.js";
 import { IRepository } from "../repositories/repository.interface.js";
 import { MemoryRepository } from "../repositories/memory.repository.js";
 import { MongoRepository } from "../repositories/mongo.repository.js";
@@ -20,6 +21,9 @@ export interface Repositories {
 	tags: IRepository<MediaTag>;
 	sessions: IRepository<Session>;
 	passwordResets: IRepository<PasswordReset>;
+	apiTokens: IRepository<ApiToken>;
+	peers: IRepository<Peer>;
+	links: IRepository<PersonLink>;
 }
 
 const COLLECTIONS: Record<keyof Repositories, string> = {
@@ -32,6 +36,9 @@ const COLLECTIONS: Record<keyof Repositories, string> = {
 	tags: "tags",
 	sessions: "sessions",
 	passwordResets: "password_resets",
+	apiTokens: "api_tokens",
+	peers: "peers",
+	links: "person_links",
 };
 
 /** Extra indexes per collection (besides the unique Id) */
@@ -43,6 +50,8 @@ const INDEXES: Partial<Record<string, string[]>> = {
 	tags: ["MediaId", "PersonId"],
 	sessions: ["UserId"],
 	passwordResets: ["UserId"],
+	apiTokens: ["UserId"],
+	links: ["PersonId", "PeerId"],
 };
 
 export interface Database {
