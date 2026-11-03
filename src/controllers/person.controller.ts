@@ -1,704 +1,241 @@
-import { Express, Request, Response } from "express";
-import { IController } from "../interfaces/controller.interface.js";
-import { DatabaseService } from "../services/database.srvs.js";
-import { Person } from "../models/person.model.js";
-import { AuthorizationService } from "../services/auth.srvs.js";
-import bodyParser from "body-parser";
+import { Router } from "express";
+import crypto from "crypto";
+import { AppContext } from "../core/context.core.js";
+import { handle, notFound, now, parse } from "../core/http.core.js";
+import { fullName, Person } from "../models/person.model.js";
+import { GenealogyService } from "../services/genealogy.srvs.js";
+import { personSchema } from "../validation/schemas.js";
 
-export class PersonController implements IController {
-	private _database = DatabaseService.getInstance();
-	private _authorization = AuthorizationService.getInstance();
-	private _collectionName = "persons";
+const normalize = (s: string) =>
+	s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+export function personController(
+	ctx: AppContext,
+	genealogy: GenealogyService
+): Router {
+	const router = Router();
+	const { persons, relationships, memberships, families, media, tags } =
+		ctx.repos;
+	const read = ctx.auth.require("Viewer");
+	const write = ctx.auth.require("Editor");
+
+	const load = async (id: string) => {
+		const person = await persons.findById(id);
+		if (!person) throw notFound("Person");
+		return person;
+	};
+
 	/**
-	 * Routes person controller
-	 * @param app
+	 * GET /api/v1/persons
+	 * @tags persons
+	 * @summary All persons, optionally filtered
+	 * @security BearerAuth
+	 * @param {string} q.query - search in all names and the birth name
+	 * @param {string} born.query - date of birth prefix (YYYY, YYYY-MM or YYYY-MM-DD)
+	 * @return {array<object>} 200 - persons, sorted by last name
 	 */
-	public routes(app: Express): void {
-		/**
-		 * GET /persons
-		 * @tags persons
-		 * @summary This returns an array of all persons
-		 * @security BearerAuth
-		 * @return {object[]} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * [
-		 * 	{
-		 * 		"FirstName": ["John"],
-		 * 		"LastName": ["Doe"],
-		 * 		"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 		"DateOfDeath": null,
-		 * 		"PlaceOfBirth": "New York",
-		 * 		"PlaceOfDeath": null,
-		 * 		"RelationshipIds": [],
-		 * 		"Notes": "",
-		 * 		"FamilyIds": [],
-		 * 		"RelatedDataIds": [],
-		 * 		"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * 	}
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.get("/persons", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.index(req, res);
-			});
-		});
-
-		/**
-		 * GET /person/:id
-		 * @tags persons
-		 * @summary This returns a person by id
-		 * @security BearerAuth
-		 * @param {string} id.path.required - the id of the person
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	"FirstName": ["John"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * }
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.get("/person/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.show(req, res);
-			});
-		});
-
-		/**
-		 * GET /person/name?firstName&lastName
-		 * @tags persons
-		 * @summary This returns a person by name
-		 * @security BearerAuth
-		 * @param {string} firstName.query.required - the first name of the person
-		 * @param {string} lastName.query.required - the last name of the person
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	"FirstName": ["John"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * }
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.get(
-			"/person/name?firstName&lastName",
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByName(req, res);
+	router.get(
+		"/",
+		read,
+		handle(async (req, res) => {
+			const q =
+				typeof req.query.q === "string" ? normalize(req.query.q) : "";
+			const born =
+				typeof req.query.born === "string" ? req.query.born : "";
+			let result = await persons.findAll();
+			if (q) {
+				const terms = q.split(/\s+/).filter(Boolean);
+				result = result.filter((p) => {
+					const haystack = normalize(
+						`${fullName(p)} ${p.BirthName ?? ""}`
+					);
+					return terms.every((t) => haystack.includes(t));
 				});
 			}
-		);
-
-		/**
-		 * GET /person/dateOfBirth/:dateOfBirth
-		 * @tags persons
-		 * @summary This returns persons by date of birth
-		 * @security BearerAuth
-		 * @param {string} dateOfBirth.path.required - the date of birth of the person
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * [{
-		 * 	"FirstName": ["John"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * },
-		 * {
-		 * 	"FirstName": ["Jane"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
-		 * }]
-		 */
-		app.get(
-			"/person/dateOfBirth/:dateOfBirth",
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByDateOfBirth(req, res);
-				});
+			if (born) {
+				result = result.filter((p) => p.DateOfBirth?.startsWith(born));
 			}
-		);
+			result.sort(
+				(a, b) =>
+					a.LastNames.join(" ").localeCompare(
+						b.LastNames.join(" ")
+					) ||
+					a.FirstNames.join(" ").localeCompare(b.FirstNames.join(" "))
+			);
+			res.send(result);
+		})
+	);
 
-		/**
-		 * GET /person/relatedData/:relatedDataIds
-		 * @tags persons
-		 * @summary This returns persons by related data ids
-		 * @security BearerAuth
-		 * @param {string} relatedDataIds.path.required - the related data ids of the person
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * [{
-		 * 	"FirstName": ["John"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * },
-		 * {
-		 * 	"FirstName": ["Jane"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4b"
-		 * }]
-		 */
-		app.get(
-			"/person/relatedData/:relatedDataIds",
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.showByRelatedDataIds(req, res);
-				});
+	/**
+	 * GET /api/v1/persons/{id}
+	 * @tags persons
+	 * @summary One person
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @return {object} 200 - person
+	 */
+	router.get(
+		"/:id",
+		read,
+		handle(async (req, res) => {
+			res.send(await load(req.params.id));
+		})
+	);
+
+	/**
+	 * GET /api/v1/persons/{id}/relationships
+	 * @tags persons
+	 * @summary All relationships of a person (both directions)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @return {array<object>} 200 - relationships
+	 */
+	router.get(
+		"/:id/relationships",
+		read,
+		handle(async (req, res) => {
+			const person = await load(req.params.id);
+			const [from, to] = await Promise.all([
+				relationships.findAll({ PersonId: person.Id }),
+				relationships.findAll({ RelatedPersonId: person.Id }),
+			]);
+			res.send([...from, ...to]);
+		})
+	);
+
+	/**
+	 * GET /api/v1/persons/{id}/families
+	 * @tags persons
+	 * @summary Family memberships of a person, including the family
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @return {array<object>} 200 - memberships with Family
+	 */
+	router.get(
+		"/:id/families",
+		read,
+		handle(async (req, res) => {
+			const person = await load(req.params.id);
+			const links = await memberships.findAll({ PersonId: person.Id });
+			const fams = await families.findByIds(links.map((l) => l.FamilyId));
+			res.send(
+				links.map((l) => ({
+					...l,
+					Family: fams.find((f) => f.Id === l.FamilyId) ?? null,
+				}))
+			);
+		})
+	);
+
+	/**
+	 * GET /api/v1/persons/{id}/media
+	 * @tags persons
+	 * @summary Media owned by the person and media the person is tagged on
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @return {object} 200 - { Own: [], Tagged: [] }
+	 */
+	router.get(
+		"/:id/media",
+		read,
+		handle(async (req, res) => {
+			const person = await load(req.params.id);
+			const own = await media.findAll({ PersonId: person.Id });
+			const tagLinks = await tags.findAll({ PersonId: person.Id });
+			const tagged = (
+				await media.findByIds([
+					...new Set(tagLinks.map((t) => t.MediaId)),
+				])
+			).filter((m) => m.PersonId !== person.Id);
+			res.send({ Own: own, Tagged: tagged });
+		})
+	);
+
+	/**
+	 * GET /api/v1/persons/{id}/tree
+	 * @tags persons
+	 * @summary Ancestors, descendants and siblings of a person
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @param {number} depth.query - generations in each direction (1-10, default 3)
+	 * @return {object} 200 - tree
+	 */
+	router.get(
+		"/:id/tree",
+		read,
+		handle(async (req, res) => {
+			const depth = Math.min(
+				Math.max(Number(req.query.depth) || 3, 1),
+				10
+			);
+			const tree = await genealogy.tree(req.params.id, depth);
+			if (!tree) throw notFound("Person");
+			res.send(tree);
+		})
+	);
+
+	/**
+	 * POST /api/v1/persons
+	 * @tags persons
+	 * @summary Create a person (Editor)
+	 * @security BearerAuth
+	 * @param {object} request.body.required - person
+	 * @return {object} 201 - person
+	 */
+	router.post(
+		"/",
+		write,
+		handle(async (req, res) => {
+			const body = parse(personSchema, req.body);
+			const person: Person = {
+				Id: crypto.randomUUID(),
+				...body,
+				CreatedAt: now(),
+				UpdatedAt: now(),
+			};
+			await persons.create(person);
+			res.status(201).send(person);
+		})
+	);
+
+	/**
+	 * PUT /api/v1/persons/{id}
+	 * @tags persons
+	 * @summary Update a person, only sent fields change (Editor)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @return {object} 200 - person
+	 */
+	router.put(
+		"/:id",
+		write,
+		handle(async (req, res) => {
+			const person = await load(req.params.id);
+			const patch = parse(personSchema.partial(), req.body);
+			res.send(
+				await persons.update(person.Id, { ...patch, UpdatedAt: now() })
+			);
+		})
+	);
+
+	/**
+	 * DELETE /api/v1/persons/{id}
+	 * @tags persons
+	 * @summary Delete a person with all links and media (Editor)
+	 * @security BearerAuth
+	 * @param {string} id.path.required - person id
+	 * @return {object} 200 - success
+	 */
+	router.delete(
+		"/:id",
+		write,
+		handle(async (req, res) => {
+			if (!(await genealogy.deletePerson(req.params.id))) {
+				throw notFound("Person");
 			}
-		);
+			res.send({ success: true });
+		})
+	);
 
-		/**
-		 * POST /person
-		 * @tags persons
-		 * @summary This a new person and saves it to the database
-		 * @security BearerAuth
-		 * @param {object} - the new person - application/json
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	"FirstName": ["John"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * }
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.post(
-			"/person",
-			bodyParser.json(),
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.create(req, res);
-				});
-			}
-		);
-
-		/**
-		 * PUT /person/:id
-		 * @tags persons
-		 * @summary This updates a person by id
-		 * @security BearerAuth
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	"FirstName": ["John"],
-		 * 	"LastName": ["Doe"],
-		 * 	"DateOfBirth": "2021-01-01T00:00:00.000Z",
-		 * 	"DateOfDeath": null,
-		 * 	"PlaceOfBirth": "New York",
-		 * 	"PlaceOfDeath": null,
-		 * 	"RelationshipIds": [],
-		 * 	"Notes": "",
-		 * 	"FamilyIds": [],
-		 * 	"RelatedDataIds": [],
-		 * 	"Id": "60f3b3b0-0b0a-4f4a-8b0a-4f4a8b0a4f4a"
-		 * }
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.put(
-			"/person/:id",
-			bodyParser.json(),
-			(req: Request, res: Response) => {
-				this._authorization.authorize(req, res, () => {
-					this.update(req, res);
-				});
-			}
-		);
-
-		/**
-		 * DELETE /person/:id
-		 * @tags persons
-		 * @summary This deletes a person by id
-		 * @security BearerAuth
-		 * @return {object} 200 - success response - application/json
-		 * @example response - 200 - success response example
-		 * {
-		 * 	"success": true,
-		 * }
-		 * @example response - 400 - bad request response example
-		 * {
-		 * 	"status": 400
-		 * }
-		 * @example response - 401 - unauthorized response example
-		 * {
-		 * 	"status": 401
-		 * }
-		 * @example response - 403 - forbidden response example
-		 * {
-		 * 	"status": 403
-		 * }
-		 * @example response - 404 - not found response example
-		 * {
-		 * 	"status": 404
-		 * }
-		 * @example response - 500 - internal server error response example
-		 * {
-		 * 	"status": 500
-		 * }
-		 * @example response - 503 - service unavailable response example
-		 * {
-		 * 	"status": 503
-		 * }
-		 */
-		app.delete("/person/:id", (req: Request, res: Response) => {
-			this._authorization.authorize(req, res, () => {
-				this.delete(req, res);
-			});
-		});
-	}
-
-	private showByRelatedDataIds(req: Request, res: Response) {
-		const relatedDataIds = req.params.relatedDataIds.split(",");
-
-		const personDocument = this._database.getDocumentByQuery<Person>(
-			this._collectionName,
-			{ RelatedDataIds: { $in: relatedDataIds } }
-		);
-
-		personDocument
-			.then((person) => {
-				if (person === null) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private showByDateOfBirth(req: Request, res: Response) {
-		const dateOfBirth = req.params.dateOfBirth;
-
-		const personDocument = this._database.getDocumentByQuery<Person>(
-			this._collectionName,
-			{ DateOfBirth: dateOfBirth }
-		);
-
-		personDocument
-			.then((person) => {
-				if (person === null) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private showByName(req: Request, res: Response) {
-		const firstName = req.query.firstName;
-		const lastName = req.query.lastName;
-
-		const personDocument = this._database.getDocumentByQuery<Person>(
-			this._collectionName,
-			{ FirstName: firstName, LastName: lastName }
-		);
-
-		personDocument
-			.then((person) => {
-				if (person === null) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-
-				//@ts-ignore
-				delete person._id;
-
-				res.send(person);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private index(req: Request, res: Response): void {
-		const personDocuments = this._database.listAllDocuments<Person>(
-			this._collectionName
-		);
-
-		personDocuments
-			.then((persons) => {
-				if (persons === null) {
-					persons = [];
-				}
-
-				persons.forEach((person) => {
-					//@ts-ignore
-					delete person._id;
-				});
-
-				res.send(persons);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private create(req: Request, res: Response): void {
-		console.log(req.body);
-
-		let firstName = req.body.FirstName;
-		let lastName = req.body.LastName;
-		let relatedDataIds = req.body.RelatedDataIds;
-		let familyIds = req.body.FamilyIds;
-		let relationshipIds = req.body.RelationshipIds;
-
-		if (typeof firstName === "string") {
-			firstName = firstName.split(" ");
-		}
-
-		if (typeof lastName === "string") {
-			lastName = lastName.split(" ");
-		}
-
-		if (typeof relatedDataIds === "string") {
-			relatedDataIds = [relatedDataIds];
-		}
-
-		if (typeof familyIds === "string") {
-			familyIds = [familyIds];
-		}
-
-		if (typeof relationshipIds === "string") {
-			relationshipIds = [relationshipIds];
-		}
-
-		const person = new Person(
-			null,
-			firstName,
-			lastName,
-			req.body.DateOfBirth,
-			req.body.DateOfDeath ?? null,
-			req.body.PlaceOfBirth,
-			req.body.PlaceOfDeath ?? null,
-			relatedDataIds,
-			req.body.Notes,
-			familyIds,
-			relationshipIds
-		);
-
-		this._database
-			.createDocument<Person>(this._collectionName, person)
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500, message: error.message });
-			});
-
-		res.send(person);
-	}
-
-	private show(req: Request, res: Response): void {
-		const personDocument = this._database.findDocument<Person>(
-			this._collectionName,
-			req.params.id
-		);
-
-		personDocument
-			.then((person) => {
-				if (person === null) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-				//@ts-ignore
-				delete person!._id;
-				res.send(person);
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private update(req: Request, res: Response): void {
-		const personDocument = this._database.findDocument<Person>(
-			this._collectionName,
-			req.params.id
-		);
-
-		personDocument
-			.then((person) => {
-				if (person === null || person === undefined) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-				let firstName = req.body.FirstName ?? person.FirstName;
-				let lastName = req.body.LastName ?? person.LastName;
-				let relatedDataIds =
-					req.body.RelatedDataIds ?? person.RelatedDataIds;
-				let familyIds = req.body.FamilyIds ?? person.FamilyIds;
-				let relationshipIds =
-					req.body.RelationshipIds ?? person.RelationshipIds;
-
-				if (typeof firstName === "string") {
-					firstName = firstName.split(" ");
-				}
-
-				if (typeof lastName === "string") {
-					lastName = lastName.split(" ");
-				}
-
-				if (typeof relatedDataIds === "string") {
-					relatedDataIds = [relatedDataIds];
-				}
-
-				if (typeof familyIds === "string") {
-					familyIds = [familyIds];
-				}
-
-				if (typeof relationshipIds === "string") {
-					relationshipIds = [relationshipIds];
-				}
-
-				const updatedPerson = new Person(
-					person.Id,
-					firstName,
-					lastName,
-					req.body.DateOfBirth ?? person.DateOfBirth,
-					req.body.DateOfDeath ?? person.DateOfDeath,
-					req.body.PlaceOfBirth ?? person.PlaceOfBirth,
-					req.body.PlaceOfDeath ?? person.PlaceOfDeath,
-					relationshipIds,
-					req.body.Notes ?? person.Notes,
-					familyIds,
-					relatedDataIds
-				);
-
-				const result = JSON.stringify(updatedPerson);
-
-				this._database
-					.updateDocument(
-						this._collectionName,
-						personDocument,
-						updatedPerson
-					)
-					.then(() => {
-						res.status(200).send(result);
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send({ status: 500 });
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
-
-	private delete(req: Request, res: Response): void {
-		const personDocument = this._database.findDocument<Person>(
-			this._collectionName,
-			req.path.split("/")[2]
-		);
-
-		personDocument
-			.then((person) => {
-				if (person === null || person === undefined) {
-					res.status(404).send({ status: 404 });
-					return;
-				}
-				this._database
-					.deleteDocument(this._collectionName, person)
-					.then(() => {
-						res.status(200).send({
-							success: true,
-							message: `User ${
-								person.FirstName + " " + person.LastName
-							} with id ${person.Id} deleted successfully`,
-						});
-					})
-					.catch((error) => {
-						console.error(error);
-						res.status(500).send({ status: 500 });
-					});
-			})
-			.catch((error) => {
-				console.error(error);
-				res.status(500).send({ status: 500 });
-			});
-	}
+	return router;
 }

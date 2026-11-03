@@ -1,91 +1,26 @@
-import { IModel } from "../interfaces/model.interface";
-import crypto from "crypto";
+import { DateString, IModel } from "../interfaces/model.interface.js";
 
-/**
- * Person model
- * @class
- * @implements {IModel}
- * @property {string} id - Person id
- * @property {string[]} firstName - Person first name
- * @property {string[]} lastName - Person last name
- * @property {Date} dateOfBirth - Person date of birth
- * @property {Date | null} dateOfDeath - Person date of death
- * @property {string} placeOfBirth - Person place of birth
- * @property {string | null} placeOfDeath - Person place of death
- * @property {string[]} relationshipIds - Person relationship ids
- * @property {string} notes - Person notes
- * @property {string[]} familyIds - Person family ids
- * @property {string[]} relatedDataIds - Person related data ids
- * @constructor
- * @param {string | null | undefined} id - Person id
- * @param {string[]} firstName - Person first name
- * @param {string[]} lastName - Person last name
- * @param {Date} dateOfBirth - Person date of birth
- * @param {Date | null} dateOfDeath - Person date of death
- * @param {string} placeOfBirth - Person place of birth
- * @param {string | null} placeOfDeath - Person place of death
- * @param {string[]} relationshipIds - Person relationship ids
- * @param {string} notes - Person notes
- * @param {string[]} familyIds - Person family ids
- * @param {string[]} relatedDataIds - Person related data ids
- * @returns {Person} - Person instance
- * @example
- * const person = new Person(
- * 	null,
- * 	["John"],
- * 	["Doe"],
- * 	new Date(),
- * 	null,
- * 	"New York",
- * 	null,
- * 	[],
- * 	"",
- * 	[],
- * 	[]
- * );
- */
-export class Person implements IModel {
-	// Properties
-	public readonly Id: string;
-	public FirstName: string[];
-	public LastName: string[];
-	public DateOfBirth: Date;
-	public DateOfDeath: Date | null;
-	public PlaceOfBirth: string;
-	public PlaceOfDeath: string | null;
-	public RelationshipIds: string[];
-	public Notes: string;
-	public FamilyIds: string[];
-	public RelatedDataIds: string[];
+export const GENDERS = ["Male", "Female", "Diverse", "Unknown"] as const;
+export type Gender = (typeof GENDERS)[number];
 
-	// Constructor
-	constructor(
-		id: string | null | undefined,
-		firstName: string[],
-		lastName: string[],
-		dateOfBirth: Date,
-		dateOfDeath: Date | null,
-		placeOfBirth: string,
-		placeOfDeath: string | null,
-		relationshipIds: string[],
-		notes: string,
-		familyIds: string[],
-		relatedDataIds: string[]
-	) {
-		if (id === "" || id === null || id === undefined) {
-			this.Id = crypto.randomUUID();
-		} else {
-			this.Id = id;
-		}
-		this.FirstName = firstName;
-		this.LastName = lastName;
-		this.DateOfBirth = dateOfBirth;
-		this.DateOfDeath = dateOfDeath;
-		this.PlaceOfBirth = placeOfBirth;
-		this.PlaceOfDeath = placeOfDeath;
-		this.RelationshipIds = relationshipIds;
-		this.Notes = notes;
-		this.FamilyIds = familyIds;
-		this.RelatedDataIds = relatedDataIds;
-	}
+export interface Person extends IModel {
+	FirstNames: string[];
+	MiddleNames: string[];
+	LastNames: string[];
+	BirthName: string | null;
+	Gender: Gender;
+	DateOfBirth: DateString;
+	PlaceOfBirth: string | null;
+	DateOfDeath: DateString;
+	PlaceOfDeath: string | null;
+	CauseOfDeath: string | null;
+	Notes: string;
+	CreatedAt: string;
+	UpdatedAt: string;
+}
+
+export function fullName(person: Person): string {
+	return [...person.FirstNames, ...person.MiddleNames, ...person.LastNames]
+		.filter(Boolean)
+		.join(" ");
 }

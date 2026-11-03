@@ -1,21 +1,23 @@
 {
-	"root": true, // if you want to prevent ESLint from searching for the configuration file all the way up to the root directory of the filesystem
+	"root": true,
 	"env": {
-		"node": true, // for ESLint to be aware of Node.js global variables and scoping
-		"es6": true // for ESLint to be aware of ES6 global variables (this automatically enables ES6 syntax)
+		"node": true,
+		"es2022": true
 	},
 	"parser": "@typescript-eslint/parser",
 	"parserOptions": {
-		"sourceType": "module"
+		"sourceType": "module",
+		"ecmaVersion": "latest"
 	},
-	"extends": [
-		"eslint:recommended", // always (set of rules recommended by ESLint team)
-		"prettier" // always
-	],
+	"extends": ["eslint:recommended", "prettier"],
+	"plugins": ["@typescript-eslint", "prettier"],
 	"rules": {
-		"prettier/prettier": "error" // always
-	},
-	"plugins": [
-		"prettier" // always
-	]
+		"prettier/prettier": "error",
+		"no-unused-vars": "off",
+		"no-undef": "off",
+		"@typescript-eslint/no-unused-vars": [
+			"error",
+			{ "argsIgnorePattern": "^_|^req$|^next$", "ignoreRestSiblings": true }
+		]
+	}
 }

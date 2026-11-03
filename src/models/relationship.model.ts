@@ -1,56 +1,29 @@
-import { IModel } from "../interfaces/model.interface.js";
-import { RelationshipType } from "../types/relationship.type.js";
-import crypto from "crypto";
+import { DateString, IModel } from "../interfaces/model.interface.js";
+
+export const RELATIONSHIP_TYPES = [
+	"Parent",
+	"Child",
+	"Spouse",
+	"Partner",
+	"Sibling",
+	"Related",
+	"Other",
+	"Unknown",
+] as const;
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
 
 /**
- * Relationship model
- * @class
- * @implements {IModel}
- * @property {string} id - Relationship id
- * @property {string} relationPartnerOne - Relation partner one
- * @property {string} relationPartnerTwo - Relation partner two
- * @property {RelationshipType} relationshipType - Relationship type
- * @property {string} notes - Notes
- * @constructor
- * @param {string | null | undefined} id - Relationship id
- * @param {string} relationPartnerOne - Relation partner one
- * @param {string} relationPartnerTwo - Relation partner two
- * @param {RelationshipType} relationshipType - Relationship type
- * @param {string} notes - Notes
- * @returns {Relationship} - Relationship instance
- * @example
- * const relationship = new Relationship(
- * 	null,
- * 	"John Doe",
- * 	"Jane Doe",
- * 	RelationshipType.FAMILY,
- * 	"John and Jane are brother and sister"
- * );
+ * Directed link between two persons.
+ * "Parent" means: `PersonId` is a parent of `RelatedPersonId`.
+ * "Child" is stored as "Parent" with swapped persons, so each fact exists once.
+ * `Role` is a free text describing the link in detail (e.g. "Mutter", "Stiefvater", "Adoptivkind").
  */
-export class Relationship implements IModel {
-	// Properties
-	public readonly Id: string;
-	public RelationPartnerOneId: string;
-	public RelationPartnerTwoId: string;
-	public RelationshipType: RelationshipType;
-	public Notes: string;
-
-	// Constructor
-	constructor(
-		id: string | null | undefined,
-		relationPartnerOneId: string,
-		relationPartnerTwoId: string,
-		relationshipType: RelationshipType,
-		notes: string
-	) {
-		if (id === "" || id === null || id === undefined) {
-			this.Id = crypto.randomUUID();
-		} else {
-			this.Id = id;
-		}
-		this.RelationPartnerOneId = relationPartnerOneId;
-		this.RelationPartnerTwoId = relationPartnerTwoId;
-		this.RelationshipType = relationshipType;
-		this.Notes = notes;
-	}
+export interface Relationship extends IModel {
+	PersonId: string;
+	RelatedPersonId: string;
+	Type: RelationshipType;
+	Role: string;
+	StartDate: DateString;
+	EndDate: DateString;
+	Notes: string;
 }
