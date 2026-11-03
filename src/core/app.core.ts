@@ -38,13 +38,17 @@ export function createContext(config: Config, database: Database): AppContext {
 
 /**
  * Creates the initial admin when no user exists yet.
- * Returns the generated password when none was configured.
+ * The password must be configured (ADMIN_PASSWORD); it is never generated or logged.
+ * Returns true when an admin was created.
  */
-export async function ensureAdmin(ctx: AppContext): Promise<string | null> {
-	if ((await ctx.repos.users.count()) > 0) return null;
-	const password =
-		ctx.config.auth.adminPassword ||
-		crypto.randomBytes(12).toString("base64url");
+export async function ensureAdmin(ctx: AppContext): Promise<boolean> {
+	if ((await ctx.repos.users.count()) > 0) return false;
+	const password = ctx.config.auth.adminPassword;
+	if (password.length < 8) {
+		throw new Error(
+			"No user exists yet. Set ADMIN_PASSWORD (at least 8 characters) to create the first admin."
+		);
+	}
 	await ctx.repos.users.create({
 		Id: crypto.randomUUID(),
 		Name: ctx.config.auth.adminName,
@@ -54,7 +58,7 @@ export async function ensureAdmin(ctx: AppContext): Promise<string | null> {
 		CreatedAt: now(),
 		UpdatedAt: now(),
 	});
-	return ctx.config.auth.adminPassword ? null : password;
+	return true;
 }
 
 /** Builds the express app – without listening, so tests can use it directly */
@@ -64,16 +68,20 @@ export function createApp(
 ): Express {
 	const app = express();
 	const genealogy = new GenealogyService(ctx.repos, ctx.storage);
-	const origins = ctx.config.server.corsOrigins;
+	const origins = ctx.config.server.corsOrigins.filter((o) => o !== "*");
 
 	app.disable("x-powered-by");
-	app.use(
-		cors({
-			origin: origins.includes("*") ? true : origins,
-			methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-			allowedHeaders: ["Content-Type", "Authorization"],
-		})
-	);
+	// Cross-origin access only for explicitly listed origins (CORS_ORIGINS).
+	// The web app is normally served from the same origin (dev proxy / nginx).
+	if (origins.length > 0) {
+		app.use(
+			cors({
+				origin: origins,
+				methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+				allowedHeaders: ["Content-Type", "Authorization"],
+			})
+		);
+	}
 	app.use(
 		rateLimiter({
 			max: ctx.config.server.rateLimitPerMinute,

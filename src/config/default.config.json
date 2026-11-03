@@ -21,9 +21,7 @@
   },
   "server": {
     "port": 8080,
-    "corsOrigins": [
-      "*"
-    ],
+    "corsOrigins": [],
     "rateLimitPerMinute": 300,
     "uploadDir": "./uploads",
     "maxUploadMb": 50

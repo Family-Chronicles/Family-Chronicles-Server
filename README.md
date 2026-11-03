@@ -12,7 +12,7 @@ The Family Chronicles project is an attempt to develop a family tree management 
 ## Quick start
 
 ```bash
-cp .env.example .env   # set JWT_SECRET and ADMIN_PASSWORD
+cp .env.example .env   # set JWT_SECRET and ADMIN_PASSWORD (required on first start)
 npm run start          # starts server + MongoDB with docker compose
 ```
 

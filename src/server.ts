@@ -40,11 +40,8 @@ async function main(): Promise<void> {
 	const database = await createDatabase(config.database);
 	const ctx = createContext(config, database);
 
-	const generated = await ensureAdmin(ctx);
-	if (generated) {
-		console.log(
-			`👤 Created admin "${config.auth.adminEmail}" with password: ${generated}`
-		);
+	if (await ensureAdmin(ctx)) {
+		console.log(`👤 Created admin "${config.auth.adminEmail}"`);
 	}
 
 	const app = createApp(ctx, (a) => swagger(a, config));
