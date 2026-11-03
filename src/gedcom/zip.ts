@@ -4,12 +4,16 @@ import { GedcomError } from "./parser.js";
 const MAX_ENTRIES = 10_000;
 const MAX_TOTAL_BYTES = 500 * 1024 * 1024;
 
-export const isZip = (data: Buffer) =>
-	data.length > 4 &&
-	data[0] === 0x50 &&
-	data[1] === 0x4b &&
-	data[2] === 0x03 &&
-	data[3] === 0x04;
+export function isZip(data: unknown): data is Buffer {
+	// only real buffers count – query or body values could be strings or arrays
+	if (!Buffer.isBuffer(data) || data.length < 4) return false;
+	return (
+		data[0] === 0x50 &&
+		data[1] === 0x4b &&
+		data[2] === 0x03 &&
+		data[3] === 0x04
+	);
+}
 
 /** Normalizes paths from GEDCOM FILE lines and zip entries: "C:\\Fotos\\A.jpg" → "fotos/a.jpg" */
 export function normalizePath(path: string): string {
